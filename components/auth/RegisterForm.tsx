@@ -61,7 +61,8 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
         // Profile will be created automatically by trigger handle_new_user
         // No need to manually insert into profiles table
         
-        // Redirect to appropriate dashboard
+        // Redirect to appropriate dashboard using window.location for full page reload
+        // This ensures middleware sees the updated session
         if (formData.role === 'company') {
           window.location.href = '/company';
         } else {
