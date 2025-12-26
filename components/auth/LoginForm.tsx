@@ -30,6 +30,9 @@ export default function LoginForm() {
       if (signInError) throw signInError;
 
       if (data.user) {
+        // Refresh router to update session
+        router.refresh();
+        
         // Get user role
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -40,14 +43,18 @@ export default function LoginForm() {
         if (profile && !profileError) {
           // Redirect based on role
           const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-          if (profileData.role === 'company') router.push('/company');
-          else if (profileData.role === 'worker') router.push('/worker');
-          else if (profileData.role === 'admin') router.push('/admin');
-          else router.push('/');
+          if (profileData.role === 'company') {
+            window.location.href = '/company';
+          } else if (profileData.role === 'worker') {
+            window.location.href = '/worker';
+          } else if (profileData.role === 'admin') {
+            window.location.href = '/admin';
+          } else {
+            window.location.href = '/';
+          }
         } else {
-          router.push('/');
+          window.location.href = '/';
         }
-        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
