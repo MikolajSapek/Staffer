@@ -40,11 +40,6 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
 
       const supabase = createClient();
       
-      // Check if Supabase is configured
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase nie jest skonfigurowany. Sprawdź zmienne środowiskowe.');
-      }
-      
       // Sign up user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
