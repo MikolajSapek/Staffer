@@ -4,4 +4,4 @@ node_modules
 .DS_Store
 *.log
 supabase/edge-functions
-
+*.tsbuildinfo
