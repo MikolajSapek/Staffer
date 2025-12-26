@@ -64,11 +64,10 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
         // Redirect to appropriate dashboard
         // Note: Onboarding pages can be added later at /worker/onboarding and /company/onboarding
         if (formData.role === 'company') {
-          router.push('/company');
+          window.location.href = '/company';
         } else {
-          router.push('/worker');
+          window.location.href = '/worker';
         }
-        router.refresh();
       }
     } catch (err: any) {
       console.error('Registration error:', err);
