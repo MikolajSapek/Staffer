@@ -62,7 +62,6 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
         // No need to manually insert into profiles table
         
         // Redirect to appropriate dashboard
-        // Note: Onboarding pages can be added later at /worker/onboarding and /company/onboarding
         if (formData.role === 'company') {
           window.location.href = '/company';
         } else {
