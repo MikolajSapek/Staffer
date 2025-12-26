@@ -61,11 +61,12 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
         // Profile will be created automatically by trigger handle_new_user
         // No need to manually insert into profiles table
         
-        // Redirect to appropriate onboarding
+        // Redirect to appropriate dashboard
+        // Note: Onboarding pages can be added later at /worker/onboarding and /company/onboarding
         if (formData.role === 'company') {
-          router.push('/company/onboarding');
+          router.push('/company');
         } else {
-          router.push('/worker/onboarding');
+          router.push('/worker');
         }
         router.refresh();
       }
