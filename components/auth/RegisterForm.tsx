@@ -40,10 +40,16 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
 
       const supabase = createClient();
       
-      // Sign up user
+      // Sign up user with role in metadata (trigger will create profile automatically)
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: {
+            // ✅ TO JEST KLUCZOWE: Trigger oczekuje roli w raw_user_meta_data
+            role: formData.role,
+          },
+        },
       });
 
       if (signUpError) {
@@ -52,18 +58,9 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
       }
 
       if (authData.user) {
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            email: formData.email,
-            role: formData.role,
-            is_verified: false,
-          } as any);
-
-        if (profileError) throw profileError;
-
+        // Profile will be created automatically by trigger handle_new_user
+        // No need to manually insert into profiles table
+        
         // Redirect to appropriate onboarding
         if (formData.role === 'company') {
           router.push('/company/onboarding');
