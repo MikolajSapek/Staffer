@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.ns", "deno.unstable"],
+    "strict": false,
+    "noImplicitAny": false
+  },
+  "include": ["supabase/edge-functions/**/*"]
+}
+
