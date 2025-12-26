@@ -8,8 +8,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  // Output configuration for Vercel
-  output: 'standalone',
 };
 
 export default nextConfig;
