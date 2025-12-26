@@ -40,13 +40,21 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
 
       const supabase = createClient();
       
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase nie jest skonfigurowany. Sprawdź zmienne środowiskowe.');
+      }
+      
       // Sign up user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error('Supabase signUp error:', signUpError);
+        throw signUpError;
+      }
 
       if (authData.user) {
         // Create profile
@@ -70,10 +78,13 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
         router.refresh();
       }
     } catch (err: any) {
+      console.error('Registration error:', err);
       if (err instanceof z.ZodError) {
         setError(err.errors[0].message);
+      } else if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_NAME_NOT_RESOLVED')) {
+        setError('Nie można połączyć się z serwerem. Sprawdź czy zmienne środowiskowe Supabase są ustawione w Vercel.');
       } else {
-        setError(err.message || 'An error occurred');
+        setError(err.message || 'Wystąpił błąd podczas rejestracji');
       }
     } finally {
       setLoading(false);
