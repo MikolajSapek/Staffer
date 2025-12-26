@@ -30,8 +30,11 @@ export default function LoginForm() {
       if (signInError) throw signInError;
 
       if (data.user) {
-        // Refresh router to update session
+        // Refresh router first to update session
         router.refresh();
+        
+        // Small delay to ensure session is updated
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Get user role
         const { data: profile, error: profileError } = await supabase
@@ -44,16 +47,16 @@ export default function LoginForm() {
           // Redirect based on role
           const profileData = profile as { role: 'worker' | 'company' | 'admin' };
           if (profileData.role === 'company') {
-            window.location.href = '/company';
+            router.replace('/company');
           } else if (profileData.role === 'worker') {
-            window.location.href = '/worker';
+            router.replace('/worker');
           } else if (profileData.role === 'admin') {
-            window.location.href = '/admin';
+            router.replace('/admin');
           } else {
-            window.location.href = '/';
+            router.replace('/');
           }
         } else {
-          window.location.href = '/';
+          router.replace('/');
         }
       }
     } catch (err: any) {
