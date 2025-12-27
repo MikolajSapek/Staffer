@@ -38,21 +38,16 @@ export default function LoginForm() {
           .single();
 
         if (profile && !profileError) {
-          // Redirect based on role using window.location for full page reload
-          // This ensures middleware sees the updated session
+          // Redirect based on role
           const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-          if (profileData.role === 'company') {
-            window.location.href = '/company';
-          } else if (profileData.role === 'worker') {
-            window.location.href = '/worker';
-          } else if (profileData.role === 'admin') {
-            window.location.href = '/admin';
-          } else {
-            window.location.href = '/';
-          }
+          if (profileData.role === 'company') router.push('/company');
+          else if (profileData.role === 'worker') router.push('/worker');
+          else if (profileData.role === 'admin') router.push('/admin');
+          else router.push('/');
         } else {
-          window.location.href = '/';
+          router.push('/');
         }
+        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
