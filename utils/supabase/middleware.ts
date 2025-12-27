@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/types/database';
 
 export async function updateSession(request: NextRequest) {
+  // 1. Inicjalizacja odpowiedzi
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -30,27 +31,33 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session if expired
+  // 2. Sprawdzenie użytkownika
+  // WAŻNE: getUser jest bezpieczniejsze niż getSession w middleware
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Public routes that don't require authentication
   const { pathname } = request.nextUrl;
-  const publicRoutes = ['/login', '/register', '/'];
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
 
-  // Protected routes - redirect to login if not authenticated
+  // -------------------------------------------------------------------
+  // POPRAWKA: Precyzyjna definicja publicznych tras
+  // Usuwamy '/' z tablicy startsWith, sprawdzamy go osobno
+  // -------------------------------------------------------------------
+  const isPublicRoute =
+    pathname === '/' || // Tylko strona główna (dokładne dopasowanie)
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/auth'); // Obsługa callbacków OAuth/MagicLink
+
+  // SCENARIUSZ A: Niezalogowany wchodzi na prywatną stronę -> LOGIN
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
-  // Role-based route protection
-  if (user) {
+  // SCENARIUSZ B: Zalogowany wchodzi na publiczną stronę (np. Login lub Home) -> DASHBOARD
+  if (user && isPublicRoute) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
@@ -60,41 +67,88 @@ export async function updateSession(request: NextRequest) {
 
       if (profile) {
         const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-        // Company routes
-        if (
-          pathname.startsWith('/company') &&
-          profileData.role !== 'company' &&
-          profileData.role !== 'admin'
-        ) {
+        const url = request.nextUrl.clone();
+        
+        // Przekierowanie bazujące na roli
+        switch (profileData.role) {
+          case 'worker':
+            url.pathname = '/worker';
+            break;
+          case 'company':
+            url.pathname = '/company';
+            break;
+          case 'admin':
+            url.pathname = '/admin';
+            break;
+          default:
+            // Jeśli rola jest nieznana, pozwól zostać lub wyślij do onboardingu
+            return supabaseResponse; 
+        }
+        return NextResponse.redirect(url);
+      }
+    } catch (error) {
+      console.error('Błąd pobierania profilu w middleware:', error);
+      // W razie błędu nie blokujemy, pozwalamy wejść na stronę (fail-open dla UX, fail-closed dla security - zależnie od preferencji)
+    }
+  }
+
+  // SCENARIUSZ C: Zalogowany wchodzi na prywatną stronę -> Sprawdzamy uprawnienia ról
+  if (user && !isPublicRoute) {
+    try {
+      // Opcjonalnie: Cache'owanie tego zapytania byłoby idealne, ale w middleware Next.js jest to trudne.
+      // Supabase jest szybkie, więc pojedyncze zapytanie select('role') jest akceptowalne.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) {
+        const profileData = profile as { role: 'worker' | 'company' | 'admin' };
+        const role = profileData.role;
+
+        // Ochrona tras Company
+        if (pathname.startsWith('/company') && role !== 'company' && role !== 'admin') {
           const url = request.nextUrl.clone();
-          url.pathname = '/unauthorized';
+          // Przekierowanie do właściwego dashboardu na podstawie roli użytkownika
+          if (role === 'worker') {
+            url.pathname = '/worker';
+          } else {
+            url.pathname = '/unauthorized';
+          }
           return NextResponse.redirect(url);
         }
 
-        // Worker routes
-        if (
-          pathname.startsWith('/worker') &&
-          profileData.role !== 'worker' &&
-          profileData.role !== 'admin'
-        ) {
+        // Ochrona tras Worker
+        if (pathname.startsWith('/worker') && role !== 'worker' && role !== 'admin') {
           const url = request.nextUrl.clone();
-          url.pathname = '/unauthorized';
+          // Przekierowanie do właściwego dashboardu na podstawie roli użytkownika
+          if (role === 'company') {
+            url.pathname = '/company';
+          } else {
+            url.pathname = '/unauthorized';
+          }
           return NextResponse.redirect(url);
         }
 
-        // Admin routes
-        if (pathname.startsWith('/admin') && profileData.role !== 'admin') {
+        // Ochrona tras Admin
+        if (pathname.startsWith('/admin') && role !== 'admin') {
           const url = request.nextUrl.clone();
-          url.pathname = '/unauthorized';
+          // Przekierowanie do właściwego dashboardu na podstawie roli użytkownika
+          if (role === 'worker') {
+            url.pathname = '/worker';
+          } else if (role === 'company') {
+            url.pathname = '/company';
+          } else {
+            url.pathname = '/unauthorized';
+          }
           return NextResponse.redirect(url);
         }
       }
     } catch (error) {
-      // If profile fetch fails, allow request to proceed (will be handled by RoleProtector)
-      // This prevents middleware from breaking the build
+      console.error('Błąd weryfikacji roli:', error);
     }
   }
 
   return supabaseResponse;
 }
-
