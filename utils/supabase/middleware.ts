@@ -35,12 +35,22 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Public routes that don't require authentication
   const { pathname } = request.nextUrl;
-  const publicRoutes = ['/login', '/register', '/'];
+
+  // Public routes that don't require authentication
+  const publicRoutes = ['/login', '/register', '/', '/unauthorized'];
   const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
+    pathname === route || pathname.startsWith(route + '/')
   );
+
+  // Static assets and API routes - allow through
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/static') ||
+    pathname.startsWith('/api')
+  ) {
+    return supabaseResponse;
+  }
 
   // Protected routes - redirect to login if not authenticated
   if (!user && !isPublicRoute) {
@@ -49,7 +59,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Role-based route protection
+  // Role-based route protection and redirects
   if (user) {
     try {
       const { data: profile } = await supabase
@@ -60,30 +70,69 @@ export async function updateSession(request: NextRequest) {
 
       if (profile) {
         const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-        // Company routes
+        const userRole = profileData.role;
+
+        // Define allowed paths for each role
+        const workerPaths = ['/worker', '/worker/onboarding'];
+        const companyPaths = ['/company', '/company/onboarding'];
+        const adminPaths = ['/admin', '/worker', '/company'];
+
+        // Check if user is accessing root or trying to access wrong role's area
+        if (pathname === '/' || (!isPublicRoute && !pathname.startsWith('/worker') && !pathname.startsWith('/company') && !pathname.startsWith('/admin'))) {
+          // Redirect to appropriate dashboard based on role
+          if (userRole === 'worker') {
+            const url = request.nextUrl.clone();
+            url.pathname = '/worker/dashboard';
+            return NextResponse.redirect(url);
+          } else if (userRole === 'company') {
+            const url = request.nextUrl.clone();
+            url.pathname = '/company/dashboard';
+            return NextResponse.redirect(url);
+          } else if (userRole === 'admin') {
+            const url = request.nextUrl.clone();
+            url.pathname = '/admin';
+            return NextResponse.redirect(url);
+          }
+        }
+
+        // Redirect /worker to /worker/dashboard for workers
+        if (userRole === 'worker' && pathname === '/worker') {
+          const url = request.nextUrl.clone();
+          url.pathname = '/worker/dashboard';
+          return NextResponse.redirect(url);
+        }
+
+        // Redirect /company to /company/dashboard for companies
+        if (userRole === 'company' && pathname === '/company') {
+          const url = request.nextUrl.clone();
+          url.pathname = '/company/dashboard';
+          return NextResponse.redirect(url);
+        }
+
+        // Company routes - restrict access
         if (
           pathname.startsWith('/company') &&
-          profileData.role !== 'company' &&
-          profileData.role !== 'admin'
+          userRole !== 'company' &&
+          userRole !== 'admin'
         ) {
           const url = request.nextUrl.clone();
           url.pathname = '/unauthorized';
           return NextResponse.redirect(url);
         }
 
-        // Worker routes
+        // Worker routes - restrict access
         if (
           pathname.startsWith('/worker') &&
-          profileData.role !== 'worker' &&
-          profileData.role !== 'admin'
+          userRole !== 'worker' &&
+          userRole !== 'admin'
         ) {
           const url = request.nextUrl.clone();
           url.pathname = '/unauthorized';
           return NextResponse.redirect(url);
         }
 
-        // Admin routes
-        if (pathname.startsWith('/admin') && profileData.role !== 'admin') {
+        // Admin routes - restrict access
+        if (pathname.startsWith('/admin') && userRole !== 'admin') {
           const url = request.nextUrl.clone();
           url.pathname = '/unauthorized';
           return NextResponse.redirect(url);
@@ -92,6 +141,7 @@ export async function updateSession(request: NextRequest) {
     } catch (error) {
       // If profile fetch fails, allow request to proceed (will be handled by RoleProtector)
       // This prevents middleware from breaking the build
+      console.error('Middleware profile fetch error:', error);
     }
   }
 
