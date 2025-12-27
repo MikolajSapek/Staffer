@@ -22,36 +22,18 @@ export default function LoginForm() {
 
     try {
       const supabase = createClient();
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) throw signInError;
 
-      if (data.user) {
-        // Get user role
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profile && !profileError) {
-          // Redirect based on role
-          const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-          if (profileData.role === 'company') router.push('/company');
-          else if (profileData.role === 'worker') router.push('/worker');
-          else if (profileData.role === 'admin') router.push('/admin');
-          else router.push('/');
-        } else {
-          router.push('/');
-        }
-        router.refresh();
-      }
+      // Po udanym logowaniu odśwież stronę
+      // Middleware automatycznie przekieruje użytkownika do odpowiedniego dashboardu
+      router.refresh();
     } catch (err: any) {
       setError(err.message || 'An error occurred');
-    } finally {
       setLoading(false);
     }
   };
@@ -98,4 +80,3 @@ export default function LoginForm() {
     </Card>
   );
 }
-
