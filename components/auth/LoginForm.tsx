@@ -40,8 +40,8 @@ export default function LoginForm() {
         if (profile && !profileError) {
           // Redirect based on role
           const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-          if (profileData.role === 'company') router.push('/company/dashboard');
-          else if (profileData.role === 'worker') router.push('/worker/dashboard');
+          if (profileData.role === 'company') router.push('/company');
+          else if (profileData.role === 'worker') router.push('/worker');
           else if (profileData.role === 'admin') router.push('/admin');
           else router.push('/');
         } else {
