@@ -63,7 +63,7 @@ export async function updateSession(request: NextRequest) {
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profile) {
         const profileData = profile as { role: 'worker' | 'company' | 'admin' };
@@ -85,6 +85,21 @@ export async function updateSession(request: NextRequest) {
             return supabaseResponse; 
         }
         return NextResponse.redirect(url);
+      } else {
+        // Brak profilu - przekieruj do onboardingu
+        // Spróbuj uzyskać rolę z user_metadata (zapisywana podczas rejestracji)
+        const role = user.user_metadata?.role as 'worker' | 'company' | undefined;
+        const url = request.nextUrl.clone();
+        
+        if (role === 'company') {
+          url.pathname = '/company/onboarding';
+        } else if (role === 'worker') {
+          url.pathname = '/worker/onboarding';
+        } else {
+          // Jeśli nie ma roli w metadata, zostaw na stronie (może wybrać podczas rejestracji)
+          return supabaseResponse;
+        }
+        return NextResponse.redirect(url);
       }
     } catch (error) {
       console.error('Błąd pobierania profilu w middleware:', error);
@@ -101,7 +116,7 @@ export async function updateSession(request: NextRequest) {
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profile) {
         const profileData = profile as { role: 'worker' | 'company' | 'admin' };
@@ -144,6 +159,26 @@ export async function updateSession(request: NextRequest) {
           }
           return NextResponse.redirect(url);
         }
+      } else {
+        // Brak profilu - przekieruj do onboardingu
+        // Sprawdź, czy użytkownik próbuje wejść na stronę onboarding (nie blokuj tego)
+        if (pathname.startsWith('/worker/onboarding') || pathname.startsWith('/company/onboarding')) {
+          return supabaseResponse; // Pozwól wejść na onboarding
+        }
+
+        // Spróbuj uzyskać rolę z user_metadata (zapisywana podczas rejestracji)
+        const role = user.user_metadata?.role as 'worker' | 'company' | undefined;
+        const url = request.nextUrl.clone();
+        
+        if (role === 'company') {
+          url.pathname = '/company/onboarding';
+        } else if (role === 'worker') {
+          url.pathname = '/worker/onboarding';
+        } else {
+          // Jeśli nie ma roli, przekieruj do strony głównej (użytkownik musi wybrać rolę)
+          url.pathname = '/';
+        }
+        return NextResponse.redirect(url);
       }
     } catch (error) {
       console.error('Błąd weryfikacji roli:', error);
