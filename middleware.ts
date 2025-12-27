@@ -18,11 +18,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - api routes
-     * - static assets (images, fonts, etc.)
-     * - manifest files
+     * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 
