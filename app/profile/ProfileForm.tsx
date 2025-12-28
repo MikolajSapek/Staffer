@@ -163,7 +163,7 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
       // Upsert worker details
       const { error: upsertError } = await supabase
         .from('worker_details')
-        .upsert(updateData as any, { onConflict: 'profile_id' });
+        .upsert(updateData, { onConflict: 'profile_id' });
 
       if (upsertError) {
         console.error('Upsert error:', upsertError);

@@ -51,7 +51,7 @@ export default function CreateShiftForm({ companyId, locations }: CreateShiftFor
           vacancies_total: parseInt(formData.vacancies_total),
           vacancies_taken: 0,
           status: 'published',
-        } as any);
+        });
 
       if (insertError) {
         throw insertError;
