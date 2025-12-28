@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,40 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingRole, setCheckingRole] = useState(true);
+
+  // Check if user already has a role (from sign-up)
+  useEffect(() => {
+    async function checkExistingRole() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // If user already has a role, redirect them
+      if (profile?.role) {
+        if (profile.role === 'worker') {
+          router.push('/schedule');
+        } else if (profile.role === 'company') {
+          router.push('/company/dashboard');
+        }
+        return;
+      }
+
+      setCheckingRole(false);
+    }
+
+    checkExistingRole();
+  }, [router]);
 
   const handleRoleSelection = async (role: 'worker' | 'company') => {
     try {
@@ -55,6 +89,17 @@ export default function OnboardingPage() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking role
+  if (checkingRole) {
+    return (
+      <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <div className="text-center">
+          <p className="text-muted-foreground">Indlæser...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[calc(100vh-200px)]">
