@@ -37,6 +37,10 @@ export default function CreateShiftForm({ companyId, locations }: CreateShiftFor
     try {
       const supabase = createClient();
 
+      // Convert datetime-local strings to ISO strings
+      const startDateTime = new Date(formData.start_time);
+      const endDateTime = new Date(formData.end_time);
+
       const { error: insertError } = await supabase
         .from('shifts')
         .insert({
@@ -45,13 +49,13 @@ export default function CreateShiftForm({ companyId, locations }: CreateShiftFor
           title: formData.title,
           description: formData.description || null,
           category: formData.category || 'general',
-          start_time: formData.start_time,
-          end_time: formData.end_time,
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
           hourly_rate: parseFloat(formData.hourly_rate),
           vacancies_total: parseInt(formData.vacancies_total),
           vacancies_taken: 0,
           status: 'published',
-        });
+        } as any);
 
       if (insertError) {
         throw insertError;
