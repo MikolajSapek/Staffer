@@ -117,7 +117,9 @@ export default async function CompanyDashboardPage() {
                   {getStatusBadge(shift.status)}
                 </div>
                 <CardDescription>
-                  {shift.locations?.name || 'Lokation ikke angivet'}
+                  {Array.isArray(shift.locations) 
+                    ? shift.locations[0]?.name || 'Lokation ikke angivet'
+                    : 'Lokation ikke angivet'}
                 </CardDescription>
               </CardHeader>
               <CardContent>

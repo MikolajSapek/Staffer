@@ -120,7 +120,9 @@ export default async function JobBoardPage() {
                   </Badge>
                 </div>
                 <CardDescription>
-                  {shift.locations?.name || 'Lokation ikke angivet'}
+                  {Array.isArray(shift.locations) 
+                    ? shift.locations[0]?.name || 'Lokation ikke angivet'
+                    : 'Lokation ikke angivet'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
@@ -135,7 +137,9 @@ export default async function JobBoardPage() {
                   </div>
                   <div>
                     <span className="font-medium">Adresse:</span>{' '}
-                    {shift.locations?.address || 'Ikke angivet'}
+                    {Array.isArray(shift.locations) 
+                      ? shift.locations[0]?.address || 'Ikke angivet'
+                      : 'Ikke angivet'}
                   </div>
                   <div>
                     <span className="font-medium">Ledige pladser:</span>{' '}

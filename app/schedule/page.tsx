@@ -88,7 +88,9 @@ export default async function SchedulePage() {
                     </Badge>
                   </div>
                   <CardDescription>
-                    {shift.locations?.name || 'Lokation ikke angivet'}
+                    {Array.isArray(shift.locations) 
+                      ? shift.locations[0]?.name || 'Lokation ikke angivet'
+                      : 'Lokation ikke angivet'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -103,7 +105,9 @@ export default async function SchedulePage() {
                     </div>
                     <div>
                       <span className="font-medium">Adresse:</span>{' '}
-                      {shift.locations?.address || 'Ikke angivet'}
+                      {Array.isArray(shift.locations) 
+                        ? shift.locations[0]?.address || 'Ikke angivet'
+                        : 'Ikke angivet'}
                     </div>
                   </div>
                 </CardContent>
