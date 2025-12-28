@@ -292,13 +292,13 @@ export default function Navbar() {
                       <UserCircle className="mr-2 h-4 w-4" />
                       Profil
                     </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log ud
-                    </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log ud
+                  </button>
                   </div>
                 </div>
               )}

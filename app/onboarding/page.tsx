@@ -30,7 +30,7 @@ export default function OnboardingPage() {
       // 2. Send update to database
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ role: role })
+        .update({ role: role } as any)
         .eq('id', user.id);
 
       if (updateError) {

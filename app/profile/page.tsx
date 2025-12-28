@@ -584,14 +584,14 @@ export default function ProfilePage() {
 
         {/* Right Column: Form */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
+        <Card>
+          <CardHeader>
               <CardTitle>Arbejdsdetaljer</CardTitle>
-              <CardDescription>
+            <CardDescription>
                 Udfyld dine oplysninger som medarbejder
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
               <form onSubmit={handleSubmit} className="space-y-8">
                 {submitError && (
                   <div className="p-4 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
@@ -918,11 +918,11 @@ export default function ProfilePage() {
                     {submitLoading || uploadingAvatar || uploadingIdCard 
                       ? 'Gemmer...' 
                       : 'Gem oplysninger'}
-                  </Button>
+            </Button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         </div>
       </div>
     </div>

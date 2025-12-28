@@ -93,14 +93,14 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
 
         // Try to encrypt via edge function
         try {
-          const { data: encryptedData, error: encryptError } = await supabase.functions.invoke(
-            'encrypt-cpr',
-            {
-              body: { cpr: formData.cpr_number },
-            }
-          );
+        const { data: encryptedData, error: encryptError } = await supabase.functions.invoke(
+          'encrypt-cpr',
+          {
+            body: { cpr: formData.cpr_number },
+          }
+        );
 
-          if (encryptError || !encryptedData?.encrypted) {
+        if (encryptError || !encryptedData?.encrypted) {
             console.warn('CPR encryption failed, but continuing without it:', encryptError);
             // Don't throw - allow form submission without CPR if encryption fails
             // The user can add it later
@@ -163,7 +163,7 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
       // Upsert worker details
       const { error: upsertError } = await supabase
         .from('worker_details')
-        .upsert(updateData, { onConflict: 'profile_id' });
+        .upsert(updateData as any, { onConflict: 'profile_id' });
 
       if (upsertError) {
         console.error('Upsert error:', upsertError);
@@ -172,7 +172,7 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
 
       setSuccess(true);
       setTimeout(() => {
-        router.refresh();
+      router.refresh();
       }, 1500);
     } catch (err: any) {
       setError(err.message || 'Der opstod en fejl ved gemning af oplysninger');
@@ -197,60 +197,60 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
       {/* Personal Information Section */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Personlige oplysninger</h3>
-        
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="first_name">Fornavn *</Label>
-            <Input
-              id="first_name"
-              value={formData.first_name}
-              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-              required
-              placeholder="Indtast dit fornavn"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="last_name">Efternavn *</Label>
-            <Input
-              id="last_name"
-              value={formData.last_name}
-              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-              required
-              placeholder="Indtast dit efternavn"
-            />
-          </div>
-        </div>
 
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="phone_number">Telefonnummer *</Label>
+            <Label htmlFor="first_name">Fornavn *</Label>
           <Input
-            id="phone_number"
-            type="tel"
-            value={formData.phone_number}
-            onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+            id="first_name"
+            value={formData.first_name}
+            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
             required
-            placeholder="+45 12 34 56 78"
+              placeholder="Indtast dit fornavn"
           />
         </div>
-
         <div className="space-y-2">
+            <Label htmlFor="last_name">Efternavn *</Label>
+          <Input
+            id="last_name"
+            value={formData.last_name}
+            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+            required
+              placeholder="Indtast dit efternavn"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+          <Label htmlFor="phone_number">Telefonnummer *</Label>
+        <Input
+          id="phone_number"
+          type="tel"
+          value={formData.phone_number}
+          onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+          required
+            placeholder="+45 12 34 56 78"
+        />
+      </div>
+
+      <div className="space-y-2">
           <Label htmlFor="cpr_number">
             CPR-nummer {!initialData?.cpr_number_encrypted && '*'}
           </Label>
-          <Input
-            id="cpr_number"
-            type="text"
+        <Input
+          id="cpr_number"
+          type="text"
             placeholder={initialData?.cpr_number_encrypted ? "Indtast nyt CPR-nummer for at opdatere" : "DDMMÅÅ-XXXX"}
-            value={formData.cpr_number}
-            onChange={(e) => setFormData({ ...formData, cpr_number: e.target.value })}
+          value={formData.cpr_number}
+          onChange={(e) => setFormData({ ...formData, cpr_number: e.target.value })}
             required={!initialData?.cpr_number_encrypted}
             maxLength={11}
-          />
-          <p className="text-xs text-muted-foreground">
+        />
+        <p className="text-xs text-muted-foreground">
             {initialData?.cpr_number_encrypted 
               ? "CPR-nummer er allerede gemt. Indtast kun hvis du vil opdatere det."
               : "CPR-nummeret bliver krypteret og gemt sikkert. Påkrævet ved første oprettelse."}
-          </p>
+        </p>
         </div>
       </div>
 
@@ -279,22 +279,22 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="bank_reg_number">Registreringsnummer *</Label>
-            <Input
-              id="bank_reg_number"
-              value={formData.bank_reg_number}
-              onChange={(e) => setFormData({ ...formData, bank_reg_number: e.target.value })}
-              required
+          <Input
+            id="bank_reg_number"
+            value={formData.bank_reg_number}
+            onChange={(e) => setFormData({ ...formData, bank_reg_number: e.target.value })}
+            required
               placeholder="1234"
               maxLength={4}
-            />
-          </div>
-          <div className="space-y-2">
+          />
+        </div>
+        <div className="space-y-2">
             <Label htmlFor="bank_account_number">Kontonummer *</Label>
-            <Input
-              id="bank_account_number"
-              value={formData.bank_account_number}
-              onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
-              required
+          <Input
+            id="bank_account_number"
+            value={formData.bank_account_number}
+            onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
+            required
               placeholder="1234567890"
             />
           </div>
@@ -356,8 +356,8 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
 
       <div className="flex justify-end pt-4 border-t">
         <Button type="submit" disabled={loading} size="lg">
-          {loading ? 'Gemmer...' : 'Gem oplysninger'}
-        </Button>
+        {loading ? 'Gemmer...' : 'Gem oplysninger'}
+      </Button>
       </div>
     </form>
   );
