@@ -1,100 +1,39 @@
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
-import type { Database } from '@/types/database';
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  const supabase = createServerClient<Database>(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
-          cookiesToSet.forEach(({ name, value }) =>
+          cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
-  );
+  )
 
-  // Refresh session if expired
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  await supabase.auth.getUser()
 
-  // Public routes that don't require authentication
-  const { pathname } = request.nextUrl;
-  const publicRoutes = ['/login', '/register', '/'];
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  // Protected routes - redirect to login if not authenticated
-  if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
-  }
-
-  // Role-based route protection
-  if (user) {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
-        const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-        // Company routes
-        if (
-          pathname.startsWith('/company') &&
-          profileData.role !== 'company' &&
-          profileData.role !== 'admin'
-        ) {
-          const url = request.nextUrl.clone();
-          url.pathname = '/unauthorized';
-          return NextResponse.redirect(url);
-        }
-
-        // Worker routes
-        if (
-          pathname.startsWith('/worker') &&
-          profileData.role !== 'worker' &&
-          profileData.role !== 'admin'
-        ) {
-          const url = request.nextUrl.clone();
-          url.pathname = '/unauthorized';
-          return NextResponse.redirect(url);
-        }
-
-        // Admin routes
-        if (pathname.startsWith('/admin') && profileData.role !== 'admin') {
-          const url = request.nextUrl.clone();
-          url.pathname = '/unauthorized';
-          return NextResponse.redirect(url);
-        }
-      }
-    } catch (error) {
-      // If profile fetch fails, allow request to proceed (will be handled by RoleProtector)
-      // This prevents middleware from breaking the build
-    }
-  }
-
-  return supabaseResponse;
+  return response
 }
-

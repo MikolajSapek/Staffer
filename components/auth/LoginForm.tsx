@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,49 +8,62 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/utils/supabase/client';
 
 export default function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
+    // Trim inputs
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    // Basic validation
+    if (!trimmedEmail || !trimmedPassword) {
+      setError('Email og adgangskode er påkrævet');
+      setLoading(false);
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Ugyldig email-format');
+      setLoading(false);
+      return;
+    }
+
     try {
       const supabase = createClient();
+      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        // Display the actual error message from Supabase
+        const errorMessage = signInError.message || 'Ukendt fejl ved login';
+        setError(errorMessage);
+        setLoading(false);
+        return;
+      }
 
-      if (data.user) {
-        // Get user role
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profile && !profileError) {
-          // Redirect based on role
-          const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-          if (profileData.role === 'company') router.push('/company');
-          else if (profileData.role === 'worker') router.push('/worker');
-          else if (profileData.role === 'admin') router.push('/admin');
-          else router.push('/');
-        } else {
-          router.push('/');
-        }
-        router.refresh();
+      if (data?.user) {
+        // Force redirect to home page - this ensures Navbar updates
+        window.location.href = '/';
+      } else {
+        setError('Login mislykkedes - ingen brugerdata modtaget');
+        setLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
+      // Catch any unexpected errors
+      const errorMessage = err?.message || 'Der opstod en uventet fejl';
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -65,8 +77,8 @@ export default function LoginForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
-              {error}
+            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              <strong>Fejl:</strong> {error}
             </div>
           )}
           <div className="space-y-2">
@@ -77,7 +89,9 @@ export default function LoginForm() {
               placeholder="din@email.dk"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
               required
+              autoComplete="email"
             />
           </div>
           <div className="space-y-2">
@@ -87,7 +101,9 @@ export default function LoginForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
               required
+              autoComplete="current-password"
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
@@ -98,4 +114,3 @@ export default function LoginForm() {
     </Card>
   );
 }
-
