@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale/da';
 
+export const dynamic = 'force-dynamic';
+
 export default async function JobBoardPage() {
   let user = null;
   let shifts: any[] = [];
