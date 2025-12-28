@@ -8,6 +8,42 @@ import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { da } from 'date-fns/locale/da';
 
+// Type definitions for Supabase response
+interface LocationData {
+  name: string;
+  address?: string;
+}
+
+interface ShiftData {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  hourly_rate: number;
+  vacancies_total: number;
+  vacancies_taken: number | null;
+  status: string;
+  locations: LocationData | LocationData[] | null;
+}
+
+// Helper function to safely extract location name from Supabase response
+// Handles both array (one-to-many) and object (one-to-one) responses
+const getLocationName = (locations: unknown): string => {
+  if (!locations) return 'Lokation ikke angivet';
+  
+  // Handle Array (Supabase One-to-Many response)
+  if (Array.isArray(locations)) {
+    return locations[0]?.name || 'Lokation ikke angivet';
+  }
+  
+  // Handle Single Object (Supabase One-to-One response)
+  if (typeof locations === 'object' && locations !== null && 'name' in locations) {
+    return (locations as LocationData).name || 'Lokation ikke angivet';
+  }
+
+  return 'Lokation ikke angivet';
+};
+
 export default async function CompanyDashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -109,7 +145,7 @@ export default async function CompanyDashboardPage() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {shifts.map((shift) => (
+          {(shifts as ShiftData[]).map((shift) => (
             <Card key={shift.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -117,11 +153,7 @@ export default async function CompanyDashboardPage() {
                   {getStatusBadge(shift.status)}
                 </div>
                 <CardDescription>
-                  {/* Safe check: if it's an array, take the first item. If it's an object, take it directly. */}
-                  {
-                    (Array.isArray(shift.locations) ? shift.locations[0]?.name : shift.locations?.name) 
-                    || 'Lokation ikke angivet'
-                  }
+                  {getLocationName(shift.locations)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
