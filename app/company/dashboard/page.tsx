@@ -117,12 +117,11 @@ export default async function CompanyDashboardPage() {
                   {getStatusBadge(shift.status)}
                 </div>
                 <CardDescription>
-                  {(() => {
-                    const loc = shift.locations as any;
-                    // Handle if it's an array (Supabase has-many) or single object (Supabase has-one)
-                    const locationName = Array.isArray(loc) ? loc[0]?.name : loc?.name;
-                    return locationName || 'Lokation ikke angivet';
-                  })()}
+                  {/* Safe check: if it's an array, take the first item. If it's an object, take it directly. */}
+                  {
+                    (Array.isArray(shift.locations) ? shift.locations[0]?.name : shift.locations?.name) 
+                    || 'Lokation ikke angivet'
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent>
