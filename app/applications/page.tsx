@@ -127,9 +127,7 @@ export default async function ApplicationsPage() {
                     </div>
                     <div>
                       <span className="font-medium">Lokation:</span>{' '}
-                      {Array.isArray(shift.locations) 
-                        ? shift.locations[0]?.name || 'Ikke angivet'
-                        : 'Ikke angivet'}
+                      {shift.locations?.name || 'Ikke angivet'}
                     </div>
                   </div>
                 </CardContent>
