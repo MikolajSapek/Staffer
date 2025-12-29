@@ -93,7 +93,6 @@ export default function ProfilePage() {
           // Handle errors gracefully - user might not have profile yet
           if (workerError.code === 'P0001' || workerError.message?.includes('not found')) {
             // Profile doesn't exist yet - this is fine, form will be empty
-            console.log('No worker profile found - user can create one');
             setWorkerDetails(null);
           } else {
             console.warn('Worker profile fetch error (ignored):', workerError);

@@ -3,8 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
-import { da } from 'date-fns/locale/da';
+import { formatDateTime } from '@/lib/date-utils';
 
 export default async function CandidatesPage() {
   const supabase = await createClient();
@@ -51,9 +50,6 @@ export default async function CandidatesPage() {
     .in('shift_id', shiftIds)
     .order('applied_at', { ascending: false }) : { data: null };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'd. MMMM yyyy HH:mm', { locale: da });
-  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -105,7 +101,7 @@ export default async function CandidatesPage() {
                     <div>
                       <CardTitle>{shift.title}</CardTitle>
                       <CardDescription>
-                        Ansøgt: {formatDate(app.applied_at)}
+                        Ansøgt: {formatDateTime(app.applied_at)}
                       </CardDescription>
                     </div>
                     {getStatusBadge(app.status)}

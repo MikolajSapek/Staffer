@@ -5,8 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { format } from 'date-fns';
-import { da } from 'date-fns/locale/da';
+import { formatTime, formatDateShort } from '@/lib/date-utils';
 
 export default async function CompanyDashboardPage() {
   const supabase = await createClient();
@@ -48,13 +47,6 @@ export default async function CompanyDashboardPage() {
     .order('created_at', { ascending: false })
     .limit(10);
 
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'HH:mm', { locale: da });
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'd. MMMM yyyy', { locale: da });
-  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -124,7 +116,7 @@ export default async function CompanyDashboardPage() {
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="font-medium">Dato:</span>{' '}
-                    {formatDate(shift.start_time)}
+                    {formatDateShort(shift.start_time)}
                   </div>
                   <div>
                     <span className="font-medium">Tid:</span>{' '}

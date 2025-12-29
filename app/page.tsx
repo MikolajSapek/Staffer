@@ -3,15 +3,13 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { da } from 'date-fns/locale/da';
+import { formatTime, formatDateLong } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
 export default async function JobBoardPage() {
   let user = null;
   let shifts: any[] = [];
-  let error = null;
 
   try {
     const supabase = createClient();
@@ -70,13 +68,6 @@ export default async function JobBoardPage() {
     shifts = [];
   }
 
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'HH:mm', { locale: da });
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'EEEE d. MMMM yyyy', { locale: da });
-  };
 
   const availableSpots = (shift: any) => {
     return (shift.vacancies_total || 0) - (shift.vacancies_taken || 0);
@@ -91,18 +82,7 @@ export default async function JobBoardPage() {
         </p>
       </div>
 
-      {error ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-red-600 mb-2">
-              Der opstod en fejl ved indlæsning af jobopslag.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Prøv at opdatere siden eller kontakt support hvis problemet fortsætter.
-            </p>
-          </CardContent>
-        </Card>
-      ) : !shifts || shifts.length === 0 ? (
+      {!shifts || shifts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
@@ -129,7 +109,7 @@ export default async function JobBoardPage() {
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="font-medium">Dato:</span>{' '}
-                    {formatDate(shift.start_time)}
+                    {formatDateLong(shift.start_time)}
                   </div>
                   <div>
                     <span className="font-medium">Tid:</span>{' '}

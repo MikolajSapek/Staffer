@@ -3,8 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
-import { da } from 'date-fns/locale/da';
+import { formatDateTime } from '@/lib/date-utils';
 
 export default async function TimesheetsPage() {
   const supabase = await createClient();
@@ -56,10 +55,6 @@ export default async function TimesheetsPage() {
     .in('shift_id', shiftIds)
     .order('created_at', { ascending: false }) : { data: null };
 
-  const formatDateTime = (dateString: string | null) => {
-    if (!dateString) return 'Ikke registreret';
-    return format(new Date(dateString), 'd. MMMM yyyy HH:mm', { locale: da });
-  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {

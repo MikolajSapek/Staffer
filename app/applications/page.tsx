@@ -2,8 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { da } from 'date-fns/locale/da';
+import { formatTime, formatDateShort, formatDateTime } from '@/lib/date-utils';
 
 export default async function ApplicationsPage() {
   const supabase = await createClient();
@@ -47,13 +46,6 @@ export default async function ApplicationsPage() {
     .eq('worker_id', user.id)
     .order('applied_at', { ascending: false });
 
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'HH:mm', { locale: da });
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'd. MMMM yyyy', { locale: da });
-  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -105,7 +97,7 @@ export default async function ApplicationsPage() {
                     <div>
                       <CardTitle>{shift.title}</CardTitle>
                       <CardDescription>
-                        Ansøgt: {formatDate(app.applied_at)}
+                        Ansøgt: {formatDateTime(app.applied_at)}
                       </CardDescription>
                     </div>
                     {getStatusBadge(app.status)}
@@ -115,7 +107,7 @@ export default async function ApplicationsPage() {
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="font-medium">Dato:</span>{' '}
-                      {formatDate(shift.start_time)}
+                      {formatDateShort(shift.start_time)}
                     </div>
                     <div>
                       <span className="font-medium">Tid:</span>{' '}

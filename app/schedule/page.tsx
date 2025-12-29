@@ -2,8 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { da } from 'date-fns/locale/da';
+import { formatTime, formatDateLong } from '@/lib/date-utils';
 
 export default async function SchedulePage() {
   const supabase = await createClient();
@@ -47,13 +46,6 @@ export default async function SchedulePage() {
     .eq('status', 'accepted')
     .order('shifts(start_time)', { ascending: true });
 
-  const formatTime = (dateString: string) => {
-    return format(new Date(dateString), 'HH:mm', { locale: da });
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'EEEE d. MMMM yyyy', { locale: da });
-  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -95,7 +87,7 @@ export default async function SchedulePage() {
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="font-medium">Dato:</span>{' '}
-                      {formatDate(shift.start_time)}
+                      {formatDateLong(shift.start_time)}
                     </div>
                     <div>
                       <span className="font-medium">Tid:</span>{' '}

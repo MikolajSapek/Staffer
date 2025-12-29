@@ -59,8 +59,6 @@ export default function OnboardingPage() {
         throw new Error('No user found');
       }
 
-      console.log('Updating role for user:', user.id, 'to:', role);
-
       // 2. Send update to database
       const { error: updateError } = await supabase
         .from('profiles')
@@ -72,7 +70,6 @@ export default function OnboardingPage() {
       }
 
       // 3. Success - redirect
-      console.log('Role updated successfully!');
 
       // Force router refresh so Navbar notices the role change
       router.refresh();

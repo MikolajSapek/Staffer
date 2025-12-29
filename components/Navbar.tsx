@@ -102,10 +102,8 @@ export default function Navbar() {
           setRole(null);
         } else if (profile && 'role' in profile) {
           const profileData = profile as { role: 'worker' | 'company' | 'admin' };
-          console.log('Navbar Debug - Role found:', profileData.role);
           setRole(profileData.role);
         } else {
-          console.log('Navbar Debug - No profile found (User needs onboarding)');
           setRole(null);
         }
       } catch (err: any) {
@@ -152,9 +150,7 @@ export default function Navbar() {
   const toggleDropdown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const newState = !isOpen;
-    console.log('Navbar Debug - toggleDropdown called, current isOpen:', isOpen, 'setting to:', newState);
-    setIsOpen(newState);
+    setIsOpen(!isOpen);
   };
 
   if (loading) {
@@ -171,8 +167,6 @@ export default function Navbar() {
       </nav>
     );
   }
-
-  console.log('Navbar Debug - Render state:', { user: user?.email || 'null', role, isOpen, loading });
 
   return (
     <nav className="border-b bg-background sticky top-0 z-50">
