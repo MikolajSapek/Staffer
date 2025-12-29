@@ -41,6 +41,12 @@ interface NavbarProps {
     common: {
       user: string;
     };
+    workerNav: {
+      roleLabel: string;
+      calendar: string;
+      applications: string;
+      finances: string;
+    };
   };
   lang: string;
 }
@@ -231,7 +237,11 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                   <div className="px-4 py-2 border-b border-gray-100">
                     <p className="text-sm font-semibold text-gray-900">{user?.email || dict.common.user}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {role ? `${dict.navigation.role}: ${role}` : dict.navigation.noRoleAssigned}
+                      {role === 'worker' 
+                        ? dict.workerNav.roleLabel
+                        : role 
+                        ? `${dict.navigation.role}: ${role}` 
+                        : dict.navigation.noRoleAssigned}
                     </p>
                   </div>
 
@@ -244,7 +254,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {dict.navigation.myCalendar}
+                        {dict.workerNav.calendar}
                       </Link>
                       <Link
                         href={`/${lang}/applications`}
@@ -252,7 +262,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Briefcase className="mr-2 h-4 w-4" />
-                        {dict.navigation.applications}
+                        {dict.workerNav.applications}
                       </Link>
                       <Link
                         href={`/${lang}/finances`}
@@ -260,7 +270,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <DollarSign className="mr-2 h-4 w-4" />
-                        {dict.navigation.finances}
+                        {dict.workerNav.finances}
                       </Link>
                     </>
                   )}

@@ -204,6 +204,48 @@
       "profileComplete": "Profil komplet",
       "fillFormToActivate": "Udfyld formularen for at aktivere"
     }
+  },
+  "workerNav": {
+    "roleLabel": "Rolle: Medarbejder",
+    "calendar": "Min Kalender",
+    "applications": "Ansøgninger",
+    "finances": "Økonomi"
+  },
+  "workerCalendar": {
+    "title": "Min Kalender",
+    "subtitle": "Dine kommende vagter",
+    "noShifts": "Du har ingen kommende vagter.",
+    "date": "Dato",
+    "time": "Tid",
+    "address": "Adresse",
+    "locationNotSpecified": "Lokation ikke angivet",
+    "notSpecified": "Ikke angivet"
+  },
+  "workerApplications": {
+    "title": "Mine Ansøgninger",
+    "subtitle": "Oversigt over dine ansøgninger til vagter",
+    "noApplications": "Du har ingen ansøgninger endnu.",
+    "applied": "Ansøgt",
+    "date": "Dato",
+    "time": "Tid",
+    "rate": "Sats",
+    "location": "Lokation",
+    "locationNotSpecified": "Ikke angivet",
+    "statusPending": "Afventer",
+    "statusAccepted": "Accepteret",
+    "statusRejected": "Afvist",
+    "statusWaitlist": "Venteliste"
+  },
+  "workerFinances": {
+    "title": "Økonomi",
+    "subtitle": "Din løn og lønsedler",
+    "totalEarnings": "Samlet indtjening",
+    "totalEarningsDescription": "Dine godkendte timer",
+    "approvedTimesheets": "godkendte tidsregistreringer",
+    "payslips": "Lønsedler",
+    "payslipsDescription": "Download dine lønsedler",
+    "payslipsUnavailable": "Lønsedler vil blive tilgængelige efter første udbetaling.",
+    "downloadPayslip": "Download lønseddel"
   }
 }
 

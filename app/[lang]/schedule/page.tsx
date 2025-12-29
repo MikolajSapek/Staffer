@@ -3,13 +3,20 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatTime, formatDateLong } from '@/lib/date-utils';
+import { getDictionary } from '@/app/[lang]/dictionaries';
 
-export default async function SchedulePage() {
+export default async function SchedulePage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const dict = await getDictionary(lang as 'en-US' | 'da');
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(`/${lang}/login`);
   }
 
   // Get user profile to check role
@@ -20,7 +27,7 @@ export default async function SchedulePage() {
     .single();
 
   if (!profile || profile.role !== 'worker') {
-    redirect('/');
+    redirect(`/${lang}`);
   }
 
   // Fetch user's accepted shifts
@@ -50,9 +57,9 @@ export default async function SchedulePage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Min Kalender</h1>
+        <h1 className="text-3xl font-bold mb-2">{dict.workerCalendar.title}</h1>
         <p className="text-muted-foreground">
-          Dine kommende vagter
+          {dict.workerCalendar.subtitle}
         </p>
       </div>
 
@@ -60,7 +67,7 @@ export default async function SchedulePage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              Du har ingen kommende vagter.
+              {dict.workerCalendar.noShifts}
             </p>
           </CardContent>
         </Card>
@@ -80,22 +87,22 @@ export default async function SchedulePage() {
                     </Badge>
                   </div>
                   <CardDescription>
-                    {shift.locations?.name || 'Lokation ikke angivet'}
+                    {shift.locations?.name || dict.workerCalendar.locationNotSpecified}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">Dato:</span>{' '}
+                      <span className="font-medium">{dict.workerCalendar.date}:</span>{' '}
                       {formatDateLong(shift.start_time)}
                     </div>
                     <div>
-                      <span className="font-medium">Tid:</span>{' '}
+                      <span className="font-medium">{dict.workerCalendar.time}:</span>{' '}
                       {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
                     </div>
                     <div>
-                      <span className="font-medium">Adresse:</span>{' '}
-                      {shift.locations?.address || 'Ikke angivet'}
+                      <span className="font-medium">{dict.workerCalendar.address}:</span>{' '}
+                      {shift.locations?.address || dict.workerCalendar.notSpecified}
                     </div>
                   </div>
                 </CardContent>

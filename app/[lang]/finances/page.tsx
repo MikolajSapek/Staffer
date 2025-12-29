@@ -3,15 +3,22 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { getDictionary } from '@/app/[lang]/dictionaries';
 
 export const dynamic = 'force-dynamic';
 
-export default async function FinancesPage() {
+export default async function FinancesPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const dict = await getDictionary(lang as 'en-US' | 'da');
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(`/${lang}/login`);
   }
 
   // Get user profile to check role
@@ -22,7 +29,7 @@ export default async function FinancesPage() {
     .single();
 
   if (!profile || profile.role !== 'worker') {
-    redirect('/');
+    redirect(`/${lang}`);
   }
 
   // Fetch approved timesheets for salary calculation
@@ -46,40 +53,40 @@ export default async function FinancesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Økonomi</h1>
+        <h1 className="text-3xl font-bold mb-2">{dict.workerFinances.title}</h1>
         <p className="text-muted-foreground">
-          Din løn og lønsedler
+          {dict.workerFinances.subtitle}
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Samlet indtjening</CardTitle>
-            <CardDescription>Dine godkendte timer</CardDescription>
+            <CardTitle>{dict.workerFinances.totalEarnings}</CardTitle>
+            <CardDescription>{dict.workerFinances.totalEarningsDescription}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold mb-2">
-              {totalEarnings.toLocaleString('da-DK')} DKK
+              {totalEarnings.toLocaleString(lang === 'da' ? 'da-DK' : 'en-US')} DKK
             </div>
             <p className="text-sm text-muted-foreground">
-              {timesheets?.length || 0} godkendte tidsregistreringer
+              {timesheets?.length || 0} {dict.workerFinances.approvedTimesheets}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Lønsedler</CardTitle>
-            <CardDescription>Download dine lønsedler</CardDescription>
+            <CardTitle>{dict.workerFinances.payslips}</CardTitle>
+            <CardDescription>{dict.workerFinances.payslipsDescription}</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Lønsedler vil blive tilgængelige efter første udbetaling.
+              {dict.workerFinances.payslipsUnavailable}
             </p>
             <Button variant="outline" disabled>
               <Download className="mr-2 h-4 w-4" />
-              Download lønseddel
+              {dict.workerFinances.downloadPayslip}
             </Button>
           </CardContent>
         </Card>

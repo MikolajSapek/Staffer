@@ -3,13 +3,20 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatTime, formatDateShort, formatDateTime } from '@/lib/date-utils';
+import { getDictionary } from '@/app/[lang]/dictionaries';
 
-export default async function ApplicationsPage() {
+export default async function ApplicationsPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const dict = await getDictionary(lang as 'en-US' | 'da');
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(`/${lang}/login`);
   }
 
   // Get user profile to check role
@@ -20,7 +27,7 @@ export default async function ApplicationsPage() {
     .single();
 
   if (!profile || profile.role !== 'worker') {
-    redirect('/');
+    redirect(`/${lang}`);
   }
 
   // Fetch user's applications
@@ -55,10 +62,10 @@ export default async function ApplicationsPage() {
       waitlist: 'outline',
     };
     const labels: Record<string, string> = {
-      accepted: 'Accepteret',
-      pending: 'Afventer',
-      rejected: 'Afvist',
-      waitlist: 'Venteliste',
+      accepted: dict.workerApplications.statusAccepted,
+      pending: dict.workerApplications.statusPending,
+      rejected: dict.workerApplications.statusRejected,
+      waitlist: dict.workerApplications.statusWaitlist,
     };
     return (
       <Badge variant={variants[status] || 'secondary'}>
@@ -70,9 +77,9 @@ export default async function ApplicationsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Mine Ansøgninger</h1>
+        <h1 className="text-3xl font-bold mb-2">{dict.workerApplications.title}</h1>
         <p className="text-muted-foreground">
-          Oversigt over dine ansøgninger til vagter
+          {dict.workerApplications.subtitle}
         </p>
       </div>
 
@@ -80,7 +87,7 @@ export default async function ApplicationsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              Du har ingen ansøgninger endnu.
+              {dict.workerApplications.noApplications}
             </p>
           </CardContent>
         </Card>
@@ -97,7 +104,7 @@ export default async function ApplicationsPage() {
                     <div>
                       <CardTitle>{shift.title}</CardTitle>
                       <CardDescription>
-                        Ansøgt: {formatDateTime(app.applied_at)}
+                        {dict.workerApplications.applied}: {formatDateTime(app.applied_at)}
                       </CardDescription>
                     </div>
                     {getStatusBadge(app.status)}
@@ -106,20 +113,20 @@ export default async function ApplicationsPage() {
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     <div>
-                      <span className="font-medium">Dato:</span>{' '}
+                      <span className="font-medium">{dict.workerApplications.date}:</span>{' '}
                       {formatDateShort(shift.start_time)}
                     </div>
                     <div>
-                      <span className="font-medium">Tid:</span>{' '}
+                      <span className="font-medium">{dict.workerApplications.time}:</span>{' '}
                       {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
                     </div>
                     <div>
-                      <span className="font-medium">Sats:</span>{' '}
+                      <span className="font-medium">{dict.workerApplications.rate}:</span>{' '}
                       {shift.hourly_rate} DKK/t
                     </div>
                     <div>
-                      <span className="font-medium">Lokation:</span>{' '}
-                      {shift.locations?.name || 'Ikke angivet'}
+                      <span className="font-medium">{dict.workerApplications.location}:</span>{' '}
+                      {shift.locations?.name || dict.workerApplications.locationNotSpecified}
                     </div>
                   </div>
                 </CardContent>
