@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export function createClient() {
-  const cookieStore = cookies()
+export async function createClient() {
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,7 +32,7 @@ export function createClient() {
  * Get the current authenticated user
  */
 export async function getCurrentUser() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
     error,
@@ -56,7 +56,7 @@ export async function getUserRole(): Promise<'worker' | 'company' | 'admin' | nu
     return null;
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
@@ -81,7 +81,7 @@ export async function getCurrentProfile() {
     return null;
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')

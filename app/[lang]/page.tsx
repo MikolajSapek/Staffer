@@ -4,15 +4,22 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatTime, formatDateLong } from '@/lib/date-utils';
+import { getDictionary } from './dictionaries';
 
 export const dynamic = 'force-dynamic';
 
-export default async function JobBoardPage() {
+export default async function JobBoardPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const dict = await getDictionary(lang as 'en-US' | 'da');
   let user = null;
   let shifts: any[] = [];
 
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     user = userData?.user || null;
 
@@ -76,9 +83,9 @@ export default async function JobBoardPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Jobopslag</h1>
+        <h1 className="text-3xl font-bold mb-2">{dict.jobBoard.title}</h1>
         <p className="text-muted-foreground">
-          Find din næste vikarvagt her
+          {dict.jobBoard.subtitle}
         </p>
       </div>
 
@@ -86,7 +93,7 @@ export default async function JobBoardPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              Der er ingen aktive jobopslag i øjeblikket.
+              {dict.jobBoard.noJobs}
             </p>
           </CardContent>
         </Card>
@@ -102,25 +109,25 @@ export default async function JobBoardPage() {
                   </Badge>
                 </div>
                 <CardDescription>
-                  {shift.locations?.name || 'Lokation ikke angivet'}
+                  {shift.locations?.name || dict.jobBoard.locationNotSpecified}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
                 <div className="space-y-2 text-sm">
                   <div>
-                    <span className="font-medium">Dato:</span>{' '}
+                    <span className="font-medium">{dict.jobBoard.date}:</span>{' '}
                     {formatDateLong(shift.start_time)}
                   </div>
                   <div>
-                    <span className="font-medium">Tid:</span>{' '}
+                    <span className="font-medium">{dict.jobBoard.time}:</span>{' '}
                     {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
                   </div>
                   <div>
-                    <span className="font-medium">Adresse:</span>{' '}
-                    {shift.locations?.address || 'Ikke angivet'}
+                    <span className="font-medium">{dict.jobBoard.address}:</span>{' '}
+                    {shift.locations?.address || dict.jobBoard.notSpecified}
                   </div>
                   <div>
-                    <span className="font-medium">Ledige pladser:</span>{' '}
+                    <span className="font-medium">{dict.jobBoard.availableSpots}:</span>{' '}
                     {availableSpots(shift)} / {shift.vacancies_total}
                   </div>
                 </div>
@@ -128,12 +135,12 @@ export default async function JobBoardPage() {
               <CardFooter>
                 {!user ? (
                   <Button asChild className="w-full">
-                    <Link href="/login">Log ind for at ansøge</Link>
+                    <Link href={`/${lang}/login`}>{dict.jobBoard.loginToApply}</Link>
                   </Button>
                 ) : (
                   <Button asChild className="w-full" disabled={availableSpots(shift) === 0}>
-                    <Link href={`/shifts/${shift.id}/apply`}>
-                      {availableSpots(shift) === 0 ? 'Fuldt booket' : 'Ansøg nu'}
+                    <Link href={`/${lang}/shifts/${shift.id}/apply`}>
+                      {availableSpots(shift) === 0 ? dict.jobBoard.fullyBooked : dict.jobBoard.apply}
                     </Link>
                   </Button>
                 )}

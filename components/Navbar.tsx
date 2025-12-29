@@ -19,7 +19,33 @@ import {
   FileText 
 } from 'lucide-react';
 
-export default function Navbar() {
+interface NavbarProps {
+  dict: {
+    navigation: {
+      dashboard: string;
+      login: string;
+      register: string;
+      profile: string;
+      schedule: string;
+      timesheets: string;
+      applications: string;
+      candidates: string;
+      finances: string;
+      myCalendar: string;
+      createShift: string;
+      logout: string;
+      userMenu: string;
+      role: string;
+      noRoleAssigned: string;
+    };
+    common: {
+      user: string;
+    };
+  };
+  lang: string;
+}
+
+export default function Navbar({ dict, lang }: NavbarProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -133,7 +159,7 @@ export default function Navbar() {
       setIsOpen(false);
       setUser(null);
       setRole(null);
-      router.push('/');
+      router.push(`/${lang}`);
       router.refresh();
     } catch (error) {
       console.error('Error signing out:', error);
@@ -158,7 +184,7 @@ export default function Navbar() {
       <nav className="border-b bg-background">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="text-xl font-bold">
+            <Link href={`/${lang}`} className="text-xl font-bold">
               Staffer
             </Link>
             <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
@@ -172,17 +198,17 @@ export default function Navbar() {
     <nav className="border-b bg-background sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold">
+          <Link href={`/${lang}`} className="text-xl font-bold">
             Staffer
           </Link>
 
           {!user ? (
             <div className="flex items-center gap-2">
               <Button variant="ghost" asChild>
-                <Link href="/login">Log ind</Link>
+                <Link href={`/${lang}/login`}>{dict.navigation.login}</Link>
               </Button>
               <Button asChild>
-                <Link href="/register">Opret profil</Link>
+                <Link href={`/${lang}/register`}>{dict.navigation.register}</Link>
               </Button>
             </div>
           ) : (
@@ -190,11 +216,11 @@ export default function Navbar() {
               <button
                 onClick={toggleDropdown}
                 className="rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary cursor-pointer"
-                aria-label="User menu"
+                aria-label={dict.navigation.userMenu}
                 type="button"
               >
                 <Avatar>
-                  <AvatarImage src={undefined} alt={user.email || 'User'} />
+                  <AvatarImage src={user?.user_metadata?.avatar_url || undefined} alt={user?.email || dict.common.user} />
                   <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
               </button>
@@ -203,9 +229,9 @@ export default function Navbar() {
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-[100]">
                   {/* SEKCJA 1: ZAWSZE WIDOCZNA - HEADER */}
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">{user?.email || 'User'}</p>
+                    <p className="text-sm font-semibold text-gray-900">{user?.email || dict.common.user}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {role ? `Rolle: ${role}` : 'Ingen rolle tildelt'}
+                      {role ? `${dict.navigation.role}: ${role}` : dict.navigation.noRoleAssigned}
                     </p>
                   </div>
 
@@ -213,28 +239,28 @@ export default function Navbar() {
                   {role === 'worker' && (
                     <>
                       <Link
-                        href="/schedule"
+                        href={`/${lang}/schedule`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Calendar className="mr-2 h-4 w-4" />
-                        Min Kalender
+                        {dict.navigation.myCalendar}
                       </Link>
                       <Link
-                        href="/applications"
+                        href={`/${lang}/applications`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Briefcase className="mr-2 h-4 w-4" />
-                        Ansøgninger
+                        {dict.navigation.applications}
                       </Link>
                       <Link
-                        href="/finances"
+                        href={`/${lang}/finances`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <DollarSign className="mr-2 h-4 w-4" />
-                        Økonomi
+                        {dict.navigation.finances}
                       </Link>
                     </>
                   )}
@@ -242,36 +268,36 @@ export default function Navbar() {
                   {role === 'company' && (
                     <>
                       <Link
-                        href="/company/dashboard"
+                        href={`/${lang}/dashboard`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Dashboard
+                        {dict.navigation.dashboard}
                       </Link>
                       <Link
-                        href="/create-shift"
+                        href={`/${lang}/create-shift`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Plus className="mr-2 h-4 w-4" />
-                        Opret vagt
+                        {dict.navigation.createShift}
                       </Link>
                       <Link
-                        href="/candidates"
+                        href={`/${lang}/candidates`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Users className="mr-2 h-4 w-4" />
-                        Kandidater
+                        {dict.navigation.candidates}
                       </Link>
                       <Link
-                        href="/timesheets"
+                        href={`/${lang}/timesheets`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <FileText className="mr-2 h-4 w-4" />
-                        Tidsregistreringer
+                        {dict.navigation.timesheets}
                       </Link>
                     </>
                   )}
@@ -279,19 +305,19 @@ export default function Navbar() {
                   {/* SEKCJA 3: ZAWSZE WIDOCZNA - STOPKA */}
                   <div className="border-t border-gray-100 mt-1">
                     <Link
-                      href="/profile"
+                      href={`/${lang}/profile`}
                       onClick={() => setIsOpen(false)}
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       <UserCircle className="mr-2 h-4 w-4" />
-                      Profil
+                      {dict.navigation.profile}
                     </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Log ud
+                    {dict.navigation.logout}
                   </button>
                   </div>
                 </div>

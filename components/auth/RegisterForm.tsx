@@ -74,7 +74,7 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
         if (role === 'worker') {
           router.push('/schedule');
         } else {
-          router.push('/company/dashboard');
+          router.push('/dashboard');
         }
       }
     } catch (err: any) {

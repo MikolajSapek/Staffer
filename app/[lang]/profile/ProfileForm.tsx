@@ -11,7 +11,12 @@ import { Upload, X, FileText, User, CheckCircle2 } from 'lucide-react';
 
 type TaxCardType = 'Hovedkort' | 'Bikort' | 'Frikort';
 
-export default function ProfilePage() {
+interface ProfileFormProps {
+  dict: any;
+  lang: string;
+}
+
+export default function ProfileForm({ dict, lang }: ProfileFormProps) {
   const router = useRouter();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const idCardInputRef = useRef<HTMLInputElement>(null);
@@ -31,6 +36,7 @@ export default function ProfilePage() {
   // File states
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const [avatarError, setAvatarError] = useState(false);
   const [idCardFile, setIdCardFile] = useState<File | null>(null);
 
   // Initialize form data with empty strings
@@ -60,13 +66,13 @@ export default function ProfilePage() {
         
         if (userError) {
           console.warn('Auth error (non-critical):', userError);
-          setAuthError('Kunne ikke bekræfte din session. Prøv at logge ind igen.');
+          setAuthError(dict.profile.authError);
           setIsLoading(false);
           return;
         }
 
         if (!authUser) {
-          setAuthError('Du er ikke logget ind. Log venligst ind for at fortsætte.');
+          setAuthError(dict.profile.notLoggedIn);
           setIsLoading(false);
           return;
         }
@@ -139,7 +145,7 @@ export default function ProfilePage() {
     }
 
     fetchData();
-  }, []);
+  }, [dict]);
 
   // Handle avatar file selection
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,15 +153,16 @@ export default function ProfilePage() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        setSubmitError('Avatar skal være et billede');
+        setSubmitError(dict.profile.validation.avatarError);
         return;
       }
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setSubmitError('Avatar må maksimalt være 5MB');
+        setSubmitError(dict.profile.validation.avatarSize);
         return;
       }
       setAvatarFile(file);
+      setAvatarError(false); // Reset error state when new file is selected
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -171,12 +178,12 @@ export default function ProfilePage() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-        setSubmitError('ID-kort skal være et billede eller PDF');
+        setSubmitError(dict.profile.validation.idCardError);
         return;
       }
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        setSubmitError('ID-kort må maksimalt være 10MB');
+        setSubmitError(dict.profile.validation.idCardSize);
         return;
       }
       setIdCardFile(file);
@@ -269,7 +276,7 @@ export default function ProfilePage() {
 
     try {
       if (!user) {
-        setSubmitError('Du er ikke logget ind.');
+        setSubmitError(dict.profile.validation.notLoggedIn);
         setSubmitLoading(false);
         return;
       }
@@ -278,19 +285,19 @@ export default function ProfilePage() {
 
       // Validate required fields
       if (!formData.first_name.trim() || !formData.last_name.trim()) {
-        setSubmitError('Fornavn og efternavn er påkrævet');
+        setSubmitError(dict.profile.validation.firstNameRequired);
         setSubmitLoading(false);
         return;
       }
 
       if (!formData.phone_number.trim()) {
-        setSubmitError('Telefonnummer er påkrævet');
+        setSubmitError(dict.profile.validation.phoneRequired);
         setSubmitLoading(false);
         return;
       }
 
       if (!formData.bank_reg_number.trim() || !formData.bank_account_number.trim()) {
-        setSubmitError('Bankoplysninger er påkrævet');
+        setSubmitError(dict.profile.validation.bankRequired);
         setSubmitLoading(false);
         return;
       }
@@ -302,7 +309,7 @@ export default function ProfilePage() {
         // Validate CPR format
         const cprRegex = /^\d{6}-?\d{4}$/;
         if (!cprRegex.test(formData.cpr_number.replace(/-/g, ''))) {
-          setSubmitError('CPR-nummer skal være i formatet DDMMÅÅ-XXXX');
+          setSubmitError(dict.profile.validation.cprFormat);
           setSubmitLoading(false);
           return;
         }
@@ -312,7 +319,7 @@ export default function ProfilePage() {
       // If no CPR provided and none exists, require it for new profiles
       // Check if CPR exists in workerDetails (from RPC, it's decrypted as cpr_number)
       if (!cprNumber && !workerDetails?.cpr_number) {
-        setSubmitError('CPR-nummer er påkrævet ved første oprettelse.');
+        setSubmitError(dict.profile.validation.cprRequired);
         setSubmitLoading(false);
         return;
       }
@@ -403,6 +410,7 @@ export default function ProfilePage() {
           });
           if (dataAny.avatar_url) {
             setAvatarPreview(dataAny.avatar_url);
+            setAvatarError(false); // Reset error state when loading existing avatar
           }
         }
       }, 1500);
@@ -419,7 +427,7 @@ export default function ProfilePage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Indlæser profil...</p>
+          <p className="text-muted-foreground">{dict.profile.loading}</p>
         </div>
       </div>
     );
@@ -433,7 +441,7 @@ export default function ProfilePage() {
           <CardContent className="py-12 text-center">
             <p className="text-red-600 text-lg font-semibold mb-2">{authError}</p>
             <p className="text-muted-foreground text-sm">
-              Gå til <a href="/login" className="text-blue-600 hover:underline">login siden</a> for at logge ind.
+              {dict.profile.goToLogin} <a href={`/${lang}/login`} className="text-blue-600 hover:underline">{dict.navigation.login}</a>.
             </p>
           </CardContent>
         </Card>
@@ -455,9 +463,9 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Min Profil</h1>
+        <h1 className="text-3xl font-bold mb-2">{dict.profile.title}</h1>
         <p className="text-muted-foreground">
-          Opdater dine personlige oplysninger og arbejdsdetaljer
+          {dict.profile.subtitle}
         </p>
       </div>
 
@@ -488,23 +496,26 @@ export default function ProfilePage() {
                       <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
                         Staffer
                       </h3>
-                      <p className="text-xs text-gray-500">Worker ID Card</p>
+                      <p className="text-xs text-gray-500">{dict.profile.preview.workerIdCard}</p>
                     </div>
                     {isProfileComplete && (
                       <div className="flex items-center gap-1 text-green-600">
                         <CheckCircle2 className="w-5 h-5" />
-                        <span className="text-xs font-medium">Verified</span>
+                        <span className="text-xs font-medium">{dict.profile.preview.verified}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Avatar */}
                   <div className="flex justify-center mb-6">
-                    {avatarPreview ? (
+                    {avatarPreview && !avatarError ? (
                       <img
                         src={avatarPreview}
                         alt="Profile"
                         className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                        onError={() => {
+                          setAvatarError(true);
+                        }}
                       />
                     ) : (
                       <div className="w-32 h-32 rounded-full bg-gray-200 border-4 border-white shadow-lg flex items-center justify-center">
@@ -522,9 +533,9 @@ export default function ProfilePage() {
                         ? formData.first_name
                         : formData.last_name
                         ? formData.last_name
-                        : 'Fornavn Efternavn'}
+                        : `${dict.profile.firstName} ${dict.profile.lastName}`}
                     </h2>
-                    <p className="text-sm text-gray-600 mt-1">Pracownik</p>
+                    <p className="text-sm text-gray-600 mt-1">{dict.profile.preview.worker}</p>
                   </div>
 
                   {/* Divider */}
@@ -547,10 +558,10 @@ export default function ProfilePage() {
                     {/* Phone */}
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                        Telefon
+                        {dict.profile.phoneNumber}
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {formData.phone_number || 'Telefonnummer...'}
+                        {formData.phone_number || `${dict.profile.phoneNumber}...`}
                       </p>
                     </div>
 
@@ -571,8 +582,8 @@ export default function ProfilePage() {
                   <div className="mt-6 pt-4 border-t border-gray-300">
                     <p className="text-xs text-center text-gray-500">
                       {isProfileComplete 
-                        ? 'Profil komplet' 
-                        : 'Udfyld formularen for at aktivere'}
+                        ? dict.profile.preview.profileComplete
+                        : dict.profile.preview.fillFormToActivate}
                     </p>
                   </div>
                 </div>
@@ -585,9 +596,9 @@ export default function ProfilePage() {
         <div className="lg:col-span-2">
         <Card>
           <CardHeader>
-              <CardTitle>Arbejdsdetaljer</CardTitle>
+              <CardTitle>{dict.profile.workDetails}</CardTitle>
             <CardDescription>
-                Udfyld dine oplysninger som medarbejder
+                {dict.profile.workDetailsDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -599,20 +610,20 @@ export default function ProfilePage() {
                 )}
                 {submitSuccess && (
                   <div className="p-4 text-sm text-green-600 bg-green-50 rounded-md border border-green-200">
-                    Profil opdateret! Opdaterer data...
+                    {dict.profile.profileUpdated}
                   </div>
                 )}
 
                 {/* Personal Information Section */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">Personlige oplysninger</h3>
-                    <p className="text-sm text-muted-foreground">Grundlæggende information om dig</p>
+                    <h3 className="text-lg font-semibold">{dict.profile.personalInfo}</h3>
+                    <p className="text-sm text-muted-foreground">{dict.profile.personalInfoDescription}</p>
                   </div>
               
               {/* Avatar Upload */}
               <div className="space-y-2">
-                <Label>Profilbillede</Label>
+                <Label>{dict.profile.avatar}</Label>
                 <div className="flex items-center gap-4">
                   {avatarPreview && (
                     <div className="relative">
@@ -620,12 +631,19 @@ export default function ProfilePage() {
                         src={avatarPreview}
                         alt="Avatar preview"
                         className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+                        onError={() => {
+                          // Clear preview on error
+                          setAvatarPreview('');
+                          setAvatarFile(null);
+                          setAvatarError(true);
+                        }}
                       />
                       <button
                         type="button"
                         onClick={() => {
                           setAvatarPreview('');
                           setAvatarFile(null);
+                          setAvatarError(false);
                           if (avatarInputRef.current) avatarInputRef.current.value = '';
                         }}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
@@ -649,10 +667,10 @@ export default function ProfilePage() {
                       className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Upload className="w-4 h-4" />
-                      {avatarFile ? avatarFile.name : 'Vælg profilbillede'}
+                      {avatarFile ? avatarFile.name : dict.profile.selectAvatar}
                     </label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Maksimalt 5MB. JPG, PNG eller GIF
+                      {dict.profile.avatarHint}
                     </p>
                   </div>
                 </div>
@@ -660,50 +678,50 @@ export default function ProfilePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="first_name">Fornavn *</Label>
+                  <Label htmlFor="first_name">{dict.profile.firstName} *</Label>
                   <Input
                     id="first_name"
                     value={formData.first_name || ''}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                     required
-                    placeholder="Indtast dit fornavn"
+                    placeholder={dict.profile.firstNamePlaceholder}
                     disabled={submitLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="last_name">Efternavn *</Label>
+                  <Label htmlFor="last_name">{dict.profile.lastName} *</Label>
                   <Input
                     id="last_name"
                     value={formData.last_name || ''}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                     required
-                    placeholder="Indtast dit efternavn"
+                    placeholder={dict.profile.lastNamePlaceholder}
                     disabled={submitLoading}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone_number">Telefonnummer *</Label>
+                <Label htmlFor="phone_number">{dict.profile.phoneNumber} *</Label>
                 <Input
                   id="phone_number"
                   type="tel"
                   value={formData.phone_number || ''}
                   onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                   required
-                  placeholder="+45 12 34 56 78"
+                  placeholder={dict.profile.phoneNumberPlaceholder}
                   disabled={submitLoading}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="cpr_number">
-                  CPR-nummer {!workerDetails?.cpr_number && '*'}
+                  {dict.profile.cprNumber} {!workerDetails?.cpr_number && '*'}
                 </Label>
                 <Input
                   id="cpr_number"
                   type="text"
-                  placeholder={workerDetails?.cpr_number ? "Indtast nyt CPR-nummer for at opdatere" : "DDMMÅÅ-XXXX"}
+                  placeholder={workerDetails?.cpr_number ? dict.profile.cprNumberUpdate : dict.profile.cprNumberPlaceholder}
                   value={formData.cpr_number || ''}
                   onChange={(e) => setFormData({ ...formData, cpr_number: e.target.value })}
                   required={!workerDetails?.cpr_number}
@@ -712,8 +730,8 @@ export default function ProfilePage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   {workerDetails?.cpr_number 
-                    ? "CPR-nummer er allerede gemt. Indtast kun hvis du vil opdatere det."
-                    : "CPR-nummeret bliver gemt sikkert. Påkrævet ved første oprettelse."}
+                    ? dict.profile.cprNumberHint
+                    : dict.profile.cprNumberRequired}
                 </p>
               </div>
             </div>
@@ -721,12 +739,12 @@ export default function ProfilePage() {
                 {/* Tax and Bank Information Section */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">Skatte- og bankoplysninger</h3>
-                    <p className="text-sm text-muted-foreground">Information til løn og betaling</p>
+                    <h3 className="text-lg font-semibold">{dict.profile.taxAndBank}</h3>
+                    <p className="text-sm text-muted-foreground">{dict.profile.taxAndBankDescription}</p>
                   </div>
               
               <div className="space-y-2">
-                <Label htmlFor="tax_card_type">Skattekort type *</Label>
+                <Label htmlFor="tax_card_type">{dict.profile.taxCardType} *</Label>
                 <select
                   id="tax_card_type"
                   value={formData.tax_card_type || 'Hovedkort'}
@@ -735,40 +753,40 @@ export default function ProfilePage() {
                   disabled={submitLoading}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="Hovedkort">Hovedkort</option>
-                  <option value="Bikort">Bikort</option>
-                  <option value="Frikort">Frikort</option>
+                  <option value="Hovedkort">{dict.profile.taxCardMain}</option>
+                  <option value="Bikort">{dict.profile.taxCardSecondary}</option>
+                  <option value="Frikort">{dict.profile.taxCardFree}</option>
                 </select>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="bank_reg_number">Registreringsnummer *</Label>
+                  <Label htmlFor="bank_reg_number">{dict.profile.bankRegNumber} *</Label>
                   <Input
                     id="bank_reg_number"
                     value={formData.bank_reg_number || ''}
                     onChange={(e) => setFormData({ ...formData, bank_reg_number: e.target.value })}
                     required
-                    placeholder="1234"
+                    placeholder={dict.profile.bankRegNumberPlaceholder}
                     maxLength={4}
                     disabled={submitLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bank_account_number">Kontonummer *</Label>
+                  <Label htmlFor="bank_account_number">{dict.profile.bankAccountNumber} *</Label>
                   <Input
                     id="bank_account_number"
                     value={formData.bank_account_number || ''}
                     onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
                     required
-                    placeholder="1234567890"
+                    placeholder={dict.profile.bankAccountNumberPlaceholder}
                     disabled={submitLoading}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="su_limit_amount">SU-grænse (valgfrit)</Label>
+                <Label htmlFor="su_limit_amount">{dict.profile.suLimit}</Label>
                 <Input
                   id="su_limit_amount"
                   type="number"
@@ -776,11 +794,11 @@ export default function ProfilePage() {
                   min="0"
                   value={formData.su_limit_amount || ''}
                   onChange={(e) => setFormData({ ...formData, su_limit_amount: e.target.value })}
-                  placeholder="0.00"
+                  placeholder={dict.profile.suLimitPlaceholder}
                   disabled={submitLoading}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Maksimalt beløb du kan tjene uden at påvirke din SU
+                  {dict.profile.suLimitHint}
                 </p>
               </div>
             </div>
@@ -788,17 +806,17 @@ export default function ProfilePage() {
                 {/* Bio and Experience Section */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">Beskrivelse og erfaring</h3>
-                    <p className="text-sm text-muted-foreground">Fortæl om dig selv og din baggrund</p>
+                    <h3 className="text-lg font-semibold">{dict.profile.bioAndExperience}</h3>
+                    <p className="text-sm text-muted-foreground">{dict.profile.bioAndExperienceDescription}</p>
                   </div>
               
               <div className="space-y-2">
-                <Label htmlFor="description">Beskrivelse / Bio</Label>
+                <Label htmlFor="description">{dict.profile.description}</Label>
                 <textarea
                   id="description"
                   value={formData.description || ''}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Beskriv dig selv kort..."
+                  placeholder={dict.profile.descriptionPlaceholder}
                   rows={4}
                   disabled={submitLoading}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -806,12 +824,12 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="experience">Arbejdserfaring</Label>
+                <Label htmlFor="experience">{dict.profile.experience}</Label>
                 <textarea
                   id="experience"
                   value={formData.experience || ''}
                   onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                  placeholder="Beskriv din arbejdserfaring..."
+                  placeholder={dict.profile.experiencePlaceholder}
                   rows={6}
                   disabled={submitLoading}
                   className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -822,28 +840,28 @@ export default function ProfilePage() {
                 {/* Additional Information Section */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">Yderligere oplysninger</h3>
-                    <p className="text-sm text-muted-foreground">Valgfri detaljer</p>
+                    <h3 className="text-lg font-semibold">{dict.profile.additionalInfo}</h3>
+                    <p className="text-sm text-muted-foreground">{dict.profile.additionalInfoDescription}</p>
                   </div>
               
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="shirt_size">T-shirt størrelse</Label>
+                  <Label htmlFor="shirt_size">{dict.profile.shirtSize}</Label>
                   <Input
                     id="shirt_size"
                     value={formData.shirt_size || ''}
                     onChange={(e) => setFormData({ ...formData, shirt_size: e.target.value })}
-                    placeholder="S, M, L, XL, etc."
+                    placeholder={dict.profile.shirtSizePlaceholder}
                     disabled={submitLoading}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="shoe_size">Sko størrelse</Label>
+                  <Label htmlFor="shoe_size">{dict.profile.shoeSize}</Label>
                   <Input
                     id="shoe_size"
                     value={formData.shoe_size || ''}
                     onChange={(e) => setFormData({ ...formData, shoe_size: e.target.value })}
-                    placeholder="38, 39, 40, etc."
+                    placeholder={dict.profile.shoeSizePlaceholder}
                     disabled={submitLoading}
                   />
                 </div>
@@ -853,12 +871,12 @@ export default function ProfilePage() {
                 {/* ID Verification Section */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">Dokumenter</h3>
-                    <p className="text-sm text-muted-foreground">Upload ID-kort til verifikation</p>
+                    <h3 className="text-lg font-semibold">{dict.profile.documents}</h3>
+                    <p className="text-sm text-muted-foreground">{dict.profile.documentsDescription}</p>
                   </div>
               
               <div className="space-y-2">
-                <Label htmlFor="id-card-upload">ID-kort / Pas</Label>
+                <Label htmlFor="id-card-upload">{dict.profile.idCard}</Label>
                 <div className="flex items-center gap-4">
                   {idCardFile && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -879,7 +897,7 @@ export default function ProfilePage() {
                   {!idCardFile && (workerDetails as any)?.id_card_url && (
                     <div className="flex items-center gap-2 text-sm text-green-600">
                       <FileText className="w-5 h-5" />
-                      <span>ID-kort allerede uploadet</span>
+                      <span>{dict.profile.idCardUploaded}</span>
                     </div>
                   )}
                   <div className="flex-1">
@@ -897,10 +915,10 @@ export default function ProfilePage() {
                       className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Upload className="w-4 h-4" />
-                      {idCardFile ? 'Skift fil' : 'Upload ID-kort'}
+                      {idCardFile ? dict.profile.changeFile : dict.profile.uploadIdCard}
                     </label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Maksimalt 10MB. JPG, PNG eller PDF
+                      {dict.profile.idCardHint}
                     </p>
                   </div>
                 </div>
@@ -915,8 +933,8 @@ export default function ProfilePage() {
                     className="min-w-[200px]"
                   >
                     {submitLoading || uploadingAvatar || uploadingIdCard 
-                      ? 'Gemmer...' 
-                      : 'Gem oplysninger'}
+                      ? dict.profile.saving
+                      : dict.profile.saveChanges}
             </Button>
                 </div>
               </form>
@@ -927,3 +945,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

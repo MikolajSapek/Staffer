@@ -35,7 +35,21 @@ export default function OnboardingPage() {
         if (profile.role === 'worker') {
           router.push('/schedule');
         } else if (profile.role === 'company') {
-          router.push('/company/dashboard');
+          // Check if company has completed onboarding (company_details)
+          const { data: companyDetails } = await supabase
+            .from('company_details')
+            .select('profile_id')
+            .eq('profile_id', user.id)
+            .maybeSingle();
+          
+          // If no company_details, they need to complete onboarding
+          // The (company) route group will handle this, but we redirect to dashboard
+          // which will then redirect to onboarding if needed
+          if (!companyDetails) {
+            router.push('/dashboard');
+          } else {
+            router.push('/dashboard');
+          }
         }
         return;
       }
@@ -77,7 +91,9 @@ export default function OnboardingPage() {
       if (role === 'worker') {
         router.push('/schedule');
       } else {
-        router.push('/company/dashboard');
+        // For companies, check if they have company_details
+        // If not, they'll be redirected to onboarding by the dashboard page
+        router.push('/dashboard');
       }
     } catch (error: any) {
       console.error('Error updating role:', error.message);

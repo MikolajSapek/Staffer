@@ -96,6 +96,7 @@ export interface Database {
           profile_id: string;
           company_name: string;
           cvr_number: string;
+          main_address: string | null;
           ean_number: string | null;
           stripe_customer_id: string | null;
           subscription_status: 'active' | 'inactive' | 'cancelled';
@@ -108,6 +109,7 @@ export interface Database {
           profile_id: string;
           company_name: string;
           cvr_number: string;
+          main_address?: string | null;
           ean_number?: string | null;
           stripe_customer_id?: string | null;
           subscription_status?: 'active' | 'inactive' | 'cancelled';
@@ -120,6 +122,7 @@ export interface Database {
           profile_id?: string;
           company_name?: string;
           cvr_number?: string;
+          main_address?: string | null;
           ean_number?: string | null;
           stripe_customer_id?: string | null;
           subscription_status?: 'active' | 'inactive' | 'cancelled';

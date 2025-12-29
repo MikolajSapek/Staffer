@@ -17,7 +17,7 @@ export default async function LoginPage() {
 
     if (profile) {
       const role = profile.role as 'worker' | 'company' | 'admin';
-      if (role === 'company') redirect('/company/dashboard');
+      if (role === 'company') redirect('/dashboard');
       if (role === 'worker') redirect('/schedule');
       if (role === 'admin') redirect('/admin');
     }
@@ -38,4 +38,3 @@ export default async function LoginPage() {
     </div>
   );
 }
-
