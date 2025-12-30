@@ -7,7 +7,26 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
 
-export default function LoginForm() {
+interface LoginFormProps {
+  dict: {
+    loginTitle: string;
+    loginDescription: string;
+    email: string;
+    emailPlaceholder: string;
+    password: string;
+    signIn: string;
+    signingIn: string;
+    error: string;
+    validation: {
+      emailRequired: string;
+      invalidEmail: string;
+      unknownError: string;
+      loginFailed: string;
+    };
+  };
+}
+
+export default function LoginForm({ dict }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +43,7 @@ export default function LoginForm() {
 
     // Basic validation
     if (!trimmedEmail || !trimmedPassword) {
-      setError('Email og adgangskode er påkrævet');
+      setError(dict.validation.emailRequired);
       setLoading(false);
       return;
     }
@@ -32,7 +51,7 @@ export default function LoginForm() {
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
-      setError('Ugyldig email-format');
+      setError(dict.validation.invalidEmail);
       setLoading(false);
       return;
     }
@@ -47,7 +66,7 @@ export default function LoginForm() {
 
       if (signInError) {
         // Display the actual error message from Supabase
-        const errorMessage = signInError.message || 'Ukendt fejl ved login';
+        const errorMessage = signInError.message || dict.validation.unknownError;
         setError(errorMessage);
         setLoading(false);
         return;
@@ -57,12 +76,12 @@ export default function LoginForm() {
         // Force redirect to home page - this ensures Navbar updates
         window.location.href = '/';
       } else {
-        setError('Login mislykkedes - ingen brugerdata modtaget');
+        setError(dict.validation.loginFailed);
         setLoading(false);
       }
     } catch (err: any) {
       // Catch any unexpected errors
-      const errorMessage = err?.message || 'Der opstod en uventet fejl';
+      const errorMessage = err?.message || dict.validation.unknownError;
       setError(errorMessage);
       setLoading(false);
     }
@@ -71,22 +90,22 @@ export default function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Log ind</CardTitle>
-        <CardDescription>Indtast dine loginoplysninger</CardDescription>
+        <CardTitle>{dict.loginTitle}</CardTitle>
+        <CardDescription>{dict.loginDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-              <strong>Fejl:</strong> {error}
+              <strong>{dict.error}:</strong> {error}
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{dict.email}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="din@email.dk"
+              placeholder={dict.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
@@ -95,7 +114,7 @@ export default function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Adgangskode</Label>
+            <Label htmlFor="password">{dict.password}</Label>
             <Input
               id="password"
               type="password"
@@ -107,7 +126,7 @@ export default function LoginForm() {
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Logger ind...' : 'Log ind'}
+            {loading ? dict.signingIn : dict.signIn}
           </Button>
         </form>
       </CardContent>

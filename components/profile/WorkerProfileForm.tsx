@@ -11,12 +11,12 @@ import { Upload, X, FileText, User, CheckCircle2 } from 'lucide-react';
 
 type TaxCardType = 'Hovedkort' | 'Bikort' | 'Frikort';
 
-interface ProfileFormProps {
+interface WorkerProfileFormProps {
   dict: any;
   lang: string;
 }
 
-export default function ProfileForm({ dict, lang }: ProfileFormProps) {
+export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps) {
   const router = useRouter();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const idCardInputRef = useRef<HTMLInputElement>(null);
@@ -372,7 +372,9 @@ export default function ProfileForm({ dict, lang }: ProfileFormProps) {
       const { error: rpcError } = await supabase.rpc('upsert_worker_secure', rpcParams);
 
       if (rpcError) {
-        console.error('RPC error:', rpcError);
+        console.error('RPC error details:', JSON.stringify(rpcError, null, 2));
+        console.error('RPC function: upsert_worker_secure');
+        console.error('RPC params:', JSON.stringify(rpcParams, null, 2));
         setSubmitError(rpcError.message || 'Kunne ikke gemme oplysninger');
         setSubmitLoading(false);
         return;

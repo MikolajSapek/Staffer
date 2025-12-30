@@ -10,17 +10,39 @@ import { createClient } from '@/utils/supabase/client';
 import { z } from 'zod';
 import { Briefcase, Building2 } from 'lucide-react';
 
-const registerSchema = z.object({
-  email: z.string().email('Ugyldig email'),
-  password: z.string().min(6, 'Adgangskode skal være mindst 6 tegn'),
-  role: z.enum(['worker', 'company']),
-});
-
 interface RegisterFormProps {
   defaultRole?: 'worker' | 'company';
+  lang: string;
+  dict: {
+    registerTitle: string;
+    registerDescription: string;
+    email: string;
+    emailPlaceholder: string;
+    password: string;
+    signUp: string;
+    signingUp: string;
+    hasAccount: string;
+    loginLink: string;
+    roleLabel: string;
+    roleWorker: string;
+    roleWorkerDescription: string;
+    roleCompany: string;
+    roleCompanyDescription: string;
+    validation: {
+      invalidEmail: string;
+      passwordRequired: string;
+      registrationFailed: string;
+      serverError: string;
+    };
+  };
 }
 
-export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormProps) {
+export default function RegisterForm({ defaultRole = 'worker', lang, dict }: RegisterFormProps) {
+  const registerSchema = z.object({
+    email: z.string().email(dict.validation.invalidEmail),
+    password: z.string().min(6, dict.validation.passwordRequired),
+    role: z.enum(['worker', 'company']),
+  });
   const router = useRouter();
   const [role, setRole] = useState<'worker' | 'company'>(defaultRole);
   const [formData, setFormData] = useState({
@@ -45,18 +67,26 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
 
       const supabase = createClient();
       
-      // Sign up user with role in metadata (trigger will create profile automatically)
-      // Upewnij się, że te nazwy pasują do tych w SQL (raw_user_meta_data->>'first_name')
+      // Przygotuj metadata w zależności od roli
+      // Przykład dla rejestracji PRACOWNIKA - workers_details wymaga first_name i last_name
+      // Przykład dla rejestracji FIRMY - company_details wymaga company_name i cvr_number (NOT NULL)
+      const metadata = role === 'worker' 
+        ? {
+            role: 'worker',
+            first_name: '', // Wymagane w workers_details, można dodać później w onboarding
+            last_name: '',  // Wymagane w workers_details, można dodać później w onboarding
+          }
+        : {
+            role: 'company',
+            company_name: '', // Wymagane w company_details
+            cvr_number: '',   // Wymagane w company_details (NOT NULL)
+          };
+
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          data: {
-            // ✅ TO JEST KLUCZOWE: Trigger oczekuje tych pól w raw_user_meta_data
-            first_name: '', // Można dodać później w profilu (raw_user_meta_data->>'first_name')
-            last_name: '',  // Można dodać później w profilu (raw_user_meta_data->>'last_name')
-            role: role || 'worker', // <--- KLUCZOWE: Rola musi być wysłana (raw_user_meta_data->>'role')
-          },
+          data: metadata,
         },
       });
 
@@ -72,9 +102,9 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
         // Redirect based on role
         router.refresh();
         if (role === 'worker') {
-          router.push('/schedule');
+          router.push(`/${lang}/schedule`);
         } else {
-          router.push('/dashboard');
+          router.push(`/${lang}/dashboard`);
         }
       }
     } catch (err: any) {
@@ -82,9 +112,9 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
       if (err instanceof z.ZodError) {
         setError(err.errors[0].message);
       } else if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_NAME_NOT_RESOLVED')) {
-        setError('Nie można połączyć się z serwerem. Sprawdź czy zmienne środowiskowe Supabase są ustawione w Vercel.');
+        setError(dict.validation.serverError);
       } else {
-        setError(err.message || 'Wystąpił błąd podczas rejestracji');
+        setError(err.message || dict.validation.registrationFailed);
       }
     } finally {
       setLoading(false);
@@ -94,8 +124,8 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Opret konto</CardTitle>
-        <CardDescription>Vælg din rolle og opret en konto</CardDescription>
+        <CardTitle>{dict.registerTitle}</CardTitle>
+        <CardDescription>{dict.registerDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -107,7 +137,7 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
           
           {/* Role Selection Cards */}
           <div className="space-y-2">
-            <Label>Jeg er</Label>
+            <Label>{dict.roleLabel}</Label>
             <div className="grid gap-4 md:grid-cols-2">
               <button
                 type="button"
@@ -121,10 +151,10 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
                 <Briefcase className={`h-12 w-12 ${role === 'worker' ? 'text-blue-600' : 'text-gray-400'}`} />
                 <div className="text-center">
                   <div className={`font-semibold text-lg ${role === 'worker' ? 'text-blue-900' : 'text-gray-900'}`}>
-                    Pracownik
+                    {dict.roleWorker}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Jeg søger vikarjobs
+                    {dict.roleWorkerDescription}
                   </div>
                 </div>
               </button>
@@ -140,10 +170,10 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
                 <Building2 className={`h-12 w-12 ${role === 'company' ? 'text-blue-600' : 'text-gray-400'}`} />
                 <div className="text-center">
                   <div className={`font-semibold text-lg ${role === 'company' ? 'text-blue-900' : 'text-gray-900'}`}>
-                    Firma
+                    {dict.roleCompany}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Jeg søger vikarer
+                    {dict.roleCompanyDescription}
                   </div>
                 </div>
               </button>
@@ -151,18 +181,18 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{dict.email}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="din@email.dk"
+              placeholder={dict.emailPlaceholder}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Adgangskode</Label>
+            <Label htmlFor="password">{dict.password}</Label>
             <Input
               id="password"
               type="password"
@@ -172,12 +202,12 @@ export default function RegisterForm({ defaultRole = 'worker' }: RegisterFormPro
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Opretter konto...' : 'Opret konto'}
+            {loading ? dict.signingUp : dict.signUp}
           </Button>
           <p className="text-sm text-center text-muted-foreground">
-            Har du allerede en konto?{' '}
-            <a href="/login" className="text-primary hover:underline">
-              Log ind
+            {dict.hasAccount}{' '}
+            <a href={`/${lang}/login`} className="text-primary hover:underline">
+              {dict.loginLink}
             </a>
           </p>
         </form>

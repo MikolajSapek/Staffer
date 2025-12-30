@@ -2,8 +2,15 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import LoginForm from '@/components/auth/LoginForm';
 import Link from 'next/link';
+import { getDictionary } from '@/app/[lang]/dictionaries';
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const dict = await getDictionary(lang as 'en-US' | 'da');
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -17,21 +24,21 @@ export default async function LoginPage() {
 
     if (profile) {
       const role = profile.role as 'worker' | 'company' | 'admin';
-      if (role === 'company') redirect('/dashboard');
-      if (role === 'worker') redirect('/schedule');
-      if (role === 'admin') redirect('/admin');
+      if (role === 'company') redirect(`/${lang}/dashboard`);
+      if (role === 'worker') redirect(`/${lang}/schedule`);
+      if (role === 'admin') redirect(`/${lang}/admin`);
     }
-    redirect('/');
+    redirect(`/${lang}`);
   }
 
   return (
     <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[calc(100vh-200px)]">
       <div className="w-full max-w-md">
-        <LoginForm />
+        <LoginForm dict={dict.auth} />
         <div className="mt-4 text-center text-sm text-muted-foreground">
-          Har du ikke en konto?{' '}
-          <Link href="/register" className="text-primary hover:underline">
-            Opret profil
+          {dict.auth.noAccount}{' '}
+          <Link href={`/${lang}/register`} className="text-primary hover:underline">
+            {dict.auth.registerLink}
           </Link>
         </div>
       </div>
