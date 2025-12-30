@@ -62,7 +62,7 @@ export default function LocationsPage() {
 
       setLocations(data || []);
     } catch (err: any) {
-      console.error('Error fetching locations:', err);
+      console.error('Error fetching locations details:', JSON.stringify(err, null, 2));
       setError(err.message || 'Kunne ikke hente lokationer');
     } finally {
       setLoading(false);
