@@ -90,11 +90,18 @@ export default async function ApplicationsPage({
     );
   };
 
-  const getCompanyName = (shift: any) => {
+  interface ShiftWithCompany {
+    profiles?: {
+      last_name: string | null;
+      company_details?: Array<{ logo_url: string | null }>;
+    } | null;
+  }
+
+  const getCompanyName = (shift: ShiftWithCompany) => {
     return shift.profiles?.last_name || 'Unknown Company';
   };
 
-  const getCompanyLogo = (shift: any) => {
+  const getCompanyLogo = (shift: ShiftWithCompany) => {
     return shift.profiles?.company_details?.[0]?.logo_url || null;
   };
 
@@ -117,7 +124,7 @@ export default async function ApplicationsPage({
         </Card>
       ) : (
         <div className="space-y-4">
-          {applications.map((app: any) => {
+          {applications.map((app) => {
             const shift = app.shifts;
             if (!shift) return null;
 

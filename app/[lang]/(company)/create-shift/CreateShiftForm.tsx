@@ -162,13 +162,12 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
           .order('template_name', { ascending: true }) as any;
 
         if (error) {
-          console.error('Error fetching templates:', error);
           return;
         }
 
         setTemplates(data || []);
       } catch (err) {
-        console.error('Error fetching templates:', err);
+        // Error fetching templates - continue without them
       }
     }
 
@@ -274,9 +273,6 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
         status: 'published' as const,
       };
 
-      // Debug: Log the payload before sending
-      console.log('Sending payload:', payload);
-
       // Insert the shift
       const { error } = await supabase.from('shifts').insert(payload as any);
 
@@ -302,7 +298,6 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
           .insert(templatePayload as any);
 
         if (templateError) {
-          console.error('Error saving template:', templateError);
           // Don't throw - shift was created successfully, template save is secondary
         }
       }
@@ -315,9 +310,9 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
         router.push(`/${lang}/dashboard`);
         router.refresh();
       }, 1500);
-    } catch (err: any) {
-      console.error('Error creating shift DETAILS:', JSON.stringify(err, null, 2));
-      setError(err.message || dict.validation.titleRequired);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : dict.validation.titleRequired;
+      setError(errorMessage);
       setLoading(false);
     }
   };

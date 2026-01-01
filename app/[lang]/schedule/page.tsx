@@ -60,9 +60,25 @@ export default async function SchedulePage({
     .order('shifts(start_time)', { ascending: true });
 
   // Transform data for client component
-  const shifts = applications
-    ?.filter((app: any) => app.shifts)
-    .map((app: any) => app.shifts) || [];
+  interface ApplicationWithShift {
+    shifts: {
+      id: string;
+      title: string;
+      start_time: string;
+      end_time: string;
+      hourly_rate: number;
+      company_id: string;
+      locations: { name: string; address: string } | null;
+      profiles: {
+        last_name: string | null;
+        company_details: Array<{ logo_url: string | null }> | null;
+      } | null;
+    } | null;
+  }
+
+  const shifts = (applications as ApplicationWithShift[] | null)
+    ?.filter((app) => app.shifts)
+    .map((app) => app.shifts) || [];
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -41,7 +41,21 @@ interface ShiftApplication {
 interface TimesheetsClientProps {
   applications: ShiftApplication[];
   processedApplicationIds: string[];
-  dict: any;
+  dict: {
+    timesheetsPage: {
+      noPendingApprovals: string;
+      pendingApprovals: string;
+      workerName: string;
+      shiftTitle: string;
+      date: string;
+      hoursWorked: string;
+      totalDue: string;
+      actions: string;
+      hours: string;
+      processing: string;
+      approveAndGenerate: string;
+    };
+  };
   lang: string;
 }
 

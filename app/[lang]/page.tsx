@@ -15,7 +15,18 @@ export default async function JobBoardPage({
   const dict = await getDictionary(lang as 'en-US' | 'da');
   let user = null;
   let userRole: 'worker' | 'company' | 'admin' | null = null;
-  let shifts: any[] = [];
+  let shifts: Array<{
+    id: string;
+    title: string;
+    hourly_rate: number;
+    start_time: string;
+    end_time: string;
+    vacancies_total: number;
+    vacancies_taken: number;
+    status: string;
+    company_id: string;
+    locations: { name: string; address: string } | null;
+  }> = [];
   let appliedShiftIds: string[] = [];
   let applicationStatusMap: Record<string, string> = {};
 
@@ -70,32 +81,14 @@ export default async function JobBoardPage({
         .order('start_time', { ascending: true });
 
       if (shiftsError) {
-        console.warn('Error fetching shifts:', {
-          message: shiftsError.message,
-          details: shiftsError.details,
-          hint: shiftsError.hint,
-          code: shiftsError.code
-        });
-        // Set shifts to empty array instead of crashing
         shifts = [];
       } else {
         shifts = shiftsData || [];
       }
-    } catch (fetchError: any) {
-      console.warn('Error in shifts query:', {
-        message: fetchError?.message,
-        name: fetchError?.name
-      });
-      // Set shifts to empty array instead of crashing
+    } catch (fetchError: unknown) {
       shifts = [];
     }
-  } catch (err: any) {
-    console.warn('Unexpected error in JobBoardPage:', {
-      message: err?.message,
-      name: err?.name,
-      stack: err?.stack
-    });
-    // Don't set error - just use empty shifts array
+  } catch (err: unknown) {
     shifts = [];
   }
 

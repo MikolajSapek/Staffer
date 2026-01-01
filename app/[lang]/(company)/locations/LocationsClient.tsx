@@ -91,8 +91,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
       if (error) throw error;
 
       setLocations(data || []);
-    } catch (err: any) {
-      console.error('Error fetching locations details:', JSON.stringify(err, null, 2));
+    } catch (err: unknown) {
       setError(dict.form.fetchError);
     } finally {
       setLoading(false);
@@ -138,9 +137,9 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
       
       // Refresh locations list
       await fetchLocations();
-    } catch (err: any) {
-      console.error('Error creating location:', err);
-      setError(err.message || dict.form.createError);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : dict.form.createError;
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -162,9 +161,9 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
 
       // Refresh locations list
       await fetchLocations();
-    } catch (err: any) {
-      console.error('Error deleting location:', err);
-      alert(err.message || dict.form.deleteError);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : dict.form.deleteError;
+      alert(errorMessage);
     }
   };
 

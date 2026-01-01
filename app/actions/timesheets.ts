@@ -79,7 +79,6 @@ export async function approveTimesheet(params: ApproveTimesheetParams) {
     .single();
 
   if (paymentError) {
-    console.error('Payment creation error:', JSON.stringify(paymentError, null, 2));
     return { error: paymentError.message };
   }
 
@@ -90,7 +89,6 @@ export async function approveTimesheet(params: ApproveTimesheetParams) {
     .eq('id', params.applicationId);
 
   if (updateError) {
-    console.error('Application update error:', JSON.stringify(updateError, null, 2));
     // Try to rollback payment creation
     await supabase.from('payments').delete().eq('id', payment.id);
     return { error: updateError.message };

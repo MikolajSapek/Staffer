@@ -129,14 +129,12 @@ export default function CompanyOnboardingPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
 
       if (userError) {
-        console.error('Auth error:', userError);
         setError('Fejl ved autentificering. Prøv at logge ud og ind igen.');
         setLoading(false);
         return;
       }
 
       if (!user || !user.id) {
-        console.error('No user or user.id found');
         setError('Du er ikke logget ind');
         setLoading(false);
         return;
@@ -144,7 +142,6 @@ export default function CompanyOnboardingPage() {
 
       // Verify user ID is a valid UUID
       if (typeof user.id !== 'string' || user.id.length === 0) {
-        console.error('Invalid user.id:', user.id);
         setError('Ugyldig bruger-ID. Prøv at logge ud og ind igen.');
         setLoading(false);
         return;
@@ -158,21 +155,11 @@ export default function CompanyOnboardingPage() {
         main_address: formData.main_address.trim(),
       };
 
-      console.log('Inserting company_details with profile_id:', user.id);
-
       const { error: insertError } = await supabase
         .from('company_details')
         .insert(insertPayload);
 
       if (insertError) {
-        console.error('Company details insert error:', {
-          code: insertError.code,
-          message: insertError.message,
-          details: insertError.details,
-          hint: insertError.hint,
-          profile_id: user.id,
-        });
-
         // Handle unique constraint violation (CVR already exists)
         if (insertError.code === '23505') {
           setError('Dette CVR-nummer er allerede registreret');
@@ -204,9 +191,9 @@ export default function CompanyOnboardingPage() {
       setTimeout(() => {
         router.push('/dashboard');
       }, 0);
-    } catch (err: any) {
-      console.error('Error submitting form:', err);
-      setError(err.message || 'Der opstod en uventet fejl. Prøv igen.');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Der opstod en uventet fejl. Prøv igen.';
+      setError(errorMessage);
       setLoading(false);
     }
   };

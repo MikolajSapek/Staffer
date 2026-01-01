@@ -86,7 +86,6 @@ export default function ApplyModal({
         if (insertError.code === '23505') {
           setError(dict.alreadyApplied);
         } else {
-          console.error('Application error DETAILS:', JSON.stringify(insertError, null, 2));
           setError(dict.error);
         }
         setLoading(false);
@@ -101,8 +100,7 @@ export default function ApplyModal({
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
-      console.error('Unexpected error DETAILS:', JSON.stringify(err, null, 2));
+    } catch (err: unknown) {
       setError(dict.error);
       setLoading(false);
     }

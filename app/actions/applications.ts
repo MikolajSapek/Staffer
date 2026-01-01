@@ -28,7 +28,10 @@ export async function updateApplicationStatus(
   }
 
   // Verify the company owns this shift
-  const shift = application.shifts as any;
+  interface ShiftData {
+    company_id: string;
+  }
+  const shift = application.shifts as ShiftData;
   if (shift.company_id !== user.id) {
     return { error: 'Unauthorized' };
   }
@@ -40,7 +43,6 @@ export async function updateApplicationStatus(
     .eq('id', applicationId);
 
   if (updateError) {
-    console.error('Update error DETAILS:', JSON.stringify(updateError, null, 2));
     return { error: updateError.message };
   }
 

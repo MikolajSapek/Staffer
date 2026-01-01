@@ -79,9 +79,9 @@ export default function LoginForm({ dict }: LoginFormProps) {
         setError(dict.validation.loginFailed);
         setLoading(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Catch any unexpected errors
-      const errorMessage = err?.message || dict.validation.unknownError;
+      const errorMessage = err instanceof Error ? err.message : dict.validation.unknownError;
       setError(errorMessage);
       setLoading(false);
     }

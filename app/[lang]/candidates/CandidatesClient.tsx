@@ -48,7 +48,43 @@ interface Application {
 
 interface CandidatesClientProps {
   applications: Application[];
-  dict: any;
+  dict: {
+    candidatesPage: {
+      status: {
+        accepted: string;
+        pending: string;
+        rejected: string;
+        waitlist: string;
+      };
+      table: {
+        candidate: string;
+        rating: string;
+        status: string;
+        actions: string;
+      };
+      actions: {
+        viewProfile: string;
+      };
+      modal: {
+        title: string;
+        about: string;
+        aboutPlaceholder?: string;
+        contact: string;
+        applicationMessage: string;
+        appliedFor: string;
+        appliedAt: string;
+        status: string;
+        accept: string;
+        reject: string;
+        accepting: string;
+        rejecting: string;
+        acceptSuccess: string;
+        rejectSuccess: string;
+        error: string;
+        close?: string;
+      };
+    };
+  };
   lang: string;
 }
 

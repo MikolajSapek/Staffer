@@ -12,7 +12,18 @@ import { Upload, X, FileText, User, CheckCircle2 } from 'lucide-react';
 type TaxCardType = 'Hovedkort' | 'Bikort' | 'Frikort';
 
 interface WorkerProfileFormProps {
-  dict: any;
+  dict: {
+    profile: {
+      authError: string;
+      notLoggedIn: string;
+      validation: {
+        firstNameRequired: string;
+        phoneRequired: string;
+        avatarError: string;
+        avatarSize: string;
+      };
+    };
+  };
   lang: string;
 }
 
@@ -22,8 +33,8 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   const idCardInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [workerDetails, setWorkerDetails] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
+  const [workerDetails, setWorkerDetails] = useState<Record<string, unknown> | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -64,7 +75,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
-          console.warn('Auth error (non-critical):', userError);
           setAuthError(dict.profile.authError);
           setIsLoading(false);
           return;
@@ -87,7 +97,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
             // Profile doesn't exist yet - this is fine, form will be empty
             setWorkerDetails(null);
           } else {
-            console.warn('Worker profile fetch error (ignored):', workerError);
             setWorkerDetails(null);
           }
         } else {
@@ -95,7 +104,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
           
           // Populate form with existing data (CPR is now decrypted)
           if (workerData) {
-            const data = workerData as any;
+            const data = workerData as Record<string, unknown>;
             setFormData({
               first_name: data.first_name || '',
               last_name: data.last_name || '',
@@ -122,8 +131,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         }
 
         setFetchError(null);
-      } catch (err: any) {
-        console.error('Unexpected error fetching data:', err);
+      } catch (err: unknown) {
         setFetchError('Der opstod en uventet fejl ved indlæsning af data.');
       } finally {
         setIsLoading(false);
@@ -197,7 +205,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         });
 
       if (uploadError) {
-        console.error('Avatar upload error:', uploadError);
         throw uploadError;
       }
 
@@ -207,8 +214,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         .getPublicUrl(filePath);
 
       return publicUrl;
-    } catch (err: any) {
-      console.error('Avatar upload failed:', err);
+    } catch (err: unknown) {
       throw new Error('Kunne ikke uploade profilbillede');
     } finally {
       setUploadingAvatar(false);
@@ -236,7 +242,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         });
 
       if (uploadError) {
-        console.error('ID card upload error:', uploadError);
         throw uploadError;
       }
 
@@ -246,8 +251,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         .createSignedUrl(filePath, 31536000); // 1 year expiry
 
       return signedUrlData?.signedUrl || filePath;
-    } catch (err: any) {
-      console.error('ID card upload failed:', err);
+    } catch (err: unknown) {
       throw new Error('Kunne ikke uploade ID-kort');
     } finally {
       setUploadingIdCard(false);
@@ -311,36 +315,51 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       }
 
       // Upload files if selected
-      let avatarUrl = (workerDetails as any)?.avatar_url || '';
+      const workerDetailsRecord = workerDetails as Record<string, unknown> | null;
+      let avatarUrl = (workerDetailsRecord?.avatar_url as string) || '';
       if (avatarFile) {
         try {
           const uploadedUrl = await uploadAvatar(user.id);
           if (uploadedUrl) {
             avatarUrl = uploadedUrl;
           }
-        } catch (uploadErr: any) {
-          setSubmitError(uploadErr.message || 'Kunne ikke uploade profilbillede');
+        } catch (uploadErr: unknown) {
+          const errorMessage = uploadErr instanceof Error ? uploadErr.message : 'Kunne ikke uploade profilbillede';
+          setSubmitError(errorMessage);
           setSubmitLoading(false);
           return;
         }
       }
 
-      let idCardUrl = (workerDetails as any)?.id_card_url || '';
+      let idCardUrl = (workerDetailsRecord?.id_card_url as string) || '';
       if (idCardFile) {
         try {
           const uploadedUrl = await uploadIdCard(user.id);
           if (uploadedUrl) {
             idCardUrl = uploadedUrl;
           }
-        } catch (uploadErr: any) {
-          setSubmitError(uploadErr.message || 'Kunne ikke uploade ID-kort');
+        } catch (uploadErr: unknown) {
+          const errorMessage = uploadErr instanceof Error ? uploadErr.message : 'Kunne ikke uploade ID-kort';
+          setSubmitError(errorMessage);
           setSubmitLoading(false);
           return;
         }
       }
 
       // Prepare RPC parameters - must match SQL function signature exactly
-      const rpcParams: any = {
+      const rpcParams: {
+        p_first_name: string;
+        p_last_name: string;
+        p_phone_number: string;
+        p_cpr_number: string | null;
+        p_tax_card_type: TaxCardType;
+        p_bank_reg_number: string;
+        p_bank_account_number: string;
+        p_description: string | null;
+        p_experience: string | null;
+        p_avatar_url: string | null;
+        p_id_card_url: string | null;
+      } = {
         p_first_name: formData.first_name.trim(),
         p_last_name: formData.last_name.trim(),
         p_phone_number: formData.phone_number.trim(),
@@ -358,9 +377,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       const { error: rpcError } = await supabase.rpc('upsert_worker_secure', rpcParams);
 
       if (rpcError) {
-        console.error('RPC error details:', JSON.stringify(rpcError, null, 2));
-        console.error('RPC function: upsert_worker_secure');
-        console.error('RPC params:', JSON.stringify(rpcParams, null, 2));
         setSubmitError(rpcError.message || 'Kunne ikke gemme oplysninger');
         setSubmitLoading(false);
         return;
@@ -380,31 +396,31 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         const { data: refreshedData } = await supabase.rpc('get_worker_profile_secure');
         if (refreshedData) {
           setWorkerDetails(refreshedData);
-          const dataAny = refreshedData as any;
+          const data = refreshedData as Record<string, unknown>;
           // Update form with refreshed data (including decrypted CPR)
           setFormData({
-            first_name: dataAny.first_name || '',
-            last_name: dataAny.last_name || '',
-            phone_number: dataAny.phone_number || '',
-            tax_card_type: (dataAny.tax_card_type || 'Hovedkort') as TaxCardType,
-            bank_reg_number: dataAny.bank_reg_number || '',
-            bank_account_number: dataAny.bank_account_number || '',
-            su_limit_amount: dataAny.su_limit_amount?.toString() || '',
-            shirt_size: dataAny.shirt_size || '',
-            shoe_size: dataAny.shoe_size || '',
-            description: dataAny.description || '',
-            experience: dataAny.experience || '',
-            cpr_number: dataAny.cpr_number || '', // Decrypted CPR
+            first_name: (data.first_name as string) || '',
+            last_name: (data.last_name as string) || '',
+            phone_number: (data.phone_number as string) || '',
+            tax_card_type: ((data.tax_card_type as TaxCardType) || 'Hovedkort'),
+            bank_reg_number: (data.bank_reg_number as string) || '',
+            bank_account_number: (data.bank_account_number as string) || '',
+            su_limit_amount: (data.su_limit_amount as number)?.toString() || '',
+            shirt_size: (data.shirt_size as string) || '',
+            shoe_size: (data.shoe_size as string) || '',
+            description: (data.description as string) || '',
+            experience: (data.experience as string) || '',
+            cpr_number: (data.cpr_number as string) || '', // Decrypted CPR
           });
-          if (dataAny.avatar_url) {
-            setAvatarPreview(dataAny.avatar_url);
+          if (data.avatar_url) {
+            setAvatarPreview(data.avatar_url as string);
             setAvatarError(false); // Reset error state when loading existing avatar
           }
         }
       }, 1500);
-    } catch (err: any) {
-      console.error('Submit error:', err);
-      setSubmitError(err.message || 'Der opstod en fejl ved gemning af oplysninger');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Der opstod en fejl ved gemning af oplysninger';
+      setSubmitError(errorMessage);
     } finally {
       setSubmitLoading(false);
     }

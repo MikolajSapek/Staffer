@@ -91,7 +91,6 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
       });
 
       if (signUpError) {
-        console.error('Supabase signUp error:', signUpError);
         throw signUpError;
       }
 
@@ -107,14 +106,17 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
           router.push(`/${lang}/dashboard`);
         }
       }
-    } catch (err: any) {
-      console.error('Registration error:', err);
+    } catch (err: unknown) {
       if (err instanceof z.ZodError) {
         setError(err.errors[0].message);
-      } else if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_NAME_NOT_RESOLVED')) {
-        setError(dict.validation.serverError);
+      } else if (err instanceof Error) {
+        if (err.message?.includes('Failed to fetch') || err.message?.includes('ERR_NAME_NOT_RESOLVED')) {
+          setError(dict.validation.serverError);
+        } else {
+          setError(err.message || dict.validation.registrationFailed);
+        }
       } else {
-        setError(err.message || dict.validation.registrationFailed);
+        setError(dict.validation.registrationFailed);
       }
     } finally {
       setLoading(false);

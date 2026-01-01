@@ -98,15 +98,20 @@ export default function ShiftsClient({ dict, statusDict, lang }: ShiftsClientPro
       if (fetchError) throw fetchError;
 
       setShifts(data || []);
-    } catch (err: any) {
-      console.error('Error fetching shifts DETAILS:', JSON.stringify(err, null, 2));
-      setError(err.message || 'Could not fetch shifts');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Could not fetch shifts';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusBadge = (status: string, statusDict: any) => {
+  const getStatusBadge = (status: string, statusDict: {
+    active: string;
+    fullyBooked: string;
+    completed: string;
+    cancelled: string;
+  }) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       published: 'default',
       full: 'secondary',

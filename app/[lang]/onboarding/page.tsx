@@ -95,9 +95,9 @@ export default function OnboardingPage() {
         // If not, they'll be redirected to onboarding by the dashboard page
         router.push('/dashboard');
       }
-    } catch (error: any) {
-      console.error('Error updating role:', error.message);
-      setError(error.message || 'Der opstod en fejl ved opdatering af rolle. Prøv igen.');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Der opstod en fejl ved opdatering af rolle. Prøv igen.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

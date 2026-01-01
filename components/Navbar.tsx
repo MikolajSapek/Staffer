@@ -67,7 +67,7 @@ interface NavbarProps {
 export default function Navbar({ dict, lang }: NavbarProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,10 +98,6 @@ export default function Navbar({ dict, lang }: NavbarProps) {
     supabase.auth.getUser().then(({ data: { user }, error }) => {
       // Handle AuthSessionMissingError gracefully - this is normal for logged out users
       if (error) {
-        // Only log non-session-missing errors
-        if (error.message && !error.message.includes('session') && !error.message.includes('JWT')) {
-          console.warn('Navbar - Auth error:', error.message);
-        }
         setUser(null);
         setRole(null);
         setAvatarUrl(null);
@@ -142,12 +138,6 @@ export default function Navbar({ dict, lang }: NavbarProps) {
 
         if (error) {
           // Handle RLS/permission errors gracefully
-          if (error.code === '42501' || error.message?.includes('permission denied')) {
-            // RLS policy issue - user might not have access yet
-            console.warn('Navbar - Profile access denied (RLS):', error.message);
-          } else {
-            console.warn('Navbar Debug - Error fetching profile:', error.message);
-          }
           setRole(null);
           setAvatarUrl(null);
         } else if (profile && 'role' in profile) {
@@ -178,15 +168,14 @@ export default function Navbar({ dict, lang }: NavbarProps) {
           setRole(null);
           setAvatarUrl(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Handle AuthSessionMissingError and other errors gracefully
-        if (err?.message?.includes('session') || err?.message?.includes('JWT')) {
+        const error = err as { message?: string };
+        if (error?.message?.includes('session') || error?.message?.includes('JWT')) {
           // Session error - user might be logged out
           setUser(null);
           setRole(null);
           setAvatarUrl(null);
-        } else {
-          console.warn('Navbar Debug - Error in fetchUserRole:', err?.message || err);
         }
         setRole(null);
         setAvatarUrl(null);
@@ -211,7 +200,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       router.push(`/${lang}`);
       router.refresh();
     } catch (error) {
-      console.error('Error signing out:', error);
+      // Error signing out - user will need to try again
     }
   };
 

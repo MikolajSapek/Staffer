@@ -140,8 +140,7 @@ export default function CandidateProfileModal({
       if (onSuccess) {
         onSuccess();
       }
-    } catch (err: any) {
-      console.error('Unexpected error DETAILS:', JSON.stringify(err, null, 2));
+    } catch (err: unknown) {
       setError(dict.error);
       setActionLoading(null);
     }

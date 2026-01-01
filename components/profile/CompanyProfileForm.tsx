@@ -72,8 +72,8 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [companyDetails, setCompanyDetails] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
+  const [companyDetails, setCompanyDetails] = useState<Record<string, unknown> | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -121,7 +121,6 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
         if (userError) {
-          console.warn('Auth error (non-critical):', userError);
           setAuthError(profileDict.authError);
           setIsLoading(false);
           return;
@@ -143,7 +142,6 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
           .maybeSingle();
 
         if (companyError) {
-          console.warn('Company details fetch error (non-critical):', companyError);
           setCompanyDetails(null);
         } else {
           setCompanyDetails(companyData);
@@ -171,8 +169,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         }
 
         setFetchError(null);
-      } catch (err: any) {
-        console.error('Unexpected error fetching data:', err);
+      } catch (err: unknown) {
         setFetchError('Der opstod en uventet fejl ved indlæsning af data.');
       } finally {
         setIsLoading(false);
@@ -254,7 +251,6 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         });
 
       if (uploadError) {
-        console.error('Logo upload error:', uploadError);
         throw uploadError;
       }
 
@@ -264,8 +260,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         .getPublicUrl(filePath);
 
       return publicUrl;
-    } catch (err: any) {
-      console.error('Logo upload failed:', err);
+    } catch (err: unknown) {
       throw new Error('Failed to upload logo');
     } finally {
       setUploadingLogo(false);
@@ -294,7 +289,6 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         });
 
       if (uploadError) {
-        console.error('Cover photo upload error:', uploadError);
         throw uploadError;
       }
 
@@ -304,8 +298,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         .getPublicUrl(filePath);
 
       return publicUrl;
-    } catch (err: any) {
-      console.error('Cover photo upload failed:', err);
+    } catch (err: unknown) {
       throw new Error('Failed to upload cover photo');
     } finally {
       setUploadingCoverPhoto(false);
@@ -338,8 +331,9 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
           if (uploadedUrl) {
             logoUrl = uploadedUrl;
           }
-        } catch (uploadErr: any) {
-          setSubmitError(uploadErr.message || 'Failed to upload logo');
+        } catch (uploadErr: unknown) {
+          const errorMessage = uploadErr instanceof Error ? uploadErr.message : 'Failed to upload logo';
+          setSubmitError(errorMessage);
           setSubmitLoading(false);
           return;
         }
@@ -352,15 +346,25 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
           if (uploadedUrl) {
             coverPhotoUrl = uploadedUrl;
           }
-        } catch (uploadErr: any) {
-          setSubmitError(uploadErr.message || 'Failed to upload cover photo');
+        } catch (uploadErr: unknown) {
+          const errorMessage = uploadErr instanceof Error ? uploadErr.message : 'Failed to upload cover photo';
+          setSubmitError(errorMessage);
           setSubmitLoading(false);
           return;
         }
       }
 
       // Prepare RPC parameters - map form fields to RPC parameters
-      const rpcParams: any = {
+      const rpcParams: {
+        p_company_name: string;
+        p_cvr_number: string;
+        p_main_address: string | null;
+        p_ean_number: string | null;
+        p_invoice_email: string | null;
+        p_description: string | null;
+        p_logo_url: string | null;
+        p_cover_photo_url: string | null;
+      } = {
         p_company_name: validatedData.company_name.trim(),
         p_cvr_number: validatedData.cvr_number.trim(),
         p_main_address: validatedData.main_address?.trim() || null,
@@ -375,9 +379,6 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       const { error: rpcError } = await supabase.rpc('upsert_company_secure', rpcParams);
 
       if (rpcError) {
-        console.error('RPC error details:', JSON.stringify(rpcError, null, 2));
-        console.error('RPC function: upsert_company_secure');
-        console.error('RPC params:', JSON.stringify(rpcParams, null, 2));
         setSubmitError(rpcError.message || dict.validation.saveFailed);
         setSubmitLoading(false);
         return;
@@ -397,15 +398,16 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
 
         if (refreshedData) {
           setCompanyDetails(refreshedData);
+          const refreshedDataRecord = refreshedData as Record<string, unknown>;
           setFormData({
-            company_name: refreshedData.company_name || '',
-            cvr_number: refreshedData.cvr_number || '',
-            invoice_email: (refreshedData as any).invoice_email || '',
-            main_address: refreshedData.main_address || '',
-            ean_number: refreshedData.ean_number || '',
-            description: (refreshedData as any).description || '',
-            logo_url: refreshedData.logo_url || '',
-            cover_photo_url: refreshedData.cover_photo_url || '',
+            company_name: (refreshedDataRecord.company_name as string) || '',
+            cvr_number: (refreshedDataRecord.cvr_number as string) || '',
+            invoice_email: (refreshedDataRecord.invoice_email as string) || '',
+            main_address: (refreshedDataRecord.main_address as string) || '',
+            ean_number: (refreshedDataRecord.ean_number as string) || '',
+            description: (refreshedDataRecord.description as string) || '',
+            logo_url: (refreshedDataRecord.logo_url as string) || '',
+            cover_photo_url: (refreshedDataRecord.cover_photo_url as string) || '',
           });
           
           // Update preview URLs
@@ -423,12 +425,12 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         if (logoInputRef.current) logoInputRef.current.value = '';
         if (coverPhotoInputRef.current) coverPhotoInputRef.current.value = '';
       }, 1500);
-    } catch (err: any) {
-      console.error('Submit error:', err);
+    } catch (err: unknown) {
       if (err instanceof z.ZodError) {
         setSubmitError(err.errors[0].message);
       } else {
-        setSubmitError(err.message || dict.validation.saveFailed);
+        const errorMessage = err instanceof Error ? err.message : dict.validation.saveFailed;
+        setSubmitError(errorMessage);
       }
     } finally {
       setSubmitLoading(false);
