@@ -81,11 +81,16 @@
   },
   "dashboard": {
     "welcome": "Welcome",
+    "welcomeTitle": "Welcome back, {name}",
+    "welcomeSubtitle": "Here is your company overview.",
     "commandCenter": "Your command center - overview of your job listings and activities",
     "createJobListing": "Create job listing",
-    "activeShifts": "Active shifts",
+    "activeShifts": "Active Shifts",
+    "totalLocations": "Total Locations",
+    "totalHires": "Total Hires",
+    "clickToView": "Click to view",
+    "clickToManage": "Click to manage",
     "publishedAndFullyBooked": "Published and fully booked shifts",
-    "totalHires": "Total hires",
     "acceptedApplications": "Accepted applications",
     "locations": "Locations",
     "manageLocations": "Manage locations",
@@ -143,6 +148,15 @@
       "hourlyRateRequired": "Hourly rate must be greater than 0",
       "vacanciesRequired": "Number of positions must be at least 1",
       "endTimeAfterStart": "End time must be after start time"
+    },
+    "templates": {
+      "loadTemplate": "Load from Template",
+      "selectTemplatePlaceholder": "Select a template...",
+      "saveAsTemplate": "Save this as a template",
+      "templateName": "Template Name",
+      "templateNamePlaceholder": "e.g., Weekend Waiter",
+      "templateSaved": "Template saved!",
+      "templateNameRequired": "Template name is required when saving as template"
     }
   },
   "candidates": {
@@ -243,10 +257,6 @@
   "companyProfile": {
     "title": "Company Profile",
     "subtitle": "Update your company information",
-    "loading": "Loading company profile...",
-    "authError": "Could not verify your session. Please try logging in again.",
-    "notLoggedIn": "You are not logged in. Please log in to continue.",
-    "goToLogin": "Go to login page",
     "companyDetails": "Company Details",
     "companyDetailsDescription": "Fill in your company information",
     "companyName": "Company Name",
@@ -274,9 +284,6 @@
     "subscriptionStatusActive": "Active",
     "subscriptionStatusInactive": "Inactive",
     "subscriptionStatusCancelled": "Cancelled",
-    "saveChanges": "Save Changes",
-    "saving": "Saving...",
-    "profileUpdated": "Company profile updated!",
     "validation": {
       "companyNameRequired": "Company name is required",
       "cvrNumberRequired": "CVR number is required",
@@ -327,6 +334,91 @@
     "payslipsDescription": "Download your payslips",
     "payslipsUnavailable": "Payslips will be available after first payment.",
     "downloadPayslip": "Download payslip"
+  },
+  "companyShifts": {
+    "title": "My Shifts",
+    "description": "Manage your job listings and view archived shifts.",
+    "activeShifts": "Active Shifts",
+    "archiveShifts": "Archive Shifts",
+    "noActiveShifts": "No active shifts found.",
+    "noArchiveShifts": "No archived shifts found.",
+    "loading": "Loading shifts...",
+    "date": "Date",
+    "time": "Time",
+    "rate": "Rate",
+    "booked": "Booked",
+    "status": "Status",
+    "location": "Location",
+    "viewDetails": "View Details",
+    "edit": "Edit",
+    "cancel": "Cancel Shift"
+  },
+  "companyLocations": {
+    "title": "Company Locations",
+    "description": "Manage your work sites and addresses.",
+    "addLocation": "Add New Location",
+    "noLocations": "No locations found. Add your first one!",
+    "loading": "Loading locations...",
+    "table": {
+      "name": "Location Name",
+      "address": "Address",
+      "city": "City",
+      "zip": "Zip Code",
+      "active": "Active",
+      "actions": "Actions"
+    },
+    "form": {
+      "editTitle": "Edit Location",
+      "addTitle": "New Location",
+      "addDescription": "Add a new location where work can be performed",
+      "nameLabel": "Location Name",
+      "namePlaceholder": "E.g. Main Warehouse, City Restaurant",
+      "addressLabel": "Street Address",
+      "addressPlaceholder": "E.g. Main Street 123, 2100 Copenhagen",
+      "save": "Save Location",
+      "creating": "Creating...",
+      "cancel": "Cancel",
+      "deleting": "Deleting...",
+      "deleteConfirm": "Are you sure you want to delete this location?",
+      "deleteError": "Could not delete location",
+      "nameRequired": "Name and address are required",
+      "notLoggedIn": "You are not logged in",
+      "createError": "An error occurred while creating location",
+      "fetchError": "Could not fetch locations"
+    }
+  },
+  "shiftOptions": {
+    "roles": {
+      "placeholder": "Select a role",
+      "waiter": "Waiter",
+      "bartender": "Bartender",
+      "chef": "Chef",
+      "dishwasher": "Dishwasher",
+      "runner": "Runner",
+      "manager": "Manager",
+      "cleaning": "Cleaning"
+    },
+    "breaks": {
+      "placeholder": "Select break duration",
+      "none": "No break",
+      "15min": "15 minutes",
+      "30min": "30 minutes",
+      "45min": "45 minutes",
+      "60min": "1 hour"
+    },
+    "categories": {
+      "gastronomy": "Gastronomy",
+      "warehouse": "Warehouse",
+      "production": "Production",
+      "retail": "Retail",
+      "hospitality": "Hotel & Service",
+      "cleaning": "Cleaning",
+      "construction": "Construction & Engineering",
+      "logistics": "Logistics & Transport",
+      "office": "Office & Administration",
+      "healthcare": "Healthcare & Care",
+      "other": "Other"
+    }
   }
 }
 

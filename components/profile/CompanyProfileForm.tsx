@@ -15,10 +15,6 @@ interface CompanyProfileFormProps {
   dict: {
     title: string;
     subtitle: string;
-    loading: string;
-    authError: string;
-    notLoggedIn: string;
-    goToLogin: string;
     companyDetails: string;
     companyDetailsDescription: string;
     companyName: string;
@@ -46,9 +42,6 @@ interface CompanyProfileFormProps {
     subscriptionStatusActive: string;
     subscriptionStatusInactive: string;
     subscriptionStatusCancelled: string;
-    saveChanges: string;
-    saving: string;
-    profileUpdated: string;
     validation: {
       companyNameRequired: string;
       cvrNumberRequired: string;
@@ -58,17 +51,28 @@ interface CompanyProfileFormProps {
       imageSize: string;
     };
   };
+  profileDict: {
+    loading: string;
+    authError: string;
+    notLoggedIn: string;
+    goToLogin: string;
+    saveChanges: string;
+    saving: string;
+    profileUpdated: string;
+  };
+  navigationDict: {
+    login: string;
+  };
   lang: string;
 }
 
-export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormProps) {
+export default function CompanyProfileForm({ dict, profileDict, navigationDict, lang }: CompanyProfileFormProps) {
   const router = useRouter();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverPhotoInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
   const [companyDetails, setCompanyDetails] = useState<any>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -118,31 +122,18 @@ export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormPro
 
         if (userError) {
           console.warn('Auth error (non-critical):', userError);
-          setAuthError(dict.authError);
+          setAuthError(profileDict.authError);
           setIsLoading(false);
           return;
         }
 
         if (!authUser) {
-          setAuthError(dict.notLoggedIn);
+          setAuthError(profileDict.notLoggedIn);
           setIsLoading(false);
           return;
         }
 
         setUser(authUser);
-
-        // Fetch profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.warn('Profile fetch error (non-critical):', profileError);
-        } else {
-          setProfile(profileData);
-        }
 
         // Fetch company details
         const { data: companyData, error: companyError } = await supabase
@@ -161,10 +152,10 @@ export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormPro
             setFormData({
               company_name: companyData.company_name || '',
               cvr_number: companyData.cvr_number || '',
-              invoice_email: '', // Note: invoice_email might not exist in schema yet
+              invoice_email: (companyData as any).invoice_email || '',
               main_address: companyData.main_address || '',
               ean_number: companyData.ean_number || '',
-              description: '', // Description might not exist in schema yet
+              description: (companyData as any).description || '',
               logo_url: companyData.logo_url || '',
               cover_photo_url: companyData.cover_photo_url || '',
             });
@@ -409,10 +400,10 @@ export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormPro
           setFormData({
             company_name: refreshedData.company_name || '',
             cvr_number: refreshedData.cvr_number || '',
-            invoice_email: '',
+            invoice_email: (refreshedData as any).invoice_email || '',
             main_address: refreshedData.main_address || '',
             ean_number: refreshedData.ean_number || '',
-            description: '',
+            description: (refreshedData as any).description || '',
             logo_url: refreshedData.logo_url || '',
             cover_photo_url: refreshedData.cover_photo_url || '',
           });
@@ -449,7 +440,7 @@ export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormPro
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center py-12">
-          <p className="text-muted-foreground">{dict.loading}</p>
+          <p className="text-muted-foreground">{profileDict.loading}</p>
         </div>
       </div>
     );
@@ -463,9 +454,9 @@ export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormPro
           <CardContent className="py-12 text-center">
             <p className="text-red-600 text-lg font-semibold mb-2">{authError}</p>
             <p className="text-muted-foreground text-sm">
-              {dict.goToLogin}{' '}
+              {profileDict.goToLogin}{' '}
               <a href={`/${lang}/login`} className="text-blue-600 hover:underline">
-                {dict.goToLogin}
+                {navigationDict.login}
               </a>
             </p>
           </CardContent>
@@ -599,7 +590,7 @@ export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormPro
             )}
             {submitSuccess && (
               <div className="p-4 text-sm text-green-600 bg-green-50 rounded-md border border-green-200">
-                {dict.profileUpdated}
+                {profileDict.profileUpdated}
               </div>
             )}
 
@@ -702,7 +693,7 @@ export default function CompanyProfileForm({ dict, lang }: CompanyProfileFormPro
                 size="lg" 
                 className="min-w-[200px]"
               >
-                {submitLoading || uploadingLogo || uploadingCoverPhoto ? dict.saving : dict.saveChanges}
+                {submitLoading || uploadingLogo || uploadingCoverPhoto ? profileDict.saving : profileDict.saveChanges}
               </Button>
             </div>
           </form>

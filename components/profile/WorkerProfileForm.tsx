@@ -23,7 +23,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
   const [workerDetails, setWorkerDetails] = useState<any>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -78,19 +77,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         }
 
         setUser(authUser);
-
-        // Fetch profile
-        const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.warn('Profile fetch error (non-critical):', profileError);
-        } else {
-          setProfile(profileData);
-        }
 
         // Fetch worker details using secure RPC (decrypts CPR)
         const { data: workerData, error: workerError } = await supabase.rpc('get_worker_profile_secure');

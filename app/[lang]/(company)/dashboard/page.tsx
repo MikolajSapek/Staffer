@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Plus, Briefcase, Users, MapPin } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { getDictionary } from '@/app/[lang]/dictionaries';
+import StatsCards from '@/components/dashboard/StatsCards';
 
 export default async function CompanyDashboardPage({
   params,
@@ -66,33 +67,26 @@ export default async function CompanyDashboardPage({
     .order('created_at', { ascending: false })
     .limit(10);
 
-  // Fetch stats
-  const { count: activeShiftsCount } = await supabase
-    .from('shifts')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', user.id)
-    .in('status', ['published', 'full']);
-
-  // Get all shift IDs for this company
-  const { data: allShifts } = await supabase
-    .from('shifts')
-    .select('id')
-    .eq('company_id', user.id);
-
-  const shiftIds = allShifts?.map(s => s.id) || [];
-
-  // Count total accepted applications
-  const { count: totalHires } = await supabase
-    .from('shift_applications')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'accepted')
-    .in('shift_id', shiftIds.length > 0 ? shiftIds : ['00000000-0000-0000-0000-000000000000']);
-
-  // Count locations
+  // Query 1: Count locations for this company
   const { count: locationsCount } = await supabase
     .from('locations')
     .select('*', { count: 'exact', head: true })
     .eq('company_id', user.id);
+
+  // Query 2: Count active shifts (status is not 'completed')
+  const { count: activeShiftsCount } = await supabase
+    .from('shifts')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', user.id)
+    .neq('status', 'completed');
+
+  // Query 3: Sum vacancies_taken from shifts table for this company
+  const { data: shiftsData } = await supabase
+    .from('shifts')
+    .select('vacancies_taken')
+    .eq('company_id', user.id);
+
+  const totalHires = shiftsData?.reduce((sum, shift) => sum + (shift.vacancies_taken || 0), 0) || 0;
 
 
   const getStatusBadge = (status: string) => {
@@ -123,10 +117,10 @@ export default async function CompanyDashboardPage({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-2">
-              {dict.dashboard.welcome}, {companyDetails.company_name}!
+              {dict.dashboard.welcomeTitle.replace('{name}', companyDetails.company_name || '')}
             </h1>
             <p className="text-muted-foreground">
-              {dict.dashboard.commandCenter}
+              {dict.dashboard.welcomeSubtitle}
             </p>
           </div>
           <Button asChild size="lg">
@@ -138,58 +132,27 @@ export default async function CompanyDashboardPage({
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {dict.dashboard.activeShifts}
-              </CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{activeShiftsCount || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {dict.dashboard.publishedAndFullyBooked}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {dict.dashboard.totalHires}
-              </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalHires || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {dict.dashboard.acceptedApplications}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {dict.dashboard.locations}
-              </CardTitle>
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{locationsCount || 0}</div>
-              <div className="text-xs text-muted-foreground">
-                <Link href={`/${lang}/locations`} className="text-primary hover:underline">
-                  {dict.dashboard.manageLocations}
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mb-8">
+          <StatsCards
+            stats={{
+              shifts: activeShiftsCount || 0,
+              locations: locationsCount || 0,
+              hires: totalHires,
+            }}
+            dict={{
+              activeShifts: dict.dashboard.activeShifts,
+              totalLocations: dict.dashboard.totalLocations,
+              totalHires: dict.dashboard.totalHires,
+              clickToView: dict.dashboard.clickToView,
+              clickToManage: dict.dashboard.clickToManage,
+            }}
+            lang={lang}
+          />
         </div>
       </div>
 
       {/* Recent Shifts Section */}
-      <div className="mb-8">
+      <div id="recent-shifts" className="mb-8 scroll-mt-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-semibold">{dict.dashboard.recentJobListings}</h2>
           <Button variant="outline" asChild>

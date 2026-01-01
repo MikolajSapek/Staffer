@@ -1,9 +1,9 @@
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
-import LocationsClient from './LocationsClient';
+import ShiftsClient from './ShiftsClient';
 
-export default async function LocationsPage({
+export default async function ShiftsPage({
   params,
 }: {
   params: Promise<{ lang: string }>;
@@ -13,9 +13,9 @@ export default async function LocationsPage({
   const supabase = await createClient();
   
   // Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
     redirect(`/${lang}/login`);
   }
 
@@ -30,5 +30,6 @@ export default async function LocationsPage({
     redirect(`/${lang}`);
   }
 
-  return <LocationsClient dict={dict.companyLocations} lang={lang} />;
+  return <ShiftsClient dict={dict.companyShifts} statusDict={dict.status} lang={lang} />;
 }
+

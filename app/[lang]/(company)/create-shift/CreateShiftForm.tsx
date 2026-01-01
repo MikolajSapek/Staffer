@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,30 +57,87 @@ interface CreateShiftFormProps {
       vacanciesRequired: string;
       endTimeAfterStart: string;
     };
+    templates: {
+      loadTemplate: string;
+      selectTemplatePlaceholder: string;
+      saveAsTemplate: string;
+      templateName: string;
+      templateNamePlaceholder: string;
+      templateSaved: string;
+      templateNameRequired: string;
+    };
+  };
+  shiftOptions: {
+    roles: {
+      placeholder: string;
+      waiter: string;
+      bartender: string;
+      chef: string;
+      dishwasher: string;
+      runner: string;
+      manager: string;
+      cleaning: string;
+    };
+    breaks: {
+      placeholder: string;
+      none: string;
+      '15min': string;
+      '30min': string;
+      '45min': string;
+      '60min': string;
+    };
+    categories: {
+      gastronomy: string;
+      warehouse: string;
+      production: string;
+      retail: string;
+      hospitality: string;
+      cleaning: string;
+      construction: string;
+      logistics: string;
+      office: string;
+      healthcare: string;
+      other: string;
+    };
   };
   lang: string;
 }
 
-// Predefined job categories
-const JOB_CATEGORIES = [
-  { value: 'gastronomy', label: 'Gastronomi' },
-  { value: 'warehouse', label: 'Lager' },
-  { value: 'production', label: 'Produktion' },
-  { value: 'retail', label: 'Detailhandel' },
-  { value: 'hospitality', label: 'Hotel & Service' },
-  { value: 'cleaning', label: 'Rengøring' },
-  { value: 'construction', label: 'Bygge & Anlæg' },
-  { value: 'logistics', label: 'Logistik & Transport' },
-  { value: 'office', label: 'Kontor & Administration' },
-  { value: 'healthcare', label: 'Sundhed & Pleje' },
-  { value: 'other', label: 'Andet' },
-];
+// Job category values (used as keys for dictionary lookups)
+const JOB_CATEGORY_VALUES = [
+  'gastronomy',
+  'warehouse',
+  'production',
+  'retail',
+  'hospitality',
+  'cleaning',
+  'construction',
+  'logistics',
+  'office',
+  'healthcare',
+  'other',
+] as const;
 
-export default function CreateShiftForm({ companyId, locations, dict, lang }: CreateShiftFormProps) {
+interface ShiftTemplate {
+  id: string;
+  template_name: string;
+  title: string;
+  description: string | null;
+  category: string;
+  hourly_rate: number;
+  vacancies_total: number;
+  location_id: string;
+}
+
+export default function CreateShiftForm({ companyId, locations, dict, shiftOptions, lang }: CreateShiftFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -92,6 +149,51 @@ export default function CreateShiftForm({ companyId, locations, dict, lang }: Cr
     hourly_rate: '',
     vacancies_total: '1',
   });
+
+  // Fetch templates on mount
+  useEffect(() => {
+    async function fetchTemplates() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('shift_templates' as any)
+          .select('*')
+          .eq('company_id', companyId)
+          .order('template_name', { ascending: true }) as any;
+
+        if (error) {
+          console.error('Error fetching templates:', error);
+          return;
+        }
+
+        setTemplates(data || []);
+      } catch (err) {
+        console.error('Error fetching templates:', err);
+      }
+    }
+
+    fetchTemplates();
+  }, [companyId]);
+
+  // Load template when selected
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (!templateId) return;
+
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setFormData({
+        ...formData,
+        title: template.title || '',
+        description: template.description || '',
+        category: template.category || '',
+        location_id: template.location_id || (locations.length > 0 ? locations[0].id : ''),
+        hourly_rate: template.hourly_rate?.toString() || '',
+        vacancies_total: template.vacancies_total?.toString() || '1',
+        // Don't overwrite start_time and end_time
+      });
+    }
+  };
 
   const validateForm = (): string | null => {
     if (!formData.title.trim()) {
@@ -114,6 +216,11 @@ export default function CreateShiftForm({ companyId, locations, dict, lang }: Cr
     }
     if (!formData.vacancies_total || parseInt(formData.vacancies_total) < 1) {
       return dict.validation.vacanciesRequired;
+    }
+
+    // Validate template name if saving as template
+    if (saveAsTemplate && !templateName.trim()) {
+      return dict.templates.templateNameRequired;
     }
 
     // Validate that end time is after start time
@@ -145,24 +252,59 @@ export default function CreateShiftForm({ companyId, locations, dict, lang }: Cr
     try {
       const supabase = createClient();
 
-      const { error: insertError } = await supabase
-        .from('shifts')
-        .insert({
-          company_id: companyId,
-          location_id: formData.location_id,
+      // Get the current authenticated user - company_id must match auth.uid()
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Construct the payload with proper data types
+      const payload = {
+        company_id: user.id, // CRITICAL: Must match auth.uid() for RLS policy
+        location_id: formData.location_id || null,
+        title: formData.title.trim(),
+        description: formData.description.trim() || null,
+        category: formData.category,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        hourly_rate: parseFloat(formData.hourly_rate),
+        vacancies_total: parseInt(formData.vacancies_total),
+        vacancies_taken: 0,
+        status: 'published' as const,
+      };
+
+      // Debug: Log the payload before sending
+      console.log('Sending payload:', payload);
+
+      // Insert the shift
+      const { error } = await supabase.from('shifts').insert(payload as any);
+
+      if (error) {
+        throw error;
+      }
+
+      // Save as template if checkbox is checked
+      if (saveAsTemplate && templateName.trim()) {
+        const templatePayload = {
+          company_id: user.id,
+          template_name: templateName.trim(),
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           category: formData.category,
-          start_time: formData.start_time,
-          end_time: formData.end_time,
           hourly_rate: parseFloat(formData.hourly_rate),
           vacancies_total: parseInt(formData.vacancies_total),
-          vacancies_taken: 0,
-          status: 'published',
-        });
+          location_id: formData.location_id || null,
+        };
 
-      if (insertError) {
-        throw insertError;
+        const { error: templateError } = await supabase
+          .from('shift_templates')
+          .insert(templatePayload as any);
+
+        if (templateError) {
+          console.error('Error saving template:', templateError);
+          // Don't throw - shift was created successfully, template save is secondary
+        }
       }
 
       // Show success message
@@ -174,7 +316,7 @@ export default function CreateShiftForm({ companyId, locations, dict, lang }: Cr
         router.refresh();
       }, 1500);
     } catch (err: any) {
-      console.error('Error creating shift:', err);
+      console.error('Error creating shift DETAILS:', JSON.stringify(err, null, 2));
       setError(err.message || dict.validation.titleRequired);
       setLoading(false);
     }
@@ -212,6 +354,30 @@ export default function CreateShiftForm({ companyId, locations, dict, lang }: Cr
               <div className="p-4 text-sm text-red-600 bg-red-50 rounded-md border border-red-200 flex items-start gap-2">
                 <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">{error}</div>
+              </div>
+            )}
+
+            {/* Load Template Dropdown */}
+            {templates.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="template-select">{dict.templates.loadTemplate}</Label>
+                <Select
+                  value={selectedTemplateId}
+                  onValueChange={handleTemplateSelect}
+                  disabled={loading}
+                >
+                  <SelectTrigger id="template-select" className="w-full">
+                    <SelectValue placeholder={dict.templates.selectTemplatePlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{dict.templates.selectTemplatePlaceholder}</SelectItem>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.template_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -283,9 +449,9 @@ export default function CreateShiftForm({ companyId, locations, dict, lang }: Cr
                     <SelectValue placeholder={dict.selectCategory} />
                   </SelectTrigger>
                   <SelectContent>
-                    {JOB_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
+                    {JOB_CATEGORY_VALUES.map((categoryValue) => (
+                      <SelectItem key={categoryValue} value={categoryValue}>
+                        {shiftOptions.categories[categoryValue]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -393,6 +559,39 @@ export default function CreateShiftForm({ companyId, locations, dict, lang }: Cr
               <p className="text-xs text-muted-foreground">
                 {dict.descriptionHint}
               </p>
+            </div>
+
+            {/* Save as Template */}
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="save-as-template"
+                  checked={saveAsTemplate}
+                  onChange={(e) => setSaveAsTemplate(e.target.checked)}
+                  disabled={loading}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <Label htmlFor="save-as-template" className="cursor-pointer">
+                  {dict.templates.saveAsTemplate}
+                </Label>
+              </div>
+              {saveAsTemplate && (
+                <div className="space-y-2 pl-6">
+                  <Label htmlFor="template-name">
+                    {dict.templates.templateName} <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="template-name"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder={dict.templates.templateNamePlaceholder}
+                    required={saveAsTemplate}
+                    disabled={loading}
+                    className="w-full"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}

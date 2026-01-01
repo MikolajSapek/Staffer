@@ -33,7 +33,24 @@ export default async function ProfilePage({
 
   // Render appropriate form based on role
   if (profile.role === 'company') {
-    return <CompanyProfileForm dict={dict.companyProfile} lang={lang} />;
+    return (
+      <CompanyProfileForm 
+        dict={dict.companyProfile} 
+        profileDict={{
+          loading: dict.profile.loading,
+          authError: dict.profile.authError,
+          notLoggedIn: dict.profile.notLoggedIn,
+          goToLogin: dict.profile.goToLogin,
+          saveChanges: dict.profile.saveChanges,
+          saving: dict.profile.saving,
+          profileUpdated: dict.profile.profileUpdated,
+        }}
+        navigationDict={{
+          login: dict.navigation.login,
+        }}
+        lang={lang} 
+      />
+    );
   } else if (profile.role === 'worker') {
     return <WorkerProfileForm dict={dict} lang={lang} />;
   } else {

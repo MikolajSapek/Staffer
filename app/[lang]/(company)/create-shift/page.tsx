@@ -57,7 +57,13 @@ export default async function CreateShiftPage({
       </div>
 
       <div className="max-w-3xl">
-        <CreateShiftForm companyId={user.id} locations={locations || []} dict={dict.createShift} lang={lang} />
+        <CreateShiftForm 
+          companyId={user.id} 
+          locations={locations || []} 
+          dict={dict.createShift}
+          shiftOptions={dict.shiftOptions}
+          lang={lang} 
+        />
       </div>
     </div>
   );

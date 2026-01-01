@@ -81,11 +81,16 @@
   },
   "dashboard": {
     "welcome": "Velkommen",
+    "welcomeTitle": "Velkommen tilbage, {name}",
+    "welcomeSubtitle": "Her er dit virksomhedsoverblik.",
     "commandCenter": "Dit kommandocentral - oversigt over dine jobopslag og aktiviteter",
     "createJobListing": "Opret jobopslag",
     "activeShifts": "Aktive vagter",
+    "totalLocations": "Lokationer i alt",
+    "totalHires": "Ansættelser i alt",
+    "clickToView": "Klik for at se",
+    "clickToManage": "Klik for at administrere",
     "publishedAndFullyBooked": "Publiserede og fuldt bookede vagter",
-    "totalHires": "Samlede ansættelser",
     "acceptedApplications": "Accepterede ansøgninger",
     "locations": "Lokationer",
     "manageLocations": "Administrer lokationer",
@@ -143,6 +148,15 @@
       "hourlyRateRequired": "Timeløn skal være større end 0",
       "vacanciesRequired": "Antal pladser skal være mindst 1",
       "endTimeAfterStart": "Sluttid skal være efter starttid"
+    },
+    "templates": {
+      "loadTemplate": "Indlæs fra skabelon",
+      "selectTemplatePlaceholder": "Vælg en skabelon...",
+      "saveAsTemplate": "Gem dette som en skabelon",
+      "templateName": "Skabelonnavn",
+      "templateNamePlaceholder": "f.eks. Weekend Tjener",
+      "templateSaved": "Skabelon gemt!",
+      "templateNameRequired": "Skabelonnavn er påkrævet når du gemmer som skabelon"
     }
   },
   "candidates": {
@@ -243,10 +257,6 @@
   "companyProfile": {
     "title": "Virksomhedsprofil",
     "subtitle": "Opdater dine virksomhedsoplysninger",
-    "loading": "Indlæser virksomhedsprofil...",
-    "authError": "Kunne ikke bekræfte din session. Prøv at logge ind igen.",
-    "notLoggedIn": "Du er ikke logget ind. Log venligst ind for at fortsætte.",
-    "goToLogin": "Gå til login siden",
     "companyDetails": "Virksomhedsoplysninger",
     "companyDetailsDescription": "Udfyld dine virksomhedsoplysninger",
     "companyName": "Virksomhedsnavn",
@@ -274,9 +284,6 @@
     "subscriptionStatusActive": "Aktiv",
     "subscriptionStatusInactive": "Inaktiv",
     "subscriptionStatusCancelled": "Annulleret",
-    "saveChanges": "Gem ændringer",
-    "saving": "Gemmer...",
-    "profileUpdated": "Virksomhedsprofil opdateret!",
     "validation": {
       "companyNameRequired": "Virksomhedsnavn er påkrævet",
       "cvrNumberRequired": "CVR-nummer er påkrævet",
@@ -327,6 +334,93 @@
     "payslipsDescription": "Download dine lønsedler",
     "payslipsUnavailable": "Lønsedler vil blive tilgængelige efter første udbetaling.",
     "downloadPayslip": "Download lønseddel"
+  },
+  "companyShifts": {
+    "title": "Mine vagter",
+    "description": "Administrer dine jobopslag og se arkiverede vagter.",
+    "activeShifts": "Aktive vagter",
+    "archiveShifts": "Arkiverede vagter",
+    "noActiveShifts": "Ingen aktive vagter fundet.",
+    "noArchiveShifts": "Ingen arkiverede vagter fundet.",
+    "loading": "Indlæser vagter...",
+    "date": "Dato",
+    "time": "Tid",
+    "rate": "Sats",
+    "booked": "Booket",
+    "status": "Status",
+    "location": "Lokation",
+    "locationNotSpecified": "Lokation ikke angivet",
+    "viewDetails": "Se detaljer",
+    "edit": "Rediger",
+    "cancel": "Annuller vagt",
+    "createNewShift": "Opret ny vagt"
+  },
+  "companyLocations": {
+    "title": "Virksomhedslokationer",
+    "description": "Administrer dine arbejdssteder og adresser.",
+    "addLocation": "Tilføj ny lokation",
+    "noLocations": "Ingen lokationer fundet. Tilføj din første!",
+    "loading": "Indlæser lokationer...",
+    "table": {
+      "name": "Lokationsnavn",
+      "address": "Adresse",
+      "city": "By",
+      "zip": "Postnummer",
+      "active": "Aktiv",
+      "actions": "Handlinger"
+    },
+    "form": {
+      "editTitle": "Rediger lokation",
+      "addTitle": "Ny lokation",
+      "addDescription": "Tilføj en ny lokation hvor arbejdet kan udføres",
+      "nameLabel": "Lokationsnavn",
+      "namePlaceholder": "F.eks. Hovedlager, City Restaurant",
+      "addressLabel": "Gadeadresse",
+      "addressPlaceholder": "F.eks. Hovedgade 123, 2100 København",
+      "save": "Gem lokation",
+      "creating": "Opretter...",
+      "cancel": "Annuller",
+      "deleting": "Sletter...",
+      "deleteConfirm": "Er du sikker på, at du vil slette denne lokation?",
+      "deleteError": "Kunne ikke slette lokation",
+      "nameRequired": "Navn og adresse er påkrævet",
+      "notLoggedIn": "Du er ikke logget ind",
+      "createError": "Der opstod en fejl ved oprettelse af lokation",
+      "fetchError": "Kunne ikke hente lokationer"
+    }
+  },
+  "shiftOptions": {
+    "roles": {
+      "placeholder": "Vælg en rolle",
+      "waiter": "Tjener",
+      "bartender": "Bartender",
+      "chef": "Kok",
+      "dishwasher": "Opvasker",
+      "runner": "Runner",
+      "manager": "Manager",
+      "cleaning": "Rengøring"
+    },
+    "breaks": {
+      "placeholder": "Vælg pausevarighed",
+      "none": "Ingen pause",
+      "15min": "15 minutter",
+      "30min": "30 minutter",
+      "45min": "45 minutter",
+      "60min": "1 time"
+    },
+    "categories": {
+      "gastronomy": "Gastronomi",
+      "warehouse": "Lager",
+      "production": "Produktion",
+      "retail": "Detailhandel",
+      "hospitality": "Hotel & Service",
+      "cleaning": "Rengøring",
+      "construction": "Bygge & Anlæg",
+      "logistics": "Logistik & Transport",
+      "office": "Kontor & Administration",
+      "healthcare": "Sundhed & Pleje",
+      "other": "Andet"
+    }
   }
 }
 
