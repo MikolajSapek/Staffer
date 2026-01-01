@@ -1,10 +1,8 @@
-import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { formatTime, formatDateLong } from '@/lib/date-utils';
+import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from './dictionaries';
+import { getCurrentProfile } from '@/utils/supabase/server';
+import JobBoardClient from './JobBoardClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,12 +14,37 @@ export default async function JobBoardPage({
   const { lang } = await params;
   const dict = await getDictionary(lang as 'en-US' | 'da');
   let user = null;
+  let userRole: 'worker' | 'company' | 'admin' | null = null;
   let shifts: any[] = [];
+  let appliedShiftIds: string[] = [];
+  let applicationStatusMap: Record<string, string> = {};
 
   try {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
     user = userData?.user || null;
+    
+    // Get user profile to check role
+    if (user) {
+      const profile = await getCurrentProfile();
+      userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
+      
+      // If worker, fetch their applications to show application status
+      if (userRole === 'worker') {
+        const { data: applications } = await supabase
+          .from('shift_applications')
+          .select('shift_id, status')
+          .eq('worker_id', user.id);
+        
+        appliedShiftIds = applications?.map(app => app.shift_id) || [];
+        // Create a map of shift_id -> status for accurate status display
+        applications?.forEach(app => {
+          // Map 'accepted' to 'approved' for backward compatibility if needed
+          const status = app.status === 'accepted' ? 'approved' : app.status;
+          applicationStatusMap[app.shift_id] = status;
+        });
+      }
+    }
 
     // Fetch active shifts - this should work for public access
     // Wrap in try-catch to handle any errors gracefully
@@ -37,6 +60,7 @@ export default async function JobBoardPage({
           vacancies_total,
           vacancies_taken,
           status,
+          company_id,
           locations (
             name,
             address
@@ -76,10 +100,6 @@ export default async function JobBoardPage({
   }
 
 
-  const availableSpots = (shift: any) => {
-    return (shift.vacancies_total || 0) - (shift.vacancies_taken || 0);
-  };
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -98,56 +118,15 @@ export default async function JobBoardPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {shifts.map((shift) => (
-            <Card key={shift.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-xl">{shift.title}</CardTitle>
-                  <Badge variant="secondary">
-                    {shift.hourly_rate} DKK/t
-                  </Badge>
-                </div>
-                <CardDescription>
-                  {shift.locations?.name || dict.jobBoard.locationNotSpecified}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">{dict.jobBoard.date}:</span>{' '}
-                    {formatDateLong(shift.start_time)}
-                  </div>
-                  <div>
-                    <span className="font-medium">{dict.jobBoard.time}:</span>{' '}
-                    {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
-                  </div>
-                  <div>
-                    <span className="font-medium">{dict.jobBoard.address}:</span>{' '}
-                    {shift.locations?.address || dict.jobBoard.notSpecified}
-                  </div>
-                  <div>
-                    <span className="font-medium">{dict.jobBoard.availableSpots}:</span>{' '}
-                    {availableSpots(shift)} / {shift.vacancies_total}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                {!user ? (
-                  <Button asChild className="w-full">
-                    <Link href={`/${lang}/login`}>{dict.jobBoard.loginToApply}</Link>
-                  </Button>
-                ) : (
-                  <Button asChild className="w-full" disabled={availableSpots(shift) === 0}>
-                    <Link href={`/${lang}/shifts/${shift.id}/apply`}>
-                      {availableSpots(shift) === 0 ? dict.jobBoard.fullyBooked : dict.jobBoard.apply}
-                    </Link>
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        <JobBoardClient
+          shifts={shifts}
+          userRole={userRole}
+          user={user}
+          appliedShiftIds={appliedShiftIds}
+          applicationStatusMap={applicationStatusMap}
+          dict={dict}
+          lang={lang}
+        />
       )}
     </div>
   );

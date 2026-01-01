@@ -16,7 +16,10 @@ import {
   LayoutDashboard, 
   Plus, 
   Users, 
-  FileText 
+  FileText,
+  MapPin,
+  Clock,
+  Globe
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -38,6 +41,16 @@ interface NavbarProps {
       role: string;
       noRoleAssigned: string;
     };
+    nav?: {
+      dashboard: string;
+      shifts: string;
+      locations: string;
+      timesheets: string;
+      candidates: string;
+      settings: string;
+      profile: string;
+      logout: string;
+    };
     common: {
       user: string;
     };
@@ -56,6 +69,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -90,6 +104,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
         }
         setUser(null);
         setRole(null);
+        setAvatarUrl(null);
         setLoading(false);
         return;
       }
@@ -98,6 +113,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       if (user) {
         fetchUserRole(user.id);
       } else {
+        setAvatarUrl(null);
         setLoading(false);
       }
     });
@@ -111,6 +127,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
         fetchUserRole(session.user.id);
       } else {
         setRole(null);
+        setAvatarUrl(null);
         setLoading(false);
       }
     });
@@ -132,11 +149,34 @@ export default function Navbar({ dict, lang }: NavbarProps) {
             console.warn('Navbar Debug - Error fetching profile:', error.message);
           }
           setRole(null);
+          setAvatarUrl(null);
         } else if (profile && 'role' in profile) {
           const profileData = profile as { role: 'worker' | 'company' | 'admin' };
           setRole(profileData.role);
+          
+          // Fetch avatar_url based on role
+          if (profileData.role === 'worker') {
+            // Fetch avatar_url from worker_details
+            const { data: workerDetails } = await supabase
+              .from('worker_details')
+              .select('avatar_url')
+              .eq('profile_id', userId)
+              .maybeSingle();
+            setAvatarUrl(workerDetails?.avatar_url || null);
+          } else if (profileData.role === 'company') {
+            // For companies, use logo_url from company_details as avatar
+            const { data: companyDetails } = await supabase
+              .from('company_details')
+              .select('logo_url')
+              .eq('profile_id', userId)
+              .maybeSingle();
+            setAvatarUrl(companyDetails?.logo_url || null);
+          } else {
+            setAvatarUrl(null);
+          }
         } else {
           setRole(null);
+          setAvatarUrl(null);
         }
       } catch (err: any) {
         // Handle AuthSessionMissingError and other errors gracefully
@@ -144,10 +184,12 @@ export default function Navbar({ dict, lang }: NavbarProps) {
           // Session error - user might be logged out
           setUser(null);
           setRole(null);
+          setAvatarUrl(null);
         } else {
           console.warn('Navbar Debug - Error in fetchUserRole:', err?.message || err);
         }
         setRole(null);
+        setAvatarUrl(null);
       } finally {
         setLoading(false);
       }
@@ -165,6 +207,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       setIsOpen(false);
       setUser(null);
       setRole(null);
+      setAvatarUrl(null);
       router.push(`/${lang}`);
       router.refresh();
     } catch (error) {
@@ -226,7 +269,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                 type="button"
               >
                 <Avatar>
-                  <AvatarImage src={user?.user_metadata?.avatar_url || undefined} alt={user?.email || dict.common.user} />
+                  <AvatarImage src={avatarUrl || undefined} alt={user?.email || dict.common.user} />
                   <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
               </button>
@@ -283,15 +326,23 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <LayoutDashboard className="mr-2 h-4 w-4" />
-                        {dict.navigation.dashboard}
+                        {dict.nav?.dashboard || dict.navigation.dashboard}
                       </Link>
                       <Link
-                        href={`/${lang}/create-shift`}
+                        href={`/${lang}/shifts`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
-                        <Plus className="mr-2 h-4 w-4" />
-                        {dict.navigation.createShift}
+                        <Clock className="mr-2 h-4 w-4" />
+                        {dict.nav?.shifts || 'Shifts'}
+                      </Link>
+                      <Link
+                        href={`/${lang}/locations`}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <MapPin className="mr-2 h-4 w-4" />
+                        {dict.nav?.locations || 'Locations'}
                       </Link>
                       <Link
                         href={`/${lang}/candidates`}
@@ -299,7 +350,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Users className="mr-2 h-4 w-4" />
-                        {dict.navigation.candidates}
+                        {dict.nav?.candidates || dict.navigation.candidates}
                       </Link>
                       <Link
                         href={`/${lang}/timesheets`}
@@ -307,7 +358,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <FileText className="mr-2 h-4 w-4" />
-                        {dict.navigation.timesheets}
+                        {dict.nav?.timesheets || dict.navigation.timesheets}
                       </Link>
                     </>
                   )}
@@ -315,19 +366,27 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                   {/* SEKCJA 3: ZAWSZE WIDOCZNA - STOPKA */}
                   <div className="border-t border-gray-100 mt-1">
                     <Link
+                      href={`/${lang}`}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <Globe className="mr-2 h-4 w-4" />
+                      {dict.jobBoard?.title || 'Job Board'}
+                    </Link>
+                    <Link
                       href={`/${lang}/profile`}
                       onClick={() => setIsOpen(false)}
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       <UserCircle className="mr-2 h-4 w-4" />
-                      {dict.navigation.profile}
+                      {dict.nav?.profile || dict.navigation.profile}
                     </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    {dict.navigation.logout}
+                    {dict.nav?.logout || dict.navigation.logout}
                   </button>
                   </div>
                 </div>

@@ -16,6 +16,16 @@
     "role": "Rolle",
     "noRoleAssigned": "Ingen rolle tildelt"
   },
+  "nav": {
+    "dashboard": "Oversigt",
+    "shifts": "Vagter",
+    "locations": "Lokationer",
+    "timesheets": "Timesedler",
+    "candidates": "Kandidater",
+    "settings": "Indstillinger",
+    "profile": "Profil",
+    "logout": "Log ud"
+  },
   "auth": {
     "loginTitle": "Velkommen tilbage",
     "loginDescription": "Indtast dine loginoplysninger",
@@ -421,6 +431,81 @@
       "healthcare": "Sundhed & Pleje",
       "other": "Andet"
     }
+  },
+  "candidatesPage": {
+    "title": "Ansøgere & Kandidater",
+    "subtitle": "Administrer ansøgninger til dine vagter.",
+    "table": {
+      "candidate": "Kandidat",
+      "job": "Job / Vagt",
+      "appliedDate": "Ansøgningsdato",
+      "status": "Status",
+      "actions": "Handlinger"
+    },
+    "status": {
+      "pending": "Afventer",
+      "approved": "Godkendt",
+      "rejected": "Afvist",
+      "accepted": "Accepteret",
+      "waitlist": "Venteliste"
+    },
+    "actions": {
+      "viewProfile": "Se profil",
+      "accept": "Accepter",
+      "reject": "Afvis"
+    },
+    "empty": "Ingen kandidater fundet endnu.",
+    "applied": "Ansøgt",
+    "candidateId": "Kandidat ID",
+    "modal": {
+      "title": "Kandidatprofil",
+      "about": "Om",
+      "aboutPlaceholder": "Ingen yderligere oplysninger angivet.",
+      "contact": "Kontaktoplysninger",
+      "applicationMessage": "Ansøgningsbesked",
+      "appliedFor": "Ansøgt til",
+      "appliedAt": "Ansøgt den",
+      "status": "Status",
+      "accept": "Accepter",
+      "reject": "Afvis",
+      "accepting": "Accepterer...",
+      "rejecting": "Afviser...",
+      "acceptSuccess": "Kandidat accepteret!",
+      "rejectSuccess": "Kandidat afvist.",
+      "error": "Der opstod en fejl. Prøv venligst igen.",
+      "close": "Luk"
+    }
+  },
+  "timesheetsPage": {
+    "title": "Godkendelse af Timesedler",
+    "subtitle": "Gennemgå og godkend arbejdstimer.",
+    "table": {
+      "worker": "Medarbejder",
+      "shift": "Vagt",
+      "date": "Dato",
+      "duration": "Varighed",
+      "totalPay": "Samlet løn",
+      "status": "Status",
+      "actions": "Handlinger"
+    },
+    "status": {
+      "pending": "Afventer",
+      "approved": "Godkendt",
+      "disputed": "Anfægtet",
+      "paid": "Betalt"
+    },
+    "actions": {
+      "approve": "Godkend",
+      "dispute": "Anfægt",
+      "reject": "Afvis"
+    },
+    "empty": "Ingen timesedler at gennemgå.",
+    "workerId": "Medarbejder ID",
+    "plannedTime": "Planlagt tid",
+    "recordedTime": "Registreret tid",
+    "notSpecified": "Ikke angivet",
+    "notRecorded": "Ikke registreret",
+    "notCheckedOut": "Ikke afmeldt"
   }
 }
 

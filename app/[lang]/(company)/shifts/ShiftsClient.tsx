@@ -99,7 +99,7 @@ export default function ShiftsClient({ dict, statusDict, lang }: ShiftsClientPro
 
       setShifts(data || []);
     } catch (err: any) {
-      console.error('Error fetching shifts:', err);
+      console.error('Error fetching shifts DETAILS:', JSON.stringify(err, null, 2));
       setError(err.message || 'Could not fetch shifts');
     } finally {
       setLoading(false);

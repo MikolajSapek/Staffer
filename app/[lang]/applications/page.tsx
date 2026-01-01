@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatTime, formatDateShort, formatDateTime } from '@/lib/date-utils';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 
@@ -30,13 +31,14 @@ export default async function ApplicationsPage({
     redirect(`/${lang}`);
   }
 
-  // Fetch user's applications
+  // Fetch user's applications with company details
   const { data: applications } = await supabase
     .from('shift_applications')
     .select(`
       id,
       status,
       applied_at,
+      worker_message,
       shift_id,
       shifts (
         id,
@@ -44,9 +46,16 @@ export default async function ApplicationsPage({
         start_time,
         end_time,
         hourly_rate,
+        company_id,
         locations (
           name,
           address
+        ),
+        profiles:profiles!shifts_company_id_fkey (
+          last_name,
+          company_details (
+            logo_url
+          )
         )
       )
     `)
@@ -55,23 +64,38 @@ export default async function ApplicationsPage({
 
 
   const getStatusBadge = (status: string) => {
+    // Map 'accepted' to 'approved' for display consistency
+    const displayStatus = status === 'accepted' ? 'approved' : status;
+    
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      accepted: 'default',
+      approved: 'default',
+      accepted: 'default', // Backward compatibility
       pending: 'secondary',
       rejected: 'destructive',
       waitlist: 'outline',
+      completed: 'outline',
     };
     const labels: Record<string, string> = {
-      accepted: dict.workerApplications.statusAccepted,
+      approved: dict.workerApplications.statusAccepted || 'Approved',
+      accepted: dict.workerApplications.statusAccepted || 'Accepted', // Backward compatibility
       pending: dict.workerApplications.statusPending,
       rejected: dict.workerApplications.statusRejected,
       waitlist: dict.workerApplications.statusWaitlist,
+      completed: 'Completed',
     };
     return (
-      <Badge variant={variants[status] || 'secondary'}>
-        {labels[status] || status}
+      <Badge variant={variants[displayStatus] || 'secondary'}>
+        {labels[displayStatus] || status}
       </Badge>
     );
+  };
+
+  const getCompanyName = (shift: any) => {
+    return shift.profiles?.last_name || 'Unknown Company';
+  };
+
+  const getCompanyLogo = (shift: any) => {
+    return shift.profiles?.company_details?.[0]?.logo_url || null;
   };
 
   return (
@@ -97,15 +121,28 @@ export default async function ApplicationsPage({
             const shift = app.shifts;
             if (!shift) return null;
 
+            const companyName = getCompanyName(shift);
+            const companyLogo = getCompanyLogo(shift);
+            const companyInitials = companyName.substring(0, 2).toUpperCase();
+
             return (
               <Card key={app.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>{shift.title}</CardTitle>
-                      <CardDescription>
-                        {dict.workerApplications.applied}: {formatDateTime(app.applied_at)}
-                      </CardDescription>
+                    <div className="flex items-start gap-3 flex-1">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={companyLogo || undefined} alt={companyName} />
+                        <AvatarFallback>{companyInitials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <CardTitle>{shift.title}</CardTitle>
+                        <CardDescription>
+                          {companyName}
+                        </CardDescription>
+                        <CardDescription className="mt-1">
+                          {dict.workerApplications.applied}: {formatDateTime(app.applied_at)}
+                        </CardDescription>
+                      </div>
                     </div>
                     {getStatusBadge(app.status)}
                   </div>
@@ -128,6 +165,12 @@ export default async function ApplicationsPage({
                       <span className="font-medium">{dict.workerApplications.location}:</span>{' '}
                       {shift.locations?.name || dict.workerApplications.locationNotSpecified}
                     </div>
+                    {app.worker_message && (
+                      <div className="mt-3 pt-3 border-t">
+                        <span className="font-medium">{dict.workerApplications.message || 'Your message'}:</span>
+                        <p className="text-muted-foreground mt-1">{app.worker_message}</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

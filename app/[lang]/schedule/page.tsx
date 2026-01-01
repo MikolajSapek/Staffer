@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { formatTime, formatDateLong } from '@/lib/date-utils';
+import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
+import ScheduleCalendarClient from './ScheduleCalendarClient';
 
 export default async function SchedulePage({
   params,
@@ -30,7 +29,7 @@ export default async function SchedulePage({
     redirect(`/${lang}`);
   }
 
-  // Fetch user's accepted shifts
+  // Fetch user's approved shifts with company details
   const { data: applications } = await supabase
     .from('shift_applications')
     .select(`
@@ -43,16 +42,27 @@ export default async function SchedulePage({
         start_time,
         end_time,
         hourly_rate,
+        company_id,
         locations (
           name,
           address
+        ),
+        profiles:profiles!shifts_company_id_fkey (
+          last_name,
+          company_details (
+            logo_url
+          )
         )
       )
     `)
     .eq('worker_id', user.id)
-    .eq('status', 'accepted')
+    .in('status', ['approved', 'accepted']) // Support both for backward compatibility
     .order('shifts(start_time)', { ascending: true });
 
+  // Transform data for client component
+  const shifts = applications
+    ?.filter((app: any) => app.shifts)
+    .map((app: any) => app.shifts) || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -63,7 +73,7 @@ export default async function SchedulePage({
         </p>
       </div>
 
-      {!applications || applications.length === 0 ? (
+      {!shifts || shifts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
@@ -72,44 +82,11 @@ export default async function SchedulePage({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {applications.map((app: any) => {
-            const shift = app.shifts;
-            if (!shift) return null;
-
-            return (
-              <Card key={app.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle>{shift.title}</CardTitle>
-                    <Badge variant="secondary">
-                      {shift.hourly_rate} DKK/t
-                    </Badge>
-                  </div>
-                  <CardDescription>
-                    {shift.locations?.name || dict.workerCalendar.locationNotSpecified}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="font-medium">{dict.workerCalendar.date}:</span>{' '}
-                      {formatDateLong(shift.start_time)}
-                    </div>
-                    <div>
-                      <span className="font-medium">{dict.workerCalendar.time}:</span>{' '}
-                      {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
-                    </div>
-                    <div>
-                      <span className="font-medium">{dict.workerCalendar.address}:</span>{' '}
-                      {shift.locations?.address || dict.workerCalendar.notSpecified}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <ScheduleCalendarClient
+          shifts={shifts}
+          dict={dict.workerCalendar}
+          lang={lang}
+        />
       )}
     </div>
   );

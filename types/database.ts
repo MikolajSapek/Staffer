@@ -219,22 +219,28 @@ export interface Database {
           id: string;
           shift_id: string;
           worker_id: string;
+          company_id: string;
           status: 'pending' | 'accepted' | 'rejected' | 'waitlist';
           applied_at: string;
+          worker_message: string | null;
         };
         Insert: {
           id?: string;
           shift_id: string;
           worker_id: string;
+          company_id: string;
           status?: 'pending' | 'accepted' | 'rejected' | 'waitlist';
           applied_at?: string;
+          worker_message?: string | null;
         };
         Update: {
           id?: string;
           shift_id?: string;
           worker_id?: string;
+          company_id?: string;
           status?: 'pending' | 'accepted' | 'rejected' | 'waitlist';
           applied_at?: string;
+          worker_message?: string | null;
         };
       };
       timesheets: {

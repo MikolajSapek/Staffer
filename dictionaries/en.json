@@ -16,6 +16,16 @@
     "role": "Role",
     "noRoleAssigned": "No role assigned"
   },
+  "nav": {
+    "dashboard": "Dashboard",
+    "shifts": "Shifts",
+    "locations": "Locations",
+    "timesheets": "Timesheets",
+    "candidates": "Candidates",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Log out"
+  },
   "auth": {
     "loginTitle": "Welcome back",
     "loginDescription": "Enter your login credentials",
@@ -419,6 +429,81 @@
       "healthcare": "Healthcare & Care",
       "other": "Other"
     }
+  },
+  "candidatesPage": {
+    "title": "Applicants & Candidates",
+    "subtitle": "Manage applications for your shifts.",
+    "table": {
+      "candidate": "Candidate",
+      "job": "Job / Shift",
+      "appliedDate": "Applied Date",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "accepted": "Accepted",
+      "waitlist": "Waitlist"
+    },
+    "actions": {
+      "viewProfile": "View Profile",
+      "accept": "Accept",
+      "reject": "Reject"
+    },
+    "empty": "No candidates found yet.",
+    "applied": "Applied",
+    "candidateId": "Candidate ID",
+    "modal": {
+      "title": "Candidate Profile",
+      "about": "About",
+      "aboutPlaceholder": "No additional information provided.",
+      "contact": "Contact Information",
+      "applicationMessage": "Application Message",
+      "appliedFor": "Applied For",
+      "appliedAt": "Applied At",
+      "status": "Status",
+      "accept": "Accept",
+      "reject": "Reject",
+      "accepting": "Accepting...",
+      "rejecting": "Rejecting...",
+      "acceptSuccess": "Candidate accepted successfully!",
+      "rejectSuccess": "Candidate rejected.",
+      "error": "An error occurred. Please try again.",
+      "close": "Close"
+    }
+  },
+  "timesheetsPage": {
+    "title": "Timesheets Approval",
+    "subtitle": "Review and approve worker hours.",
+    "table": {
+      "worker": "Worker",
+      "shift": "Shift",
+      "date": "Date",
+      "duration": "Duration",
+      "totalPay": "Total Pay",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "disputed": "Disputed",
+      "paid": "Paid"
+    },
+    "actions": {
+      "approve": "Approve",
+      "dispute": "Dispute",
+      "reject": "Reject"
+    },
+    "empty": "No timesheets to review.",
+    "workerId": "Worker ID",
+    "plannedTime": "Planned Time",
+    "recordedTime": "Recorded Time",
+    "notSpecified": "Not specified",
+    "notRecorded": "Not recorded",
+    "notCheckedOut": "Not checked out"
   }
 }
 

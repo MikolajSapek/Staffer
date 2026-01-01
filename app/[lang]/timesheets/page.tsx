@@ -1,16 +1,20 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { formatDateTime } from '@/lib/date-utils';
+import { getDictionary } from '../dictionaries';
+import TimesheetsClient from '../(company)/timesheets/TimesheetsClient';
 
-export default async function TimesheetsPage() {
+export default async function TimesheetsPage({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
+  const dict = await getDictionary(lang as 'en-US' | 'da');
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(`/${lang}/login`);
   }
 
   // Get user profile to check role
@@ -21,151 +25,66 @@ export default async function TimesheetsPage() {
     .single();
 
   if (!profile || profile.role !== 'company') {
-    redirect('/');
+    redirect(`/${lang}`);
   }
 
-  // Fetch company's shifts first
-  const { data: companyShifts } = await supabase
-    .from('shifts')
-    .select('id')
-    .eq('company_id', user.id);
+  // Fetch shift_applications that need approval:
+  // - status = 'accepted' (hired workers)
+  // - shifts.end_time < now() (past shifts)
+  // - Not already in payments table
+  const now = new Date().toISOString();
 
-  const shiftIds = companyShifts?.map(s => s.id) || [];
-
-  // Fetch timesheets for company's shifts
-  const { data: timesheets } = shiftIds.length > 0 ? await supabase
-    .from('timesheets')
+  const { data: applications } = await supabase
+    .from('shift_applications')
     .select(`
       id,
-      shift_id,
-      worker_id,
-      clock_in_time,
-      clock_out_time,
-      manager_approved_start,
-      manager_approved_end,
       status,
-      shifts (
+      worker_id,
+      shifts!inner(
         id,
         title,
         start_time,
         end_time,
-        hourly_rate
+        hourly_rate,
+        company_id
+      ),
+      profiles:worker_id(
+        first_name,
+        last_name,
+        email,
+        worker_details (
+          avatar_url
+        )
       )
     `)
-    .in('shift_id', shiftIds)
-    .order('created_at', { ascending: false }) : { data: null };
+    .in('status', ['approved', 'accepted']) // Support both for backward compatibility
+    .eq('shifts.company_id', user.id)
+    .lt('shifts.end_time', now)
+    .order('shifts(end_time)', { ascending: false });
 
+  // Fetch all payments to get processed application IDs
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('application_id');
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      approved: 'default',
-      pending: 'secondary',
-      disputed: 'destructive',
-      paid: 'outline',
-    };
-    const labels: Record<string, string> = {
-      approved: 'Godkendt',
-      pending: 'Afventer',
-      disputed: 'Disputeret',
-      paid: 'Betalt',
-    };
-    return (
-      <Badge variant={variants[status] || 'secondary'}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
+  const processedApplicationIds = payments?.map((p) => p.application_id) || [];
+
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Tidsregistreringer</h1>
+        <h1 className="text-3xl font-bold mb-2">{dict.timesheetsPage.title}</h1>
         <p className="text-muted-foreground">
-          Godkend eller ret tidsregistreringer fra arbejdere
+          {dict.timesheetsPage.subtitle}
         </p>
       </div>
 
-      {!timesheets || timesheets.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              Der er ingen tidsregistreringer endnu.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {timesheets.map((timesheet: any) => {
-            const shift = timesheet.shifts;
-            if (!shift) return null;
-
-            const hasClockIn = !!timesheet.clock_in_time;
-            const hasClockOut = !!timesheet.clock_out_time;
-            const hasPlanned = !!shift.start_time && !!shift.end_time;
-
-            return (
-              <Card key={timesheet.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>{shift.title}</CardTitle>
-                      <CardDescription>
-                        Arbejder ID: {timesheet.worker_id.substring(0, 8)}...
-                      </CardDescription>
-                    </div>
-                    {getStatusBadge(timesheet.status)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <div className="text-sm font-medium mb-2">Planlagt tid</div>
-                        <div className="text-sm text-muted-foreground">
-                          {hasPlanned ? (
-                            <>
-                              {formatDateTime(shift.start_time)} - {formatDateTime(shift.end_time)}
-                            </>
-                          ) : (
-                            'Ikke angivet'
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium mb-2">Registreret tid</div>
-                        <div className="text-sm text-muted-foreground">
-                          {hasClockIn ? (
-                            <>
-                              {formatDateTime(timesheet.clock_in_time)}
-                              {hasClockOut ? ` - ${formatDateTime(timesheet.clock_out_time)}` : ' - Ikke afmeldt'}
-                            </>
-                          ) : (
-                            'Ikke registreret'
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {timesheet.status === 'pending' && (
-                      <div className="flex gap-2 pt-2">
-                        <Button variant="outline" size="sm" disabled>
-                          Godkend
-                        </Button>
-                        <Button variant="outline" size="sm" disabled>
-                          Ret
-                        </Button>
-                        <Button variant="outline" size="sm" disabled>
-                          Afvis
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <TimesheetsClient
+        applications={applications || []}
+        processedApplicationIds={processedApplicationIds}
+        dict={dict}
+        lang={lang}
+      />
     </div>
   );
 }
