@@ -1,13 +1,11 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import StatsCards from '@/components/dashboard/StatsCards';
+import ArchivedShiftsList from '@/components/dashboard/ArchivedShiftsList';
 
 export default async function CompanyDashboardPage({
   params,
@@ -46,8 +44,12 @@ export default async function CompanyDashboardPage({
     redirect(`/${lang}/company-setup`);
   }
 
-  // Fetch company's shifts
-  const { data: shifts } = await supabase
+  // Get current time for filtering
+  const now = new Date().toISOString();
+
+  // Fetch archived shifts (end_time <= now OR status is 'cancelled')
+  // Using two separate queries and combining them for better type safety
+  const { data: endedShifts, error: endedError } = await supabase
     .from('shifts')
     .select(`
       id,
@@ -61,11 +63,87 @@ export default async function CompanyDashboardPage({
       locations (
         name,
         address
+      ),
+      shift_applications (
+        id,
+        status,
+        worker_id,
+        profiles:worker_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          worker_details (
+            avatar_url,
+            phone_number
+          )
+        )
       )
     `)
     .eq('company_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10);
+    .lte('end_time', now)
+    .order('end_time', { ascending: false });
+
+  // Debug logging
+  if (endedError) {
+    console.error('Error fetching ended shifts:', endedError);
+  }
+  if (endedShifts && endedShifts.length > 0) {
+    console.log('Ended Shifts Sample:', JSON.stringify(endedShifts[0], null, 2));
+    console.log('First Application:', endedShifts[0]?.shift_applications?.[0]);
+    console.log('Worker Profile:', endedShifts[0]?.shift_applications?.[0]?.profiles);
+  }
+
+  const { data: cancelledShifts, error: cancelledError } = await supabase
+    .from('shifts')
+    .select(`
+      id,
+      title,
+      start_time,
+      end_time,
+      hourly_rate,
+      vacancies_total,
+      vacancies_taken,
+      status,
+      locations (
+        name,
+        address
+      ),
+      shift_applications (
+        id,
+        status,
+        worker_id,
+        profiles:worker_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          worker_details (
+            avatar_url,
+            phone_number
+          )
+        )
+      )
+    `)
+    .eq('company_id', user.id)
+    .eq('status', 'cancelled')
+    .gt('end_time', now); // Only get cancelled shifts that haven't ended yet (to avoid duplicates)
+
+  // Debug logging
+  if (cancelledError) {
+    console.error('Error fetching cancelled shifts:', cancelledError);
+  }
+
+  // Combine and deduplicate by shift id, then sort and limit
+  const archivedShiftsMap = new Map();
+  [...(endedShifts || []), ...(cancelledShifts || [])].forEach((shift) => {
+    if (!archivedShiftsMap.has(shift.id)) {
+      archivedShiftsMap.set(shift.id, shift);
+    }
+  });
+  const archivedShifts = Array.from(archivedShiftsMap.values())
+    .sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime())
+    .slice(0, 10);
 
   // Query 1: Count locations for this company
   const { count: locationsCount } = await supabase
@@ -73,12 +151,13 @@ export default async function CompanyDashboardPage({
     .select('*', { count: 'exact', head: true })
     .eq('company_id', user.id);
 
-  // Query 2: Count active shifts (status is not 'completed')
+  // Query 2: Count active shifts (end_time > now AND status != 'cancelled')
   const { count: activeShiftsCount } = await supabase
     .from('shifts')
     .select('*', { count: 'exact', head: true })
     .eq('company_id', user.id)
-    .neq('status', 'completed');
+    .gt('end_time', now)
+    .neq('status', 'cancelled');
 
   // Query 3: Sum vacancies_taken from shifts table for this company
   const { data: shiftsData } = await supabase
@@ -87,28 +166,6 @@ export default async function CompanyDashboardPage({
     .eq('company_id', user.id);
 
   const totalHires = shiftsData?.reduce((sum, shift) => sum + (shift.vacancies_taken || 0), 0) || 0;
-
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      published: 'default',
-      full: 'secondary',
-      completed: 'outline',
-      cancelled: 'destructive',
-    };
-    const labels: Record<string, string> = {
-      published: dict.status.active,
-      full: dict.status.fullyBooked,
-      completed: dict.status.completed,
-      cancelled: dict.status.cancelled,
-    };
-    return (
-      <Badge variant={variants[status] || 'secondary'}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
-
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -151,10 +208,10 @@ export default async function CompanyDashboardPage({
         </div>
       </div>
 
-      {/* Recent Shifts Section */}
-      <div id="recent-shifts" className="mb-8 scroll-mt-8">
+      {/* Archive Shifts Section */}
+      <div id="archive-shifts" className="mb-8 scroll-mt-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold">{dict.dashboard.recentJobListings}</h2>
+          <h2 className="text-2xl font-semibold">{dict.companyShifts.archiveShifts}</h2>
           <Button variant="outline" asChild>
             <Link href={`/${lang}/create-shift`}>
               <Plus className="mr-2 h-4 w-4" />
@@ -163,57 +220,11 @@ export default async function CompanyDashboardPage({
           </Button>
         </div>
 
-      {!shifts || shifts.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground mb-4">
-              {dict.dashboard.noJobListings}
-            </p>
-            <Button asChild>
-              <Link href={`/${lang}/create-shift`}>
-                <Plus className="mr-2 h-4 w-4" />
-                {dict.dashboard.createFirstJobListing}
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {shifts.map((shift) => (
-            <Card key={shift.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-xl">{shift.title}</CardTitle>
-                  {getStatusBadge(shift.status)}
-                </div>
-                <CardDescription>
-                  {shift.locations?.name || dict.jobBoard.locationNotSpecified}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">{dict.dashboard.date}:</span>{' '}
-                    {formatDateShort(shift.start_time)}
-                  </div>
-                  <div>
-                    <span className="font-medium">{dict.dashboard.time}:</span>{' '}
-                    {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
-                  </div>
-                  <div>
-                    <span className="font-medium">{dict.dashboard.rate}:</span>{' '}
-                    {shift.hourly_rate} DKK/t
-                  </div>
-                  <div>
-                    <span className="font-medium">{dict.dashboard.booked}:</span>{' '}
-                    {shift.vacancies_taken || 0} / {shift.vacancies_total}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+        <ArchivedShiftsList
+          archivedShifts={archivedShifts}
+          lang={lang}
+          dict={dict}
+        />
       </div>
     </div>
   );

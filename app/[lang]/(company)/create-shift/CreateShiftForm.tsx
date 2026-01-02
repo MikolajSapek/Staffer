@@ -357,7 +357,7 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
               <div className="space-y-2">
                 <Label htmlFor="template-select">{dict.templates.loadTemplate}</Label>
                 <Select
-                  value={selectedTemplateId}
+                  value={selectedTemplateId || undefined}
                   onValueChange={handleTemplateSelect}
                   disabled={loading}
                 >
@@ -365,7 +365,6 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
                     <SelectValue placeholder={dict.templates.selectTemplatePlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{dict.templates.selectTemplatePlaceholder}</SelectItem>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.template_name}

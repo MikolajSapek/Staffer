@@ -18,16 +18,19 @@ import { Loader2, Mail, Phone, User, Briefcase } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-utils';
 
 interface WorkerDetails {
-  first_name: string | null;
-  last_name: string | null;
   avatar_url: string | null;
   phone_number: string;
+  experience: string | null;
+  description: string | null;
 }
 
 interface Profile {
   id: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
-  worker_details: WorkerDetails[] | null;
+  // worker_details is returned as an object
+  worker_details: WorkerDetails | null;
 }
 
 interface Shift {
@@ -87,21 +90,31 @@ export default function CandidateProfileModal({
 
   const profile = application.profiles;
   const shift = application.shifts;
-  const workerDetails = profile?.worker_details?.[0];
 
   if (!profile || !shift) {
     return null;
   }
 
-  // Safely extract data with fallbacks
-  const firstName = workerDetails?.first_name || '';
-  const lastName = workerDetails?.last_name || '';
+  // Helper function to extract worker_details (as object)
+  const getWorkerDetails = (prof: typeof profile): WorkerDetails | null => {
+    if (!prof?.worker_details) return null;
+    // worker_details is returned as an object, not an array
+    return prof.worker_details as WorkerDetails;
+  };
+
+  const workerDetails = getWorkerDetails(profile);
+
+  // Extract name from profiles table, avatar and phone from worker_details
+  const firstName = profile.first_name || '';
+  const lastName = profile.last_name || '';
   const fullName = `${firstName} ${lastName}`.trim() || profile.email || 'Unknown';
   const initials = firstName && lastName
     ? `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
     : profile.email?.charAt(0).toUpperCase() || '??';
   const avatarUrl = workerDetails?.avatar_url || null;
   const phoneNumber = workerDetails?.phone_number || '';
+  const description = workerDetails?.description || null;
+  const experience = workerDetails?.experience || null;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -159,15 +172,33 @@ export default function CandidateProfileModal({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-4 mb-4">
-            <Avatar className="h-20 w-20">
+          {/* Hero Section with Large Avatar */}
+          <div className="flex flex-row gap-6 pb-6 border-b">
+            <Avatar className="h-32 w-32 flex-shrink-0">
               <AvatarImage src={avatarUrl || undefined} alt={fullName} />
-              <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
+              <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <DialogTitle className="text-2xl">{fullName}</DialogTitle>
-              <div className="mt-1">
-                {getStatusBadge(application.status)}
+            <div className="flex-1 flex flex-col justify-center gap-3">
+              <div>
+                <DialogTitle className="text-3xl font-bold mb-2">{fullName}</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Worker details and contact information for {fullName}
+                </DialogDescription>
+                <div className="mt-2">
+                  {getStatusBadge(application.status)}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{profile.email}</span>
+                </div>
+                {phoneNumber && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{phoneNumber}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -181,7 +212,7 @@ export default function CandidateProfileModal({
               {dict.appliedFor}
             </div>
             <div className="pl-6">
-              <div className="font-medium">{shift.title}</div>
+              <div className="font-medium text-foreground">{shift.title}</div>
               <div className="text-sm text-muted-foreground">
                 {dict.appliedAt}: {formatDateTime(application.applied_at)}
               </div>
@@ -189,35 +220,33 @@ export default function CandidateProfileModal({
           </div>
 
           {/* About Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <User className="h-4 w-4" />
-              {dict.about}
+          {(description || experience) && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <User className="h-4 w-4" />
+                {dict.about}
+              </div>
+              <div className="pl-6 space-y-3">
+                {description && (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Bio</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {description}
+                    </p>
+                  </div>
+                )}
+                {experience && (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Experience</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {experience}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="pl-6">
-              <p className="text-sm text-muted-foreground">
-                {dict.aboutPlaceholder || 'No additional information provided.'}
-              </p>
-            </div>
-          </div>
+          )}
 
-          {/* Contact Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Phone className="h-4 w-4" />
-              {dict.contact}
-            </div>
-            <div className="pl-6 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{phoneNumber || 'Not provided'}</span>
-              </div>
-            </div>
-          </div>
 
           {/* Application Message */}
           {application.worker_message && (

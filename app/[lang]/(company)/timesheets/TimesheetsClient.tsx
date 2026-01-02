@@ -147,7 +147,7 @@ export default function TimesheetsClient({
                 <TableHead>{dict.timesheetsPage.date}</TableHead>
                 <TableHead>{dict.timesheetsPage.hoursWorked}</TableHead>
                 <TableHead>{dict.timesheetsPage.totalDue}</TableHead>
-                <TableHead className="text-right">{dict.timesheetsPage.actions}</TableHead>
+                <TableHead className="text-right">{dict.timesheetsPage.table.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -160,7 +160,7 @@ export default function TimesheetsClient({
                 const firstName = application.profiles.first_name || '';
                 const lastName = application.profiles.last_name || '';
                 const workerName = `${firstName} ${lastName}`.trim() || 'Unknown';
-                const avatarUrl = application.profiles.worker_details?.[0]?.avatar_url || null;
+                const avatarUrl = application.profiles.worker_details?.avatar_url || null;
                 const initials = `${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}`.toUpperCase() || '??';
 
                 return (

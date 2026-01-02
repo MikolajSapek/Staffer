@@ -3,6 +3,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -18,7 +19,7 @@ interface Worker {
   email: string;
   worker_details: {
     avatar_url: string | null;
-  }[] | null;
+  } | null;
 }
 
 interface Shift {
@@ -75,6 +76,9 @@ export default function ShiftDetailModal({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">{shift.title}</DialogTitle>
+          <DialogDescription>
+            Shift details, location, and hired team information
+          </DialogDescription>
           <div className="text-sm text-muted-foreground">
             <Badge variant={shift.status === 'full' ? 'secondary' : 'default'}>
               {shift.status === 'full' ? 'Full' : 'Active'}
@@ -125,7 +129,7 @@ export default function ShiftDetailModal({
                   const firstName = worker.first_name || '';
                   const lastName = worker.last_name || '';
                   const fullName = `${firstName} ${lastName}`.trim() || 'Unknown';
-                  const avatarUrl = worker.worker_details?.[0]?.avatar_url || null;
+                  const avatarUrl = worker.worker_details?.avatar_url || null;
                   const initials = getInitials(worker.first_name, worker.last_name);
 
                   return (

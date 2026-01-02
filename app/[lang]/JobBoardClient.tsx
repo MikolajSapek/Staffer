@@ -166,20 +166,18 @@ export default function JobBoardClient({
                 </div>
 
                 <div className="pt-2">
-                  {fullyBooked && (
+                  {fullyBooked ? (
                     <Badge variant="outline" className="w-full justify-center">
                       {dict.jobBoard.fullyBooked}
                     </Badge>
-                  )}
-                  {canApply && (
+                  ) : canApply ? (
                     <Button
                       onClick={() => handleApply(shift)}
                       className="w-full"
                     >
                       {dict.jobBoard.apply}
                     </Button>
-                  )}
-                  {!user && userRole !== 'worker' && (
+                  ) : (
                     <Button
                       variant="outline"
                       className="w-full"

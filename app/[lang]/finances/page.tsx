@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { getDictionary } from '@/app/[lang]/dictionaries';
+import { formatCurrency } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,7 +68,7 @@ export default async function FinancesPage({
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold mb-2">
-              {totalEarnings.toLocaleString(lang === 'da' ? 'da-DK' : 'en-US')} DKK
+              {formatCurrency(totalEarnings, { locale: lang === 'da' ? 'da-DK' : 'en-US' })}
             </div>
             <p className="text-sm text-muted-foreground">
               {timesheets?.length || 0} {dict.workerFinances.approvedTimesheets}

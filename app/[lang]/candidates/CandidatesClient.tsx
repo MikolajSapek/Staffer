@@ -15,24 +15,29 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Star } from 'lucide-react';
 import CandidateProfileModal from '@/components/company/CandidateProfileModal';
-import { formatDateTime } from '@/lib/date-utils';
+import { formatDateTime, formatDateShort, formatTime } from '@/lib/date-utils';
 
 interface WorkerDetails {
-  first_name: string | null;
-  last_name: string | null;
   avatar_url: string | null;
   phone_number: string;
+  experience: string | null;
+  description: string | null;
 }
 
 interface Profile {
   id: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
-  worker_details: WorkerDetails[] | null;
+  // worker_details is returned as an object
+  worker_details: WorkerDetails | null;
 }
 
 interface Shift {
   id: string;
   title: string;
+  start_time: string;
+  end_time: string;
 }
 
 interface Application {
@@ -97,6 +102,20 @@ export default function CandidatesClient({
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Debug: Log data structure to understand Supabase response format
+  if (applications && applications.length > 0) {
+    console.log('Candidates Data Check:', applications[0]);
+    console.log('Worker Details Check:', applications[0]?.profiles?.worker_details);
+    console.log('Worker Details Type:', Array.isArray(applications[0]?.profiles?.worker_details) ? 'Array' : typeof applications[0]?.profiles?.worker_details);
+  }
+
+  // Helper function to extract worker_details (as object)
+  const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
+    if (!profile?.worker_details) return null;
+    // worker_details is returned as an object, not an array
+    return profile.worker_details as WorkerDetails;
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       accepted: 'default',
@@ -154,9 +173,25 @@ export default function CandidatesClient({
   return (
     <>
       <div className="space-y-8">
-        {shiftGroups.map((group) => (
+        {shiftGroups.map((group) => {
+          // Get shift details from first application in group
+          const firstApp = group.applications[0];
+          const shift = firstApp?.shifts;
+          const shiftDate = shift?.start_time ? formatDateShort(shift.start_time) : '';
+          const shiftTime = shift?.start_time && shift?.end_time 
+            ? `${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`
+            : '';
+          
+          return (
           <div key={group.shiftId}>
-            <h3 className="text-xl font-bold mb-4">{group.shiftTitle}</h3>
+            <div className="mb-4">
+              <h3 className="text-xl font-bold">{group.shiftTitle}</h3>
+              {shiftDate && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  {shiftDate} {shiftTime && `• ${shiftTime}`}
+                </div>
+              )}
+            </div>
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -170,13 +205,13 @@ export default function CandidatesClient({
                 <TableBody>
                   {group.applications.map((app) => {
                     const profile = app.profiles;
-                    const workerDetails = profile?.worker_details?.[0];
+                    const workerDetails = getWorkerDetails(profile);
 
                     if (!profile) return null;
 
-                    // Safely extract name, phone and avatar with fallbacks
-                    const firstName = workerDetails?.first_name || '';
-                    const lastName = workerDetails?.last_name || '';
+                    // Extract name from profiles table, avatar and phone from worker_details
+                    const firstName = profile.first_name || '';
+                    const lastName = profile.last_name || '';
                     const fullName = `${firstName} ${lastName}`.trim() || profile.email || 'Unknown';
                     const phoneNumber = workerDetails?.phone_number || '';
                     const initials = firstName && lastName 
@@ -190,21 +225,14 @@ export default function CandidatesClient({
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => handleRowClick(app)}
                       >
-                        <TableCell>
+                        <TableCell className="py-4">
                           <div className="flex items-center gap-3">
-                            {avatarUrl && (
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={avatarUrl} alt={fullName} />
-                                <AvatarFallback>{initials}</AvatarFallback>
-                              </Avatar>
-                            )}
-                            {!avatarUrl && (
-                              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                                {initials}
-                              </div>
-                            )}
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={avatarUrl || undefined} alt={fullName} />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
                             <div>
-                              <div className="font-medium">{fullName}</div>
+                              <div className="font-semibold text-foreground">{fullName}</div>
                               <div className="text-sm text-muted-foreground">
                                 {profile.email || ''}
                               </div>
@@ -216,7 +244,7 @@ export default function CandidatesClient({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-4">
                           <div className="flex items-center gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <Star
@@ -226,8 +254,8 @@ export default function CandidatesClient({
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell>{getStatusBadge(app.status)}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-4">{getStatusBadge(app.status)}</TableCell>
+                        <TableCell className="py-4">
                           <Button
                             variant="outline"
                             size="sm"
@@ -246,7 +274,8 @@ export default function CandidatesClient({
               </Table>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {selectedApplication && (

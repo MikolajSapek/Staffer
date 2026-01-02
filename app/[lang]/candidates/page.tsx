@@ -29,16 +29,11 @@ export default async function CandidatesPage({
     redirect(`/${lang}`);
   }
 
-  // Fetch company's shifts first
-  const { data: companyShifts } = await supabase
-    .from('shifts')
-    .select('id')
-    .eq('company_id', user.id);
-
-  const shiftIds = companyShifts?.map(s => s.id) || [];
-
   // Fetch applications for company's shifts with worker details
-  const { data: allApplications } = shiftIds.length > 0 ? await supabase
+  // Using worker_details table via nested join through profiles (1:1 via profile_id)
+  // Fetch from profiles: first_name, last_name, email
+  // Fetch from worker_details: avatar_url, phone_number, experience, description
+  const { data: allApplications } = await supabase
     .from('shift_applications')
     .select(`
       id,
@@ -50,21 +45,24 @@ export default async function CandidatesPage({
       shifts (
         id,
         title,
-        start_time
+        start_time,
+        end_time
       ),
       profiles:worker_id (
         id,
+        first_name,
+        last_name,
         email,
         worker_details (
-          first_name,
-          last_name,
           avatar_url,
-          phone_number
+          phone_number,
+          experience,
+          description
         )
       )
     `)
-    .in('shift_id', shiftIds)
-    .order('applied_at', { ascending: false }) : { data: null };
+    .eq('company_id', user.id)
+    .order('applied_at', { ascending: false });
 
 
   return (
