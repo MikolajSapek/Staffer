@@ -4,7 +4,7 @@ import { getDictionary } from './dictionaries';
 import { getCurrentProfile } from '@/utils/supabase/server';
 import JobBoardClient from './JobBoardClient';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export default async function JobBoardPage({
   params,
@@ -15,31 +15,25 @@ export default async function JobBoardPage({
   const dict = await getDictionary(lang as 'en-US' | 'da');
   
   const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  const profile = user ? await getCurrentProfile() : null;
+  const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
   
-  let user = null;
-  let userRole: 'worker' | 'company' | 'admin' | null = null;
   let appliedShiftIds: string[] = [];
   let applicationStatusMap: Record<string, string> = {};
 
-  const { data: userData } = await supabase.auth.getUser();
-  user = userData?.user || null;
-  
-  if (user) {
-    const profile = await getCurrentProfile();
-    userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
+  if (user && userRole === 'worker') {
+    const { data: applications } = await supabase
+      .from('shift_applications')
+      .select('shift_id, status')
+      .eq('worker_id', user.id);
     
-    if (userRole === 'worker') {
-      const { data: applications } = await supabase
-        .from('shift_applications')
-        .select('shift_id, status')
-        .eq('worker_id', user.id);
-      
-      appliedShiftIds = applications?.map(app => app.shift_id) || [];
-      applications?.forEach(app => {
-        const status = app.status === 'accepted' ? 'approved' : app.status;
-        applicationStatusMap[app.shift_id] = status;
-      });
-    }
+    appliedShiftIds = applications?.map(app => app.shift_id) || [];
+    applications?.forEach(app => {
+      const status = app.status === 'accepted' ? 'approved' : app.status;
+      applicationStatusMap[app.shift_id] = status;
+    });
   }
 
   const { data: shiftsData, error: shiftsError } = await supabase
@@ -60,10 +54,10 @@ export default async function JobBoardPage({
       )
     `)
     .eq('status', 'published')
+    .gt('start_time', new Date().toISOString())
     .order('start_time', { ascending: true });
 
   const shifts = shiftsError ? [] : (shiftsData || []);
-
 
   return (
     <div className="container mx-auto px-4 py-8">

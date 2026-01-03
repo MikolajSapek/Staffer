@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -64,27 +63,6 @@ export default function ArchivedShiftsList({
   lang,
   dict,
 }: ArchivedShiftsListProps) {
-  // Define getStatusBadge function inside the component to access dict
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      published: 'default',
-      full: 'secondary',
-      completed: 'outline',
-      cancelled: 'destructive',
-    };
-    const labels: Record<string, string> = {
-      published: dict.status.active,
-      full: dict.status.fullyBooked,
-      completed: dict.status.completed,
-      cancelled: dict.status.cancelled,
-    };
-    return (
-      <Badge variant={variants[status] || 'secondary'}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
-
   const renderShiftCard = (shift: Shift) => {
     // Debug logging
     if (process.env.NODE_ENV === 'development') {
@@ -133,7 +111,6 @@ export default function ArchivedShiftsList({
           <CardHeader>
             <div className="flex items-start justify-between">
               <CardTitle className="text-xl">{shift.title}</CardTitle>
-              {getStatusBadge(shift.status)}
             </div>
             <CardDescription>
               {shift.locations?.name || dict.jobBoard.locationNotSpecified}

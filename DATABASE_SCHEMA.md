@@ -445,3 +445,4 @@ All schema changes are tracked in migration files located in `supabase/migration
 - All sensitive data (CPR numbers) is encrypted using pgcrypto
 - PostGIS is used for geographic coordinates in locations
 
+

@@ -67,3 +67,4 @@ CREATE POLICY "Companies can update payments for their shifts"
     )
   );
 
+

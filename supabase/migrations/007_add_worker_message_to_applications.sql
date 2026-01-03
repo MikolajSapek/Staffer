@@ -2,3 +2,4 @@
 ALTER TABLE shift_applications
 ADD COLUMN IF NOT EXISTS worker_message TEXT;
 
+

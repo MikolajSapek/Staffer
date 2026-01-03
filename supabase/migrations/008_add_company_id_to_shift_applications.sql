@@ -19,3 +19,4 @@ ALTER COLUMN company_id SET NOT NULL;
 -- Add index for performance
 CREATE INDEX IF NOT EXISTS idx_shift_applications_company ON shift_applications(company_id);
 
+

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, DollarSign, Users } from 'lucide-react';
+import { MapPin, Clock, Users } from 'lucide-react';
 import { formatTime, formatDateLong } from '@/lib/date-utils';
 import ApplyModal from '@/components/worker/ApplyModal';
 import type { User } from '@supabase/supabase-js';
@@ -64,7 +64,7 @@ export default function JobBoardClient({
 
   const handleApply = (shift: Shift) => {
     if (!user) {
-      // Redirect to login - handled by the button's onClick
+      window.location.href = `/${lang}/login`;
       return;
     }
     setSelectedShift(shift);
@@ -72,7 +72,6 @@ export default function JobBoardClient({
   };
 
   const handleApplySuccess = () => {
-    // Refresh the page to update application status
     window.location.reload();
   };
 

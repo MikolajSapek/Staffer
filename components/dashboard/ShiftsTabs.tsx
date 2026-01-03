@@ -154,7 +154,7 @@ export default function ShiftsTabs({
           <CardHeader>
             <div className="flex items-start justify-between">
               <CardTitle className="text-xl">{shift.title}</CardTitle>
-              {getStatusBadge(shift.status)}
+              {!isArchived && getStatusBadge(shift.status)}
             </div>
             <CardDescription>
               {shift.locations?.name || dict.jobBoard.locationNotSpecified}
