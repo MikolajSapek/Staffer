@@ -16,10 +16,10 @@ export async function updateApplicationStatus(
     redirect(`/${lang}/login`);
   }
 
-  // Get the application to verify ownership and get worker_id and shift details
+  // Get the application to verify ownership and get worker_id and shift_id
   const { data: application, error: fetchError } = await supabase
     .from('shift_applications')
-    .select('shift_id, worker_id, shifts!inner(company_id, start_time, end_time)')
+    .select('shift_id, worker_id')
     .eq('id', applicationId)
     .single();
 
@@ -27,13 +27,18 @@ export async function updateApplicationStatus(
     return { error: 'Application not found' };
   }
 
-  // Verify the company owns this shift
-  interface ShiftData {
-    company_id: string;
-    start_time: string;
-    end_time: string;
+  // Get shift details separately (no JOIN in JavaScript)
+  const { data: shift, error: shiftError } = await supabase
+    .from('shifts')
+    .select('company_id, start_time, end_time')
+    .eq('id', application.shift_id)
+    .single();
+
+  if (shiftError || !shift) {
+    return { error: 'Shift not found' };
   }
-  const shift = application.shifts as ShiftData;
+
+  // Verify the company owns this shift
   if (shift.company_id !== user.id) {
     return { error: 'Unauthorized' };
   }
@@ -59,33 +64,45 @@ export async function updateApplicationStatus(
     // Find all pending applications from the same worker
     const { data: pendingApplications, error: pendingError } = await supabase
       .from('shift_applications')
-      .select('id, shift_id, shifts!inner(start_time, end_time)')
+      .select('id, shift_id')
       .eq('worker_id', application.worker_id)
       .eq('status', 'pending')
       .neq('id', applicationId);
 
-    if (!pendingError && pendingApplications) {
-      // Filter applications with overlapping time windows
-      const overlappingApplications = pendingApplications.filter((app) => {
-        interface PendingShiftData {
-          start_time: string;
-          end_time: string;
+    if (!pendingError && pendingApplications && pendingApplications.length > 0) {
+      // Get all shift IDs
+      const shiftIds = pendingApplications.map((app) => app.shift_id);
+      
+      // Get shift details separately (no JOIN in JavaScript)
+      const { data: shifts, error: shiftsError } = await supabase
+        .from('shifts')
+        .select('id, start_time, end_time')
+        .in('id', shiftIds);
+
+      if (!shiftsError && shifts) {
+        // Create a map of shift_id to shift data
+        const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+
+        // Filter applications with overlapping time windows
+        const overlappingApplications = pendingApplications.filter((app) => {
+          const appShift = shiftMap.get(app.shift_id);
+          if (!appShift) return false;
+
+          const appStartTime = new Date(appShift.start_time);
+          const appEndTime = new Date(appShift.end_time);
+
+          // Check for overlap: (StartA < EndB) AND (EndA > StartB)
+          return appStartTime < approvedEndTime && appEndTime > approvedStartTime;
+        });
+
+        // Bulk reject overlapping applications
+        if (overlappingApplications.length > 0) {
+          const overlappingIds = overlappingApplications.map((app) => app.id);
+          await supabase
+            .from('shift_applications')
+            .update({ status: 'rejected' })
+            .in('id', overlappingIds);
         }
-        const appShift = app.shifts as PendingShiftData;
-        const appStartTime = new Date(appShift.start_time);
-        const appEndTime = new Date(appShift.end_time);
-
-        // Check for overlap: (StartA < EndB) AND (EndA > StartB)
-        return appStartTime < approvedEndTime && appEndTime > approvedStartTime;
-      });
-
-      // Bulk reject overlapping applications
-      if (overlappingApplications.length > 0) {
-        const overlappingIds = overlappingApplications.map((app) => app.id);
-        await supabase
-          .from('shift_applications')
-          .update({ status: 'rejected' })
-          .in('id', overlappingIds);
       }
     }
   }

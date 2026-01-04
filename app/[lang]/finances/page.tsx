@@ -33,23 +33,18 @@ export default async function FinancesPage({
     redirect(`/${lang}`);
   }
 
-  // Fetch approved timesheets for salary calculation
-  const { data: timesheets } = await supabase
-    .from('timesheets')
-    .select(`
-      id,
-      status,
-      shifts (
-        hourly_rate,
-        start_time,
-        end_time
-      )
-    `)
-    .eq('worker_id', user.id)
-    .eq('status', 'approved');
+  // Fetch approved timesheets using RPC function (Source of Truth)
+  const { data: finances, error: financesError } = await supabase
+    .rpc('get_my_finances_v2');
 
-  // Calculate total earnings (placeholder - would need actual hours calculation)
-  const totalEarnings = 0; // TODO: Calculate from timesheets
+  if (financesError) {
+    console.error('Error fetching finances:', financesError);
+  }
+
+  // Calculate total earnings from approved timesheets
+  const totalEarnings = finances?.reduce((sum, item) => {
+    return sum + (parseFloat(item.total_pay?.toString() || '0'));
+  }, 0) || 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -71,7 +66,7 @@ export default async function FinancesPage({
               {formatCurrency(totalEarnings, { locale: lang === 'da' ? 'da-DK' : 'en-US' })}
             </div>
             <p className="text-sm text-muted-foreground">
-              {timesheets?.length || 0} {dict.workerFinances.approvedTimesheets}
+              {finances?.length || 0} {dict.workerFinances.approvedTimesheets}
             </p>
           </CardContent>
         </Card>
