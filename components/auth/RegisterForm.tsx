@@ -50,15 +50,17 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
     password: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(false);
     setLoading(true);
 
     try {
-      // Validate form with role
+      // Validate form data
       registerSchema.parse({
         email: formData.email,
         password: formData.password,
@@ -67,23 +69,21 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
 
       const supabase = createClient();
       
-      // Przygotuj metadata w zależności od roli
-      // Przykład dla rejestracji PRACOWNIKA - workers_details wymaga first_name i last_name
-      // Przykład dla rejestracji FIRMY - company_details wymaga company_name i cvr_number (NOT NULL)
+      // Prepare metadata for database trigger
+      // The trigger handle_new_user() automatically creates the profile and detail records
       const metadata = role === 'worker' 
         ? {
             role: 'worker',
-            first_name: '', // Wymagane w workers_details, można dodać później w onboarding
-            last_name: '',  // Wymagane w workers_details, można dodać później w onboarding
+            first_name: '',
+            last_name: '',
           }
         : {
             role: 'company',
-            company_name: '', // Wymagane w company_details
-            cvr_number: '',   // Wymagane w company_details (NOT NULL)
+            company_name: '',
           };
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         options: {
           data: metadata,
@@ -95,16 +95,15 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
       }
 
       if (authData.user) {
-        // Profile will be created automatically by trigger handle_new_user with the role
-        // No need to manually insert into profiles table
+        // Profile and detail tables are created automatically by the database trigger
+        // No manual database operations needed - the trigger handles everything
+        setSuccess(true);
+        setFormData({ email: '', password: '' });
         
-        // Redirect based on role
-        router.refresh();
-        if (role === 'worker') {
-          router.push(`/${lang}/schedule`);
-        } else {
-          router.push(`/${lang}/dashboard`);
-        }
+        // Redirect to login after a brief delay to show success message
+        setTimeout(() => {
+          router.push(`/${lang}/login`);
+        }, 2000);
       }
     } catch (err: unknown) {
       if (err instanceof z.ZodError) {
@@ -132,8 +131,13 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
               {error}
+            </div>
+          )}
+          {success && (
+            <div className="p-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-md">
+              Account created successfully! Please check your email to confirm your account.
             </div>
           )}
           
