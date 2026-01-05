@@ -82,10 +82,15 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
             company_name: '',
           };
 
+      // Dynamic redirect URL based on current origin (works for both localhost and Vercel)
+      // SSR-safe check: use window.location.origin if available, fallback to production URL
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://staffer-rho.vercel.app';
+
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email.trim(),
         password: formData.password,
         options: {
+          emailRedirectTo: `${origin}/auth/callback`,
           data: metadata,
         },
       });
