@@ -222,7 +222,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       <nav className="border-b bg-background">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href={`/${lang}`} className="text-xl font-bold">
+            <Link href="/" className="italic font-bold text-2xl tracking-tight text-slate-900">
               Staffer
             </Link>
             <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
@@ -236,7 +236,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
     <nav className="border-b bg-background sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href={`/${lang}`} className="text-xl font-bold">
+          <Link href="/" className="italic font-bold text-2xl tracking-tight text-slate-900">
             Staffer
           </Link>
 

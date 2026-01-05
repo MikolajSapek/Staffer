@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import Link from 'next/link';
 import '../globals.css';
 import dynamic from 'next/dynamic';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -14,7 +15,9 @@ const Navbar = dynamic(() => import('@/components/Navbar'), {
     <nav className="border-b bg-background">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="h-8 w-32 bg-muted animate-pulse rounded" />
+          <Link href="/" className="italic font-bold text-2xl tracking-tight text-slate-900">
+            Staffer
+          </Link>
           <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
         </div>
       </div>
