@@ -47,20 +47,14 @@ export default async function CompanyDashboardPage({
   // Get current time for filtering
   const now = new Date().toISOString();
 
-  // Fetch archived shifts (end_time <= now OR status is 'cancelled')
-  // Using two separate queries and combining them for better type safety
-  const { data: endedShifts, error: endedError } = await supabase
+  // Fetch archived shifts with detailed profile information
+  // Using status filter for archived shifts (end_time <= now OR status is 'cancelled' or 'completed')
+  const { data: archivedShifts, error: archivedError } = await supabase
     .from('shifts')
     .select(`
-      id,
-      title,
-      start_time,
-      end_time,
-      hourly_rate,
-      vacancies_total,
-      vacancies_taken,
-      status,
+      *,
       locations (
+        id,
         name,
         address
       ),
@@ -69,7 +63,6 @@ export default async function CompanyDashboardPage({
         status,
         worker_id,
         profiles:worker_id (
-          id,
           first_name,
           last_name,
           email,
@@ -81,69 +74,13 @@ export default async function CompanyDashboardPage({
       )
     `)
     .eq('company_id', user.id)
-    .lte('end_time', now)
-    .order('end_time', { ascending: false });
+    .or(`end_time.lte.${now},status.eq.cancelled,status.eq.completed`)
+    .order('end_time', { ascending: false })
+    .limit(10);
 
-  // Debug logging
-  if (endedError) {
-    console.error('Error fetching ended shifts:', endedError);
+  if (archivedError) {
+    console.error('Error fetching archived shifts:', archivedError);
   }
-  if (endedShifts && endedShifts.length > 0) {
-    console.log('Ended Shifts Sample:', JSON.stringify(endedShifts[0], null, 2));
-    console.log('First Application:', endedShifts[0]?.shift_applications?.[0]);
-    console.log('Worker Profile:', endedShifts[0]?.shift_applications?.[0]?.profiles);
-  }
-
-  const { data: cancelledShifts, error: cancelledError } = await supabase
-    .from('shifts')
-    .select(`
-      id,
-      title,
-      start_time,
-      end_time,
-      hourly_rate,
-      vacancies_total,
-      vacancies_taken,
-      status,
-      locations (
-        name,
-        address
-      ),
-      shift_applications (
-        id,
-        status,
-        worker_id,
-        profiles:worker_id (
-          id,
-          first_name,
-          last_name,
-          email,
-          worker_details (
-            avatar_url,
-            phone_number
-          )
-        )
-      )
-    `)
-    .eq('company_id', user.id)
-    .eq('status', 'cancelled')
-    .gt('end_time', now); // Only get cancelled shifts that haven't ended yet (to avoid duplicates)
-
-  // Debug logging
-  if (cancelledError) {
-    console.error('Error fetching cancelled shifts:', cancelledError);
-  }
-
-  // Combine and deduplicate by shift id, then sort and limit
-  const archivedShiftsMap = new Map();
-  [...(endedShifts || []), ...(cancelledShifts || [])].forEach((shift) => {
-    if (!archivedShiftsMap.has(shift.id)) {
-      archivedShiftsMap.set(shift.id, shift);
-    }
-  });
-  const archivedShifts = Array.from(archivedShiftsMap.values())
-    .sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime())
-    .slice(0, 10);
 
   // Query 1: Count locations for this company
   const { count: locationsCount } = await supabase

@@ -1,9 +1,10 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Phone, User } from 'lucide-react';
 
 interface Shift {
   id: string;
@@ -23,10 +24,13 @@ interface Shift {
     status: string;
     worker_id?: string;
     profiles?: {
-      id: string;
-      first_name: string;
-      last_name: string;
-      worker_details?: Array<{ avatar_url: string | null; phone_number: string | null }> | { avatar_url: string | null; phone_number: string | null } | null;
+      first_name: string | null;
+      last_name: string | null;
+      email: string;
+      worker_details?: {
+        avatar_url: string | null;
+        phone_number: string | null;
+      } | null;
     } | null;
   }> | null;
 }
@@ -63,51 +67,49 @@ export default function ArchivedShiftsList({
   lang,
   dict,
 }: ArchivedShiftsListProps) {
+  const router = useRouter();
+  
   const renderShiftCard = (shift: Shift) => {
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Shift Data:', shift);
-      console.log('Shift Applications:', shift.shift_applications);
-      if (shift.shift_applications && shift.shift_applications.length > 0) {
-        console.log('First Application:', shift.shift_applications[0]);
-        console.log('First App Profiles:', shift.shift_applications[0]?.profiles);
-        console.log('First App Worker Details:', shift.shift_applications[0]?.profiles?.worker_details);
-      }
-    }
-
-    // Extract approved workers from applications
-    const approvedApplications = (shift.shift_applications as any[])?.filter(
-      (app: any) => app.status === 'accepted'
-    ) || [];
+    // Extract hired/completed workers from applications
+    // Filter for 'accepted' (hired) or 'completed' status
+    const hiredApplications = (shift.shift_applications || []).filter(
+      (app) => app.status === 'accepted' || app.status === 'completed'
+    );
     
     // Helper to get worker details from application
     const getWorkerDetails = (app: any) => {
       const profile = app.profiles;
       if (!profile) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('No profile found for application:', app);
-        }
-        return null;
+        return {
+          firstName: '',
+          lastName: '',
+          fullName: 'Unknown Worker',
+          avatarUrl: null,
+          phoneNumber: null,
+        };
       }
-      // worker_details is returned as an object, not an array
+      
       const workerDetails = profile.worker_details;
-      if (process.env.NODE_ENV === 'development' && !workerDetails) {
-        console.warn('No worker_details found for profile:', profile);
-      }
+      const firstName = profile.first_name || '';
+      const lastName = profile.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Worker';
+      
       return {
-        firstName: profile.first_name || '',
-        lastName: profile.last_name || '',
+        firstName,
+        lastName,
+        fullName,
         avatarUrl: workerDetails?.avatar_url || null,
+        phoneNumber: workerDetails?.phone_number || null,
       };
     };
 
     return (
-      <Link
+      <div
         key={shift.id}
-        href={`/${lang}/shifts/${shift.id}`}
-        className="block transition-colors hover:opacity-90"
+        onClick={() => router.push(`/${lang}/shifts/${shift.id}`)}
+        className="block transition-colors hover:opacity-90 cursor-pointer"
       >
-        <Card className="h-full cursor-pointer transition-colors hover:bg-muted/50">
+        <Card className="h-full transition-colors hover:bg-muted/50">
           <CardHeader>
             <div className="flex items-start justify-between">
               <CardTitle className="text-xl">{shift.title}</CardTitle>
@@ -135,24 +137,44 @@ export default function ArchivedShiftsList({
                 {shift.vacancies_taken || 0} / {shift.vacancies_total}
               </div>
             </div>
-            {/* Team Section */}
-            {approvedApplications.length > 0 && (
+            {/* Hired Personnel Section */}
+            {hiredApplications.length > 0 && (
               <div className="mt-4 pt-4 border-t">
-                <div className="text-xs font-medium text-muted-foreground mb-2">
-                  {dict.dashboard.team || 'Team'}
+                <div className="text-sm font-semibold mb-3">
+                  {dict.dashboard.team || 'Hired Personnel'}
                 </div>
-                <div className="flex -space-x-2">
-                  {approvedApplications.map((app) => {
+                <div className="space-y-3">
+                  {hiredApplications.map((app) => {
                     const worker = getWorkerDetails(app);
-                    if (!worker) return null;
                     const initials = worker.firstName && worker.lastName
                       ? `${worker.firstName.charAt(0)}${worker.lastName.charAt(0)}`.toUpperCase()
                       : '??';
+                    
                     return (
-                      <Avatar key={app.id} className="h-8 w-8 border-2 border-background">
-                        <AvatarImage src={worker.avatarUrl || undefined} alt={`${worker.firstName} ${worker.lastName}`} />
-                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                      </Avatar>
+                      <div key={app.id} className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage 
+                            src={worker.avatarUrl || undefined} 
+                            alt={worker.fullName}
+                          />
+                          <AvatarFallback>
+                            <User className="h-5 w-5" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{worker.fullName}</div>
+                          {worker.phoneNumber && (
+                            <a
+                              href={`tel:${worker.phoneNumber}`}
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Phone className="h-3 w-3" />
+                              {worker.phoneNumber}
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -160,7 +182,7 @@ export default function ArchivedShiftsList({
             )}
           </CardContent>
         </Card>
-      </Link>
+      </div>
     );
   };
 

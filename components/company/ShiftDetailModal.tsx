@@ -10,16 +10,15 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatTime, formatDateLong } from '@/lib/date-utils';
-import { Users } from 'lucide-react';
+import { Users, Phone } from 'lucide-react';
 
 interface Worker {
   id: string;
   first_name: string | null;
   last_name: string | null;
   email: string;
-  worker_details: {
-    avatar_url: string | null;
-  } | null;
+  avatar_url: string | null;
+  phone_number: string | null;
 }
 
 interface Shift {
@@ -129,8 +128,22 @@ export default function ShiftDetailModal({
                   const firstName = worker.first_name || '';
                   const lastName = worker.last_name || '';
                   const fullName = `${firstName} ${lastName}`.trim() || 'Unknown';
-                  const avatarUrl = worker.worker_details?.avatar_url || null;
+                  let avatarUrl = worker.avatar_url || null;
+                  
+                  // Construct full Supabase Storage URL if avatar_url is just a filename
+                  if (avatarUrl && !avatarUrl.startsWith('http://') && !avatarUrl.startsWith('https://')) {
+                    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                    if (supabaseUrl) {
+                      if (avatarUrl.includes('/')) {
+                        avatarUrl = `${supabaseUrl}/storage/v1/object/public/${avatarUrl}`;
+                      } else {
+                        avatarUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${avatarUrl}`;
+                      }
+                    }
+                  }
+                  
                   const initials = getInitials(worker.first_name, worker.last_name);
+                  const phoneNumber = worker.phone_number || null;
 
                   return (
                     <div
@@ -143,8 +156,18 @@ export default function ShiftDetailModal({
                       </Avatar>
                       <div className="flex-1">
                         <div className="font-medium">{fullName}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {worker.email}
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          <div>{worker.email}</div>
+                          {phoneNumber && (
+                            <a
+                              href={`tel:${phoneNumber}`}
+                              className="flex items-center gap-1 hover:text-primary transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Phone className="h-3 w-3" />
+                              {phoneNumber}
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>

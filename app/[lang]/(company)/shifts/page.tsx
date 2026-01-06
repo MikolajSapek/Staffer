@@ -37,24 +37,10 @@ export default async function ShiftsPage({
   const { data: shifts, error: shiftsError } = await supabase
     .from('shifts')
     .select(`
-      id,
-      title,
-      start_time,
-      end_time,
-      hourly_rate,
-      vacancies_total,
-      vacancies_taken,
-      status,
-      locations (
-        name,
-        address
-      ),
+      *,
       shift_applications (
-        id,
-        status,
-        worker_id,
+        *,
         profiles:worker_id (
-          id,
           first_name,
           last_name,
           email,
@@ -70,19 +56,29 @@ export default async function ShiftsPage({
     .neq('status', 'cancelled')
     .order('start_time', { ascending: true });
 
-  // Debug logging
   if (shiftsError) {
     console.error('Error fetching shifts:', shiftsError);
   }
-  if (shifts && shifts.length > 0) {
-    console.log('Shifts Sample:', JSON.stringify(shifts[0], null, 2));
-    console.log('First Application:', shifts[0]?.shift_applications?.[0]);
-    console.log('Worker Profile:', shifts[0]?.shift_applications?.[0]?.profiles);
-  }
+
+  // Map worker_details data to profile level and rename shift_applications to applications
+  const mappedShifts = (shifts || []).map((shift: any) => {
+    const applications = (shift.shift_applications || []).map((app: any) => {
+      if (app.profiles?.worker_details) {
+        // Flatten worker_details to profile level
+        app.profiles.avatar_url = app.profiles.worker_details.avatar_url;
+        app.profiles.phone_number = app.profiles.worker_details.phone_number;
+      }
+      return app;
+    });
+    return {
+      ...shift,
+      applications,
+    };
+  });
 
   return (
     <ActiveShiftsList
-      shifts={shifts || []}
+      shifts={mappedShifts}
       dict={dict.companyShifts}
       statusDict={dict.status}
       lang={lang}

@@ -18,7 +18,7 @@ interface Profile {
   first_name: string;
   last_name: string;
   email: string;
-  worker_details?: WorkerDetails | null;
+  worker_details?: WorkerDetails | WorkerDetails[] | null;
 }
 
 interface Application {
@@ -63,10 +63,12 @@ export default function ShiftDetailsClient({
   lang,
   dict,
 }: ShiftDetailsClientProps) {
-  // Helper to extract worker_details (as object)
+  // Helper to safely extract worker_details
   const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
     if (!profile?.worker_details) return null;
-    // worker_details is returned as an object, not an array
+    if (Array.isArray(profile.worker_details)) {
+      return profile.worker_details[0] || null;
+    }
     return profile.worker_details as WorkerDetails;
   };
 

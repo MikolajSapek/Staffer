@@ -10,16 +10,13 @@ import { Calendar, Users, Phone, MapPin, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-interface WorkerDetails {
-  avatar_url: string | null;
-  phone_number: string | null;
-}
-
 interface Profile {
   id: string;
-  first_name: string;
-  last_name: string;
-  worker_details?: WorkerDetails | null;
+  first_name: string | null;
+  last_name: string | null;
+  email?: string;
+  avatar_url: string | null;
+  phone_number: string | null;
 }
 
 interface Application {
@@ -43,7 +40,7 @@ interface Shift {
   vacancies_taken: number;
   status: string;
   locations: Location | null;
-  shift_applications?: Application[];
+  applications?: Application[];
 }
 
 interface ActiveShiftsListProps {
@@ -78,13 +75,6 @@ export default function ActiveShiftsList({
 }: ActiveShiftsListProps) {
   const [expandedShift, setExpandedShift] = useState<string | null>(null);
 
-  // Helper to extract worker_details (as object)
-  const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
-    if (!profile?.worker_details) return null;
-    // worker_details is returned as an object, not an array
-    return profile.worker_details as WorkerDetails;
-  };
-
   // Helper to get status badge
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -106,21 +96,10 @@ export default function ActiveShiftsList({
     );
   };
 
-  // Filter to only accepted applications (hired team)
+  // Filter to only accepted/hired applications (case-insensitive)
   const getHiredTeam = (shift: Shift): Application[] => {
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Shift:', shift.id, shift.title);
-      console.log('All Applications:', shift.shift_applications);
-      if (shift.shift_applications && shift.shift_applications.length > 0) {
-        console.log('First Application:', shift.shift_applications[0]);
-        console.log('First App Profiles:', shift.shift_applications[0]?.profiles);
-        console.log('First App Worker Details:', shift.shift_applications[0]?.profiles?.worker_details);
-      }
-    }
-
-    return (shift.shift_applications || []).filter(
-      (app) => app.status === 'accepted'
+    return (shift.applications || []).filter((app) => 
+      ['accepted', 'hired', 'Accepted', 'Hired'].includes(app.status)
     );
   };
 
@@ -198,12 +177,23 @@ export default function ActiveShiftsList({
                             const profile = application.profiles;
                             if (!profile) return null;
                             
-                            const workerDetails = getWorkerDetails(profile);
                             const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown Worker';
                             const initials = profile.first_name && profile.last_name
                               ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase()
                               : '??';
-                            const avatarUrl = workerDetails?.avatar_url || null;
+                            let avatarUrl = profile.avatar_url || null;
+                            
+                            // Construct full Supabase Storage URL if avatar_url is just a filename
+                            if (avatarUrl && !avatarUrl.startsWith('http://') && !avatarUrl.startsWith('https://')) {
+                              const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                              if (supabaseUrl) {
+                                if (avatarUrl.includes('/')) {
+                                  avatarUrl = `${supabaseUrl}/storage/v1/object/public/${avatarUrl}`;
+                                } else {
+                                  avatarUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${avatarUrl}`;
+                                }
+                              }
+                            }
 
                             return (
                               <Avatar key={application.id} className="h-8 w-8 border-2 border-background">
@@ -271,13 +261,25 @@ export default function ActiveShiftsList({
                           const profile = application.profiles;
                           if (!profile) return null;
 
-                          const workerDetails = getWorkerDetails(profile);
                           const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown Worker';
                           const initials = profile.first_name && profile.last_name
                             ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase()
                             : '??';
-                          const avatarUrl = workerDetails?.avatar_url || null;
-                          const phoneNumber = workerDetails?.phone_number || null;
+                          let avatarUrl = profile.avatar_url || null;
+                          
+                          // Construct full Supabase Storage URL if avatar_url is just a filename
+                          if (avatarUrl && !avatarUrl.startsWith('http://') && !avatarUrl.startsWith('https://')) {
+                            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+                            if (supabaseUrl) {
+                              if (avatarUrl.includes('/')) {
+                                avatarUrl = `${supabaseUrl}/storage/v1/object/public/${avatarUrl}`;
+                              } else {
+                                avatarUrl = `${supabaseUrl}/storage/v1/object/public/avatars/${avatarUrl}`;
+                              }
+                            }
+                          }
+                          
+                          const phoneNumber = profile.phone_number || null;
 
                           return (
                             <div
