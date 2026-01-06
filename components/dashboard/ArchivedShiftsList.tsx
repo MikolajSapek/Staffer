@@ -27,10 +27,8 @@ interface Shift {
       first_name: string | null;
       last_name: string | null;
       email: string;
-      worker_details?: {
-        avatar_url: string | null;
-        phone_number: string | null;
-      } | null;
+      avatar_url: string | null;
+      phone_number: string | null;
     } | null;
   }> | null;
 }
@@ -71,9 +69,9 @@ export default function ArchivedShiftsList({
   
   const renderShiftCard = (shift: Shift) => {
     // Extract hired workers from applications
-    // Filter for 'hired' or 'accepted' status
+    // Filter for 'hired', 'accepted', or 'completed' status
     const hiredApplications = (shift.shift_applications || []).filter(
-      (app) => app.status === 'hired' || app.status === 'accepted'
+      (app) => ['hired', 'accepted', 'completed'].includes(app.status?.toLowerCase())
     );
     
     // Helper to get worker details from application
@@ -89,7 +87,6 @@ export default function ArchivedShiftsList({
         };
       }
       
-      const workerDetails = profile.worker_details;
       const firstName = profile.first_name || '';
       const lastName = profile.last_name || '';
       const fullName = `${firstName} ${lastName}`.trim() || 'Unknown Worker';
@@ -98,8 +95,8 @@ export default function ArchivedShiftsList({
         firstName,
         lastName,
         fullName,
-        avatarUrl: workerDetails?.avatar_url || null,
-        phoneNumber: workerDetails?.phone_number || null,
+        avatarUrl: profile.avatar_url || null,
+        phoneNumber: profile.phone_number || null,
       };
     };
 

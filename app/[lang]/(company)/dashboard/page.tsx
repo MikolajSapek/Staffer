@@ -53,16 +53,14 @@ export default async function CompanyDashboardPage({
     .from('shifts')
     .select(`
       *,
-      locations!location_id (*),
+      locations!location_id(*),
       shift_applications (
-        id,
         status,
         profiles!worker_id (
           id,
           first_name,
           last_name,
-          email,
-          worker_details (
+          worker_details!profile_id (
             avatar_url,
             phone_number
           )
@@ -77,6 +75,22 @@ export default async function CompanyDashboardPage({
   if (archivedError) {
     console.error('Error fetching archived shifts:', archivedError);
   }
+
+  // Map shifts to flatten avatar_url and phone_number from worker_details
+  const mappedArchivedShifts = (archivedShifts || []).map(shift => ({
+    ...shift,
+    shift_applications: (shift.shift_applications || []).map((app: any) => {
+      const details = app.profiles?.worker_details?.[0] || app.profiles?.worker_details;
+      return {
+        ...app,
+        profiles: {
+          ...app.profiles,
+          avatar_url: details?.avatar_url,
+          phone_number: details?.phone_number
+        }
+      };
+    })
+  }));
 
   // Query 1: Count locations for this company
   const { count: locationsCount } = await supabase
@@ -154,7 +168,7 @@ export default async function CompanyDashboardPage({
         </div>
 
         <ArchivedShiftsList
-          archivedShifts={archivedShifts}
+          archivedShifts={mappedArchivedShifts}
           lang={lang}
           dict={dict}
         />
