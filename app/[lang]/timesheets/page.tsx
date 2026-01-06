@@ -28,18 +28,19 @@ export default async function TimesheetsPage({
     redirect(`/${lang}`);
   }
 
-  // Fetch shift_applications that need approval:
-  // - status = 'accepted' (hired workers)
+  // Fetch timesheets that need approval:
+  // - status = 'pending'
   // - shifts.end_time < now() (past shifts)
-  // - Not already in payments table
   const now = new Date().toISOString();
 
-  const { data: applications } = await supabase
-    .from('shift_applications')
+  const { data: timesheets } = await supabase
+    .from('timesheets')
     .select(`
       id,
       status,
       worker_id,
+      manager_approved_start,
+      manager_approved_end,
       shifts!inner(
         id,
         title,
@@ -57,17 +58,10 @@ export default async function TimesheetsPage({
         )
       )
     `)
-    .in('status', ['approved', 'accepted']) // Support both for backward compatibility
+    .eq('status', 'pending')
     .eq('shifts.company_id', user.id)
     .lt('shifts.end_time', now)
-    .order('shifts(end_time)', { ascending: false });
-
-  // Fetch all payments to get processed application IDs
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('application_id');
-
-  const processedApplicationIds = payments?.map((p) => p.application_id) || [];
+    .order('created_at', { ascending: false });
 
 
   return (
@@ -80,8 +74,7 @@ export default async function TimesheetsPage({
       </div>
 
       <TimesheetsClient
-        applications={applications || []}
-        processedApplicationIds={processedApplicationIds}
+        timesheets={timesheets || []}
         dict={dict}
         lang={lang}
       />

@@ -12,15 +12,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { formatDateShort, formatTime } from '@/lib/date-utils';
-import { approveTimesheet } from '@/app/actions/timesheets';
-import { Loader2 } from 'lucide-react';
+import { updateTimesheetStatus } from '@/app/actions/timesheets';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-interface ShiftApplication {
+interface Timesheet {
   id: string;
-  status: string;
+  status: 'pending' | 'approved' | 'disputed' | 'paid' | 'rejected';
   worker_id: string;
+  manager_approved_start: string | null;
+  manager_approved_end: string | null;
   shifts: {
     id: string;
     title: string;
@@ -39,8 +51,7 @@ interface ShiftApplication {
 }
 
 interface TimesheetsClientProps {
-  applications: ShiftApplication[];
-  processedApplicationIds: string[];
+  timesheets: Timesheet[];
   dict: {
     timesheetsPage: {
       noPendingApprovals: string;
@@ -60,8 +71,7 @@ interface TimesheetsClientProps {
 }
 
 export default function TimesheetsClient({
-  applications,
-  processedApplicationIds,
+  timesheets,
   dict,
   lang,
 }: TimesheetsClientProps) {
@@ -69,27 +79,23 @@ export default function TimesheetsClient({
   const [isPending, startTransition] = useTransition();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingTimesheetId, setRejectingTimesheetId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
-  // Filter out already processed applications
-  const pendingApplications = applications.filter(
-    (app) => !processedApplicationIds.includes(app.id)
+  // Filter to show only pending timesheets
+  const pendingTimesheets = timesheets.filter(
+    (timesheet) => timesheet.status === 'pending'
   );
 
-  const handleApprove = async (application: ShiftApplication) => {
-    setProcessingId(application.id);
+  const handleApprove = async (timesheetId: string) => {
+    setProcessingId(timesheetId);
     setError(null);
 
     startTransition(async () => {
-      const result = await approveTimesheet({
-        applicationId: application.id,
-        shiftId: application.shifts.id,
-        workerId: application.worker_id,
-        shiftTitle: application.shifts.title,
-        startTime: application.shifts.start_time,
-        endTime: application.shifts.end_time,
-        hourlyRate: application.shifts.hourly_rate,
-        workerFirstName: application.profiles.first_name,
-        workerLastName: application.profiles.last_name,
+      const result = await updateTimesheetStatus({
+        timesheetId,
+        status: 'approved',
         lang,
       });
 
@@ -103,7 +109,44 @@ export default function TimesheetsClient({
     });
   };
 
-  const calculateHours = (startTime: string, endTime: string): number => {
+  const handleRejectClick = (timesheetId: string) => {
+    setRejectingTimesheetId(timesheetId);
+    setRejectionReason('');
+    setRejectDialogOpen(true);
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!rejectingTimesheetId) return;
+
+    setProcessingId(rejectingTimesheetId);
+    setError(null);
+
+    startTransition(async () => {
+      const result = await updateTimesheetStatus({
+        timesheetId: rejectingTimesheetId,
+        status: 'rejected',
+        lang,
+        rejectionReason: rejectionReason.trim() || null,
+      });
+
+      if (result.error) {
+        setError(result.error);
+        setProcessingId(null);
+      } else {
+        setRejectDialogOpen(false);
+        setRejectingTimesheetId(null);
+        setRejectionReason('');
+        // Refresh the page to get updated data
+        router.refresh();
+      }
+    });
+  };
+
+  const calculateHours = (timesheet: Timesheet): number => {
+    const startTime = timesheet.manager_approved_start || timesheet.shifts.start_time;
+    const endTime = timesheet.manager_approved_end || timesheet.shifts.end_time;
+    if (!startTime || !endTime) return 0;
+    
     const start = new Date(startTime);
     const end = new Date(endTime);
     const diffMs = end.getTime() - start.getTime();
@@ -115,7 +158,7 @@ export default function TimesheetsClient({
     return parseFloat((hours * rate).toFixed(2));
   };
 
-  if (pendingApplications.length === 0) {
+  if (pendingTimesheets.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -151,20 +194,18 @@ export default function TimesheetsClient({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingApplications.map((application) => {
-                const hours = calculateHours(
-                  application.shifts.start_time,
-                  application.shifts.end_time
-                );
-                const total = calculateTotal(hours, application.shifts.hourly_rate);
-                const firstName = application.profiles.first_name || '';
-                const lastName = application.profiles.last_name || '';
+              {pendingTimesheets.map((timesheet) => {
+                const hours = calculateHours(timesheet);
+                const total = calculateTotal(hours, timesheet.shifts.hourly_rate);
+                const firstName = timesheet.profiles.first_name || '';
+                const lastName = timesheet.profiles.last_name || '';
                 const workerName = `${firstName} ${lastName}`.trim() || 'Unknown';
-                const avatarUrl = application.profiles.worker_details?.avatar_url || null;
+                const avatarUrl = timesheet.profiles.worker_details?.avatar_url || null;
                 const initials = `${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}`.toUpperCase() || '??';
+                const isProcessing = isPending && processingId === timesheet.id;
 
                 return (
-                  <TableRow key={application.id}>
+                  <TableRow key={timesheet.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
@@ -174,17 +215,17 @@ export default function TimesheetsClient({
                         <div>
                           <div className="font-medium">{workerName}</div>
                           <div className="text-sm text-muted-foreground">
-                            {application.profiles.email}
+                            {timesheet.profiles.email}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{application.shifts.title}</TableCell>
+                    <TableCell>{timesheet.shifts.title}</TableCell>
                     <TableCell>
-                      {formatDateShort(application.shifts.start_time)}
+                      {formatDateShort(timesheet.shifts.start_time)}
                       <br />
                       <span className="text-sm text-muted-foreground">
-                        {formatTime(application.shifts.start_time)} - {formatTime(application.shifts.end_time)}
+                        {formatTime(timesheet.shifts.start_time)} - {formatTime(timesheet.shifts.end_time)}
                       </span>
                     </TableCell>
                     <TableCell>{hours} {dict.timesheetsPage.hours}</TableCell>
@@ -192,20 +233,36 @@ export default function TimesheetsClient({
                       {total.toFixed(2)} DKK
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        onClick={() => handleApprove(application)}
-                        disabled={isPending && processingId === application.id}
-                        size="sm"
-                      >
-                        {isPending && processingId === application.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {dict.timesheetsPage.processing}
-                          </>
-                        ) : (
-                          dict.timesheetsPage.approveAndGenerate
-                        )}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          onClick={() => handleApprove(timesheet.id)}
+                          disabled={isProcessing}
+                          size="sm"
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Approve
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => handleRejectClick(timesheet.id)}
+                          disabled={isProcessing}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -214,6 +271,57 @@ export default function TimesheetsClient({
           </Table>
         </CardContent>
       </Card>
+
+      {/* Rejection Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Timesheet</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this timesheet. This will help the worker understand why their timesheet was not approved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Reason for rejection</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Enter the reason for rejection..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectionReason('');
+                setRejectingTimesheetId(null);
+              }}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmRejection}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

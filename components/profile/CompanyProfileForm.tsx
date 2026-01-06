@@ -237,13 +237,23 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       const supabase = createClient();
       setUploadingLogo(true);
 
-      const fileExt = logoFile.name.split('.').pop();
+      const fileExt = logoFile.name.split('.').pop()?.toLowerCase() || 'png';
+      
+      // Sanitize filename: remove spaces and special characters, keep only alphanumeric, dashes, and underscores
+      const sanitizedBaseName = logoFile.name
+        .replace(/\.[^/.]+$/, '') // Remove extension
+        .replace(/[^a-zA-Z0-9-_]/g, '-') // Replace special chars with dash
+        .replace(/-+/g, '-') // Replace multiple dashes with single dash
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+      
       const timestamp = Date.now();
-      const fileName = `${userId}/logo-${timestamp}.${fileExt}`;
-      const filePath = `company-assets/${fileName}`;
+      const fileName = `${userId}/logo-${timestamp}-${sanitizedBaseName}.${fileExt}`;
+      
+      // File path should NOT start with forward slash - use 'logos/filename.png' format
+      const filePath = `logos/${fileName}`;
 
-      // Upload file
-      const { error: uploadError } = await supabase.storage
+      // Upload file to 'company-assets' bucket with upsert: true
+      const { data, error: uploadError } = await supabase.storage
         .from('company-assets')
         .upload(filePath, logoFile, {
           cacheControl: '3600',
@@ -251,6 +261,12 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         });
 
       if (uploadError) {
+        console.error('Logo upload error:', uploadError);
+        console.error('Upload error details:', {
+          message: uploadError.message,
+          statusCode: uploadError.statusCode,
+          error: uploadError.error,
+        });
         throw uploadError;
       }
 
@@ -259,8 +275,14 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         .from('company-assets')
         .getPublicUrl(filePath);
 
+      console.log('Logo uploaded successfully:', publicUrl);
       return publicUrl;
     } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error('Logo upload failed:', err.message);
+        throw err;
+      }
+      console.error('Logo upload failed with unknown error:', err);
       throw new Error('Failed to upload logo');
     } finally {
       setUploadingLogo(false);
@@ -275,13 +297,23 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       const supabase = createClient();
       setUploadingCoverPhoto(true);
 
-      const fileExt = coverPhotoFile.name.split('.').pop();
+      const fileExt = coverPhotoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      
+      // Sanitize filename: remove spaces and special characters
+      const sanitizedBaseName = coverPhotoFile.name
+        .replace(/\.[^/.]+$/, '') // Remove extension
+        .replace(/[^a-zA-Z0-9-_]/g, '-') // Replace special chars with dash
+        .replace(/-+/g, '-') // Replace multiple dashes with single dash
+        .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+      
       const timestamp = Date.now();
-      const fileName = `${userId}/cover-${timestamp}.${fileExt}`;
-      const filePath = `company-assets/${fileName}`;
+      const fileName = `${userId}/cover-${timestamp}-${sanitizedBaseName}.${fileExt}`;
+      
+      // File path should NOT start with forward slash - use 'covers/filename.jpg' format
+      const filePath = `covers/${fileName}`;
 
-      // Upload file
-      const { error: uploadError } = await supabase.storage
+      // Upload file to 'company-assets' bucket with upsert: true
+      const { data, error: uploadError } = await supabase.storage
         .from('company-assets')
         .upload(filePath, coverPhotoFile, {
           cacheControl: '3600',
@@ -289,6 +321,12 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         });
 
       if (uploadError) {
+        console.error('Cover photo upload error:', uploadError);
+        console.error('Upload error details:', {
+          message: uploadError.message,
+          statusCode: uploadError.statusCode,
+          error: uploadError.error,
+        });
         throw uploadError;
       }
 
@@ -297,8 +335,14 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         .from('company-assets')
         .getPublicUrl(filePath);
 
+      console.log('Cover photo uploaded successfully:', publicUrl);
       return publicUrl;
     } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error('Cover photo upload failed:', err.message);
+        throw err;
+      }
+      console.error('Cover photo upload failed with unknown error:', err);
       throw new Error('Failed to upload cover photo');
     } finally {
       setUploadingCoverPhoto(false);
