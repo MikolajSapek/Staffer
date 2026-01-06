@@ -79,18 +79,8 @@ export default function ShiftsClient({ dict, statusDict, lang }: ShiftsClientPro
       const { data, error: fetchError } = await supabase
         .from('shifts')
         .select(`
-          id,
-          title,
-          start_time,
-          end_time,
-          hourly_rate,
-          vacancies_total,
-          vacancies_taken,
-          status,
-          locations (
-            name,
-            address
-          )
+          *,
+          locations!location_id (*)
         `)
         .eq('company_id', user.id)
         .order('created_at', { ascending: false });

@@ -15,10 +15,10 @@ interface Shift {
     address: string;
   } | null;
   profiles: {
-    last_name: string;
     company_details: {
+      company_name: string;
       logo_url: string | null;
-    }[] | null;
+    } | null;
   } | null;
 }
 

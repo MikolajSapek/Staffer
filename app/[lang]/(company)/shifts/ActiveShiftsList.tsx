@@ -296,10 +296,17 @@ export default function ActiveShiftsList({
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium truncate">{fullName}</div>
                                 {phoneNumber && (
-                                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.location.href = `tel:${phoneNumber}`;
+                                    }}
+                                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mt-1"
+                                  >
                                     <Phone className="h-3 w-3" />
                                     <span>{phoneNumber}</span>
-                                  </div>
+                                  </button>
                                 )}
                               </div>
                             </div>

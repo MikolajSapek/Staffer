@@ -37,19 +37,11 @@ export default async function SchedulePage({
       status,
       shift_id,
       shifts (
-        id,
-        title,
-        start_time,
-        end_time,
-        hourly_rate,
-        company_id,
-        locations (
-          name,
-          address
-        ),
-        profiles:profiles!shifts_company_id_fkey (
-          last_name,
-          company_details (
+        *,
+        locations!location_id (*),
+        profiles!company_id (
+          company_details!profile_id (
+            company_name,
             logo_url
           )
         )
@@ -70,8 +62,10 @@ export default async function SchedulePage({
       company_id: string;
       locations: { name: string; address: string } | null;
       profiles: {
-        last_name: string | null;
-        company_details: Array<{ logo_url: string | null }> | null;
+        company_details: {
+          company_name: string;
+          logo_url: string | null;
+        } | null;
       } | null;
     } | null;
   }

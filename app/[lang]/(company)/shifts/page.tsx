@@ -38,9 +38,12 @@ export default async function ShiftsPage({
     .from('shifts')
     .select(`
       *,
+      locations!location_id (*),
       shift_applications (
-        *,
-        profiles:worker_id (
+        id,
+        status,
+        profiles!worker_id (
+          id,
           first_name,
           last_name,
           email,

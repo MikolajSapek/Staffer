@@ -41,19 +41,11 @@ export default async function ApplicationsPage({
       worker_message,
       shift_id,
       shifts (
-        id,
-        title,
-        start_time,
-        end_time,
-        hourly_rate,
-        company_id,
-        locations (
-          name,
-          address
-        ),
-        profiles:profiles!shifts_company_id_fkey (
-          last_name,
-          company_details (
+        *,
+        locations!location_id (*),
+        profiles!company_id (
+          company_details!profile_id (
+            company_name,
             logo_url
           )
         )
@@ -92,17 +84,19 @@ export default async function ApplicationsPage({
 
   interface ShiftWithCompany {
     profiles?: {
-      last_name: string | null;
-      company_details?: Array<{ logo_url: string | null }>;
+      company_details: {
+        company_name: string;
+        logo_url: string | null;
+      } | null;
     } | null;
   }
 
   const getCompanyName = (shift: ShiftWithCompany) => {
-    return shift.profiles?.last_name || 'Unknown Company';
+    return shift.profiles?.company_details?.company_name || 'Unknown Company';
   };
 
   const getCompanyLogo = (shift: ShiftWithCompany) => {
-    return shift.profiles?.company_details?.[0]?.logo_url || null;
+    return shift.profiles?.company_details?.logo_url || null;
   };
 
   return (
@@ -172,6 +166,11 @@ export default async function ApplicationsPage({
                       <span className="font-medium">{dict.workerApplications.location}:</span>{' '}
                       {shift.locations?.name || dict.workerApplications.locationNotSpecified}
                     </div>
+                    {shift.locations?.address && (
+                      <div className="text-muted-foreground ml-4 text-xs">
+                        {shift.locations.address}
+                      </div>
+                    )}
                     {app.worker_message && (
                       <div className="mt-3 pt-3 border-t">
                         <span className="font-medium">{dict.workerApplications.message || 'Your message'}:</span>

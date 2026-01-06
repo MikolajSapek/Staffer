@@ -70,10 +70,10 @@ export default function ArchivedShiftsList({
   const router = useRouter();
   
   const renderShiftCard = (shift: Shift) => {
-    // Extract hired/completed workers from applications
-    // Filter for 'accepted' (hired) or 'completed' status
+    // Extract hired workers from applications
+    // Filter for 'hired' or 'accepted' status
     const hiredApplications = (shift.shift_applications || []).filter(
-      (app) => app.status === 'accepted' || app.status === 'completed'
+      (app) => app.status === 'hired' || app.status === 'accepted'
     );
     
     // Helper to get worker details from application
@@ -164,14 +164,17 @@ export default function ArchivedShiftsList({
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-sm">{worker.fullName}</div>
                           {worker.phoneNumber && (
-                            <a
-                              href={`tel:${worker.phoneNumber}`}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.location.href = `tel:${worker.phoneNumber}`;
+                              }}
                               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-                              onClick={(e) => e.stopPropagation()}
                             >
                               <Phone className="h-3 w-3" />
                               {worker.phoneNumber}
-                            </a>
+                            </button>
                           )}
                         </div>
                       </div>

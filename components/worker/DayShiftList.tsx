@@ -18,10 +18,10 @@ interface Shift {
     address: string;
   } | null;
   profiles: {
-    last_name: string;
     company_details: {
+      company_name: string;
       logo_url: string | null;
-    }[] | null;
+    } | null;
   } | null;
 }
 
@@ -102,8 +102,8 @@ export default function DayShiftList({
 }
 
 function ShiftCard({ shift, dict }: { shift: Shift; dict: DayShiftListProps['dict'] }) {
-  const companyName = shift.profiles?.last_name || 'Unknown Company';
-  const companyLogo = shift.profiles?.company_details?.[0]?.logo_url || null;
+  const companyName = shift.profiles?.company_details?.company_name || 'Unknown Company';
+  const companyLogo = shift.profiles?.company_details?.logo_url || null;
   const companyInitials = companyName.substring(0, 2).toUpperCase();
 
   return (

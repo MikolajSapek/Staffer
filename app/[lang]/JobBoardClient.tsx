@@ -20,6 +20,12 @@ interface Shift {
   status: string;
   company_id: string;
   locations: { name: string; address: string } | null;
+  profiles: {
+    company_details: {
+      company_name: string;
+      logo_url: string | null;
+    } | null;
+  } | null;
 }
 
 interface JobBoardClientProps {
@@ -153,6 +159,11 @@ export default function JobBoardClient({
                   {shift.locations?.name && (
                     <div className="text-muted-foreground ml-6 text-xs">
                       {shift.locations.name}
+                    </div>
+                  )}
+                  {shift.profiles?.company_details?.company_name && (
+                    <div className="text-muted-foreground ml-6 text-xs">
+                      {shift.profiles.company_details.company_name}
                     </div>
                   )}
                   <div className="flex items-center gap-2">

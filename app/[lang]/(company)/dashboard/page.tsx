@@ -53,16 +53,12 @@ export default async function CompanyDashboardPage({
     .from('shifts')
     .select(`
       *,
-      locations (
-        id,
-        name,
-        address
-      ),
+      locations!location_id (*),
       shift_applications (
         id,
         status,
-        worker_id,
-        profiles:worker_id (
+        profiles!worker_id (
+          id,
           first_name,
           last_name,
           email,

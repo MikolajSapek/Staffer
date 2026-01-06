@@ -39,18 +39,13 @@ export default async function JobBoardPage({
   const { data: shiftsData, error: shiftsError } = await supabase
     .from('shifts')
     .select(`
-      id,
-      title,
-      hourly_rate,
-      start_time,
-      end_time,
-      vacancies_total,
-      vacancies_taken,
-      status,
-      company_id,
-      locations (
-        name,
-        address
+      *,
+      locations!location_id (*),
+      profiles!company_id (
+        company_details!profile_id (
+          company_name,
+          logo_url
+        )
       )
     `)
     .eq('status', 'published')
