@@ -243,50 +243,6 @@ export interface Database {
           worker_message?: string | null;
         };
       };
-      timesheets: {
-        Row: {
-          id: string;
-          shift_id: string;
-          worker_id: string;
-          clock_in_time: string | null;
-          clock_in_location: string | null;
-          clock_out_time: string | null;
-          manager_approved_start: string | null;
-          manager_approved_end: string | null;
-          is_no_show: boolean;
-          status: 'pending' | 'approved' | 'disputed' | 'paid';
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          shift_id: string;
-          worker_id: string;
-          clock_in_time?: string | null;
-          clock_in_location?: string | null;
-          clock_out_time?: string | null;
-          manager_approved_start?: string | null;
-          manager_approved_end?: string | null;
-          is_no_show?: boolean;
-          status?: 'pending' | 'approved' | 'disputed' | 'paid';
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          shift_id?: string;
-          worker_id?: string;
-          clock_in_time?: string | null;
-          clock_in_location?: string | null;
-          clock_out_time?: string | null;
-          manager_approved_start?: string | null;
-          manager_approved_end?: string | null;
-          is_no_show?: boolean;
-          status?: 'pending' | 'approved' | 'disputed' | 'paid';
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
       documents: {
         Row: {
           id: string;

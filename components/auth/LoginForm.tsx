@@ -73,8 +73,8 @@ export default function LoginForm({ dict }: LoginFormProps) {
       }
 
       if (data?.user) {
-        // Force redirect to home page - this ensures Navbar updates
-        window.location.href = '/';
+        // Force redirect to home page with locale - this ensures Navbar updates
+        window.location.href = '/en-US';
       } else {
         setError(dict.validation.loginFailed);
         setLoading(false);

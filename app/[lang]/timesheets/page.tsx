@@ -1,7 +1,35 @@
+/**
+ * RLS POLICIES SQL - Run this in Supabase SQL Editor if you get permission errors:
+ * 
+ * -- Ensure companies can SELECT timesheets for their shifts
+ * DROP POLICY IF EXISTS "Companies can view timesheets for their shifts" ON timesheets;
+ * CREATE POLICY "Companies can view timesheets for their shifts"
+ *   ON timesheets FOR SELECT
+ *   USING (
+ *     EXISTS (
+ *       SELECT 1 FROM shifts
+ *       WHERE shifts.id = timesheets.shift_id
+ *       AND shifts.company_id = auth.uid()
+ *     )
+ *   );
+ * 
+ * -- Ensure companies can UPDATE timesheets for their shifts
+ * DROP POLICY IF EXISTS "Companies can update timesheets for their shifts" ON timesheets;
+ * CREATE POLICY "Companies can update timesheets for their shifts"
+ *   ON timesheets FOR UPDATE
+ *   USING (
+ *     EXISTS (
+ *       SELECT 1 FROM shifts
+ *       WHERE shifts.id = timesheets.shift_id
+ *       AND shifts.company_id = auth.uid()
+ *     )
+ *   );
+ */
+
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import { getDictionary } from '../dictionaries';
-import TimesheetsClient from '../(company)/timesheets/TimesheetsClient';
+import { getDictionary } from '@/app/[lang]/dictionaries';
+import TimesheetsClient from '@/app/[lang]/(company)/timesheets/TimesheetsClient';
 
 export default async function TimesheetsPage({
   params,
@@ -22,47 +50,111 @@ export default async function TimesheetsPage({
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile || profile.role !== 'company') {
     redirect(`/${lang}`);
   }
 
-  // Fetch timesheets that need approval:
-  // - status = 'pending'
-  // - shifts.end_time < now() (past shifts)
-  const now = new Date().toISOString();
+  // First, get all shift IDs for this company
+  const { data: companyShifts } = await supabase
+    .from('shifts')
+    .select('id')
+    .eq('company_id', user.id);
 
-  const { data: timesheets } = await supabase
+  const shiftIds = companyShifts?.map(s => s.id) || [];
+
+  // Fetch timesheets with filters: company_id (through shifts), status = 'pending' or 'disputed'
+  // Using explicit foreign key names for reliable relationship resolution
+  const { data: timesheets, error } = await supabase
     .from('timesheets')
     .select(`
-      id,
-      status,
-      worker_id,
-      manager_approved_start,
-      manager_approved_end,
-      shifts!inner(
+      *,
+      worker:profiles!timesheets_worker_id_fkey (
+        id,
+        first_name,
+        last_name,
+        email,
+        worker_details:worker_details!worker_details_profile_id_fkey (
+          avatar_url
+        )
+      ),
+      shift:shifts!timesheets_shift_id_fkey (
         id,
         title,
         start_time,
         end_time,
         hourly_rate,
         company_id
-      ),
-      profiles:worker_id(
-        first_name,
-        last_name,
-        email,
-        worker_details (
-          avatar_url
-        )
       )
     `)
-    .eq('status', 'pending')
-    .eq('shifts.company_id', user.id)
-    .lt('shifts.end_time', now)
-    .order('created_at', { ascending: false });
+    .in('status', ['pending', 'disputed'])
+    .in('shift_id', shiftIds.length > 0 ? shiftIds : ['00000000-0000-0000-0000-000000000000'])
+    .order('manager_approved_end', { ascending: false });
 
+  if (error) {
+    console.error('SERVER ERROR FETCHING TIMESHEETS:', JSON.stringify(error, null, 2));
+  }
+
+  // Map and calculate total_pay for each timesheet
+  // Filter to ensure we only show timesheets for this company's shifts
+  const mappedTimesheets = (timesheets || [])
+    .filter((timesheet: any) => {
+      const shift = Array.isArray(timesheet.shift) ? timesheet.shift[0] : timesheet.shift;
+      return shift?.company_id === user.id;
+    })
+    .map((timesheet: any) => {
+    const shift = Array.isArray(timesheet.shift) ? timesheet.shift[0] : timesheet.shift;
+    const worker = Array.isArray(timesheet.worker) ? timesheet.worker[0] : timesheet.worker;
+    
+    // Extract worker_details from profiles relation
+    let workerDetails = null;
+    if (worker?.worker_details) {
+      workerDetails = Array.isArray(worker.worker_details) 
+        ? worker.worker_details[0] 
+        : worker.worker_details;
+    }
+
+    // Calculate hours worked
+    const startTime = timesheet.manager_approved_start || shift?.start_time || timesheet.clock_in_time;
+    const endTime = timesheet.manager_approved_end || shift?.end_time || timesheet.clock_out_time;
+    
+    let hours = 0;
+    if (startTime && endTime) {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      const diffMs = end.getTime() - start.getTime();
+      hours = diffMs / (1000 * 60 * 60);
+    }
+
+    // Calculate total_pay
+    const hourlyRate = shift?.hourly_rate || 0;
+    const totalPay = hours * hourlyRate;
+
+    return {
+      id: timesheet.id,
+      status: timesheet.status,
+      worker_id: timesheet.worker_id,
+      manager_approved_start: timesheet.manager_approved_start,
+      manager_approved_end: timesheet.manager_approved_end,
+      total_pay: totalPay,
+      shifts: {
+        id: shift?.id || '',
+        title: shift?.title || '',
+        start_time: shift?.start_time || '',
+        end_time: shift?.end_time || '',
+        hourly_rate: hourlyRate,
+      },
+      profiles: worker ? {
+        first_name: worker.first_name || null,
+        last_name: worker.last_name || null,
+        email: worker.email || '',
+      } : null,
+      worker_details: workerDetails ? {
+        avatar_url: workerDetails.avatar_url || null,
+      } : null,
+    };
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -73,8 +165,8 @@ export default async function TimesheetsPage({
         </p>
       </div>
 
-      <TimesheetsClient
-        timesheets={timesheets || []}
+      <TimesheetsClient 
+        timesheets={mappedTimesheets}
         dict={dict}
         lang={lang}
       />

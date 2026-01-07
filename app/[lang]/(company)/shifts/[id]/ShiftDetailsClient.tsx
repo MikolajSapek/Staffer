@@ -1,12 +1,15 @@
 'use client';
 
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { ArrowLeft, Mail, Phone, Users } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Users, Archive, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { archiveShift } from '@/app/actions/shifts';
 
 interface WorkerDetails {
   avatar_url: string | null;
@@ -63,6 +66,11 @@ export default function ShiftDetailsClient({
   lang,
   dict,
 }: ShiftDetailsClientProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+
   // Helper to safely extract worker_details
   const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
     if (!profile?.worker_details) return null;
@@ -71,6 +79,30 @@ export default function ShiftDetailsClient({
     }
     return profile.worker_details as WorkerDetails;
   };
+
+  const handleArchive = () => {
+    setArchiveError(null);
+    setArchiveMessage(null);
+    
+    startTransition(async () => {
+      const result = await archiveShift({
+        shiftId: shift.id,
+        lang,
+      });
+
+      if (result.error) {
+        setArchiveError(result.error);
+      } else {
+        setArchiveMessage(result.message || 'Shift archived successfully');
+        // Refresh the page to show updated status
+        setTimeout(() => {
+          router.refresh();
+        }, 1500);
+      }
+    });
+  };
+
+  const isArchived = shift.status === 'completed' || shift.status === 'cancelled';
 
   // Helper to get status badge
   const getStatusBadge = (status: string) => {
@@ -115,8 +147,40 @@ export default function ShiftDetailsClient({
                 {shift.locations?.name || dict.jobBoard?.locationNotSpecified || 'Location not specified'}
               </CardDescription>
             </div>
-            {getStatusBadge(shift.status)}
+            <div className="flex items-center gap-3">
+              {getStatusBadge(shift.status)}
+              {!isArchived && hiredTeam.length > 0 && (
+                <Button
+                  onClick={handleArchive}
+                  disabled={isPending}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  {isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Archiving...
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-4 w-4" />
+                      Archive Shift
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
+          {archiveMessage && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-700">
+              {archiveMessage}
+            </div>
+          )}
+          {archiveError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+              {archiveError}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

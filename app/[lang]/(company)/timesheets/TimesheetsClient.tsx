@@ -23,8 +23,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { formatDateShort, formatTime } from '@/lib/date-utils';
-import { updateTimesheetStatus } from '@/app/actions/timesheets';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface Timesheet {
@@ -33,6 +33,7 @@ interface Timesheet {
   worker_id: string;
   manager_approved_start: string | null;
   manager_approved_end: string | null;
+  total_pay: number | null;
   shifts: {
     id: string;
     title: string;
@@ -44,10 +45,10 @@ interface Timesheet {
     first_name: string | null;
     last_name: string | null;
     email: string;
-    worker_details: {
-      avatar_url: string | null;
-    }[] | null;
-  };
+  } | null;
+  worker_details: {
+    avatar_url: string | null;
+  } | null;
 }
 
 interface TimesheetsClientProps {
@@ -61,10 +62,16 @@ interface TimesheetsClientProps {
       date: string;
       hoursWorked: string;
       totalDue: string;
-      actions: string;
       hours: string;
       processing: string;
       approveAndGenerate: string;
+      table: {
+        actions: string;
+      };
+      actions: {
+        approve: string;
+        dispute: string;
+      };
     };
   };
   lang: string;
@@ -79,13 +86,13 @@ export default function TimesheetsClient({
   const [isPending, startTransition] = useTransition();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [rejectingTimesheetId, setRejectingTimesheetId] = useState<string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
+  const [disputingTimesheetId, setDisputingTimesheetId] = useState<string | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
 
-  // Filter to show only pending timesheets
-  const pendingTimesheets = timesheets.filter(
-    (timesheet) => timesheet.status === 'pending'
+  // Filter to show pending and disputed timesheets
+  const filteredTimesheets = timesheets.filter(
+    (timesheet) => timesheet.status === 'pending' || timesheet.status === 'disputed'
   );
 
   const handleApprove = async (timesheetId: string) => {
@@ -93,56 +100,70 @@ export default function TimesheetsClient({
     setError(null);
 
     startTransition(async () => {
-      const result = await updateTimesheetStatus({
-        timesheetId,
-        status: 'approved',
-        lang,
-      });
+      try {
+        const supabase = createClient();
+        const { error: rpcError } = await supabase.rpc('approve_timesheet', {
+          timesheet_id_input: timesheetId,
+        } as any);
 
-      if (result.error) {
-        setError(result.error);
+        if (rpcError) {
+          setError(rpcError.message || 'Failed to approve timesheet');
+          setProcessingId(null);
+        } else {
+          // Refresh the page to get updated data
+          router.refresh();
+        }
+      } catch (err: any) {
+        setError(err.message || 'An unexpected error occurred');
         setProcessingId(null);
-      } else {
-        // Refresh the page to get updated data
-        router.refresh();
       }
     });
   };
 
-  const handleRejectClick = (timesheetId: string) => {
-    setRejectingTimesheetId(timesheetId);
-    setRejectionReason('');
-    setRejectDialogOpen(true);
+  const handleDisputeClick = (timesheetId: string) => {
+    setDisputingTimesheetId(timesheetId);
+    setDisputeReason('');
+    setDisputeDialogOpen(true);
   };
 
-  const handleConfirmRejection = async () => {
-    if (!rejectingTimesheetId) return;
+  const handleConfirmDispute = async () => {
+    if (!disputingTimesheetId) return;
 
-    setProcessingId(rejectingTimesheetId);
+    if (!disputeReason.trim()) {
+      setError('Please provide a reason for disputing this timesheet');
+      return;
+    }
+
+    setProcessingId(disputingTimesheetId);
     setError(null);
 
     startTransition(async () => {
-      const result = await updateTimesheetStatus({
-        timesheetId: rejectingTimesheetId,
-        status: 'rejected',
-        lang,
-        rejectionReason: rejectionReason.trim() || null,
-      });
+      try {
+        const supabase = createClient();
+        const { error: rpcError } = await supabase.rpc('dispute_timesheet', {
+          timesheet_id_input: disputingTimesheetId,
+          reason_input: disputeReason.trim(),
+        } as any);
 
-      if (result.error) {
-        setError(result.error);
+        if (rpcError) {
+          setError(rpcError.message || 'Failed to dispute timesheet');
+          setProcessingId(null);
+        } else {
+          setDisputeDialogOpen(false);
+          setDisputingTimesheetId(null);
+          setDisputeReason('');
+          // Refresh the page to get updated data
+          router.refresh();
+        }
+      } catch (err: any) {
+        setError(err.message || 'An unexpected error occurred');
         setProcessingId(null);
-      } else {
-        setRejectDialogOpen(false);
-        setRejectingTimesheetId(null);
-        setRejectionReason('');
-        // Refresh the page to get updated data
-        router.refresh();
       }
     });
   };
 
   const calculateHours = (timesheet: Timesheet): number => {
+    // Calculate hours for display purposes only
     const startTime = timesheet.manager_approved_start || timesheet.shifts.start_time;
     const endTime = timesheet.manager_approved_end || timesheet.shifts.end_time;
     if (!startTime || !endTime) return 0;
@@ -154,11 +175,7 @@ export default function TimesheetsClient({
     return parseFloat(hours.toFixed(2));
   };
 
-  const calculateTotal = (hours: number, rate: number): number => {
-    return parseFloat((hours * rate).toFixed(2));
-  };
-
-  if (pendingTimesheets.length === 0) {
+  if (filteredTimesheets.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -194,18 +211,20 @@ export default function TimesheetsClient({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingTimesheets.map((timesheet) => {
+              {filteredTimesheets.map((timesheet) => {
                 const hours = calculateHours(timesheet);
-                const total = calculateTotal(hours, timesheet.shifts.hourly_rate);
-                const firstName = timesheet.profiles.first_name || '';
-                const lastName = timesheet.profiles.last_name || '';
+                // Use total_pay from database (single source of truth)
+                const totalPay = timesheet.total_pay || 0;
+                const firstName = timesheet.profiles?.first_name || '';
+                const lastName = timesheet.profiles?.last_name || '';
                 const workerName = `${firstName} ${lastName}`.trim() || 'Unknown';
-                const avatarUrl = timesheet.profiles.worker_details?.avatar_url || null;
+                const avatarUrl = timesheet.worker_details?.avatar_url || null;
                 const initials = `${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}`.toUpperCase() || '??';
                 const isProcessing = isPending && processingId === timesheet.id;
+                const isDisputed = timesheet.status === 'disputed';
 
                 return (
-                  <TableRow key={timesheet.id}>
+                  <TableRow key={timesheet.id} className={isDisputed ? 'bg-yellow-50' : ''}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
@@ -215,7 +234,7 @@ export default function TimesheetsClient({
                         <div>
                           <div className="font-medium">{workerName}</div>
                           <div className="text-sm text-muted-foreground">
-                            {timesheet.profiles.email}
+                            {timesheet.profiles?.email || 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -230,10 +249,15 @@ export default function TimesheetsClient({
                     </TableCell>
                     <TableCell>{hours} {dict.timesheetsPage.hours}</TableCell>
                     <TableCell className="font-medium">
-                      {total.toFixed(2)} DKK
+                      {totalPay.toFixed(2)} DKK
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {isDisputed && (
+                          <span className="text-sm text-yellow-600 font-medium mr-2">
+                            Disputed
+                          </span>
+                        )}
                         <Button
                           onClick={() => handleApprove(timesheet.id)}
                           disabled={isProcessing}
@@ -244,23 +268,23 @@ export default function TimesheetsClient({
                           {isProcessing ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
+                              {dict.timesheetsPage.processing}
                             </>
                           ) : (
                             <>
                               <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Approve
+                              {dict.timesheetsPage.actions.approve}
                             </>
                           )}
                         </Button>
                         <Button
-                          onClick={() => handleRejectClick(timesheet.id)}
+                          onClick={() => handleDisputeClick(timesheet.id)}
                           disabled={isProcessing}
                           size="sm"
                           variant="destructive"
                         >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Reject
+                          <AlertTriangle className="mr-2 h-4 w-4" />
+                          {dict.timesheetsPage.actions.dispute}
                         </Button>
                       </div>
                     </TableCell>
@@ -272,24 +296,25 @@ export default function TimesheetsClient({
         </CardContent>
       </Card>
 
-      {/* Rejection Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      {/* Dispute Dialog */}
+      <Dialog open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Timesheet</DialogTitle>
+            <DialogTitle>Dispute Timesheet</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this timesheet. This will help the worker understand why their timesheet was not approved.
+              Please provide a reason for disputing this timesheet. This will help resolve any discrepancies with the recorded hours.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="rejection-reason">Reason for rejection</Label>
+              <Label htmlFor="dispute-reason">Reason for dispute</Label>
               <Textarea
-                id="rejection-reason"
-                placeholder="Enter the reason for rejection..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
+                id="dispute-reason"
+                placeholder="Enter the reason for disputing this timesheet..."
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
                 rows={4}
+                required
               />
             </div>
           </div>
@@ -297,9 +322,9 @@ export default function TimesheetsClient({
             <Button
               variant="outline"
               onClick={() => {
-                setRejectDialogOpen(false);
-                setRejectionReason('');
-                setRejectingTimesheetId(null);
+                setDisputeDialogOpen(false);
+                setDisputeReason('');
+                setDisputingTimesheetId(null);
               }}
               disabled={isPending}
             >
@@ -307,8 +332,8 @@ export default function TimesheetsClient({
             </Button>
             <Button
               variant="destructive"
-              onClick={handleConfirmRejection}
-              disabled={isPending}
+              onClick={handleConfirmDispute}
+              disabled={isPending || !disputeReason.trim()}
             >
               {isPending ? (
                 <>

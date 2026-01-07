@@ -73,7 +73,7 @@ export default function ArchivedShiftsList({
     const hiredApplications = (shift.shift_applications || []).filter(
       (app) => ['hired', 'accepted', 'completed'].includes(app.status?.toLowerCase())
     );
-    
+
     // Helper to get worker details from application
     const getWorkerDetails = (app: any) => {
       const profile = app.profiles;
@@ -141,14 +141,14 @@ export default function ArchivedShiftsList({
                   {dict.dashboard.team || 'Hired Personnel'}
                 </div>
                 <div className="space-y-3">
-                  {hiredApplications.map((app) => {
+                  {hiredApplications.map((app, index) => {
                     const worker = getWorkerDetails(app);
                     const initials = worker.firstName && worker.lastName
                       ? `${worker.firstName.charAt(0)}${worker.lastName.charAt(0)}`.toUpperCase()
                       : '??';
                     
                     return (
-                      <div key={app.id} className="flex items-center gap-3">
+                      <div key={app.id || `app-${index}`} className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
                           <AvatarImage 
                             src={worker.avatarUrl || undefined} 

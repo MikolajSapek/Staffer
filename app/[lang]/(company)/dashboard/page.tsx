@@ -44,23 +44,28 @@ export default async function CompanyDashboardPage({
     redirect(`/${lang}/company-setup`);
   }
 
+  // Upewnij się, że stare zmiany są oznaczone jako completed
+  await supabase.rpc('update_completed_shifts');
+
   // Get current time for filtering
   const now = new Date().toISOString();
 
   // Fetch archived shifts with detailed profile information
-  // Using status filter for archived shifts (end_time <= now OR status is 'cancelled' or 'completed')
+  // Using status filter for archived shifts
   const { data: archivedShifts, error: archivedError } = await supabase
     .from('shifts')
     .select(`
       *,
-      locations!location_id(*),
-      shift_applications (
+      location:locations!shifts_location_id_fkey(*), 
+      shift_applications(
+        id,
         status,
-        profiles!worker_id (
+        worker:profiles!shift_applications_worker_id_fkey(
           id,
           first_name,
           last_name,
-          worker_details!profile_id (
+          email,
+          worker_details:worker_details!worker_details_profile_id_fkey(
             avatar_url,
             phone_number
           )
@@ -68,7 +73,7 @@ export default async function CompanyDashboardPage({
       )
     `)
     .eq('company_id', user.id)
-    .or(`end_time.lte.${now},status.eq.cancelled,status.eq.completed`)
+    .or('status.eq.cancelled,status.eq.archived,status.eq.completed')
     .order('end_time', { ascending: false })
     .limit(10);
 
@@ -77,17 +82,31 @@ export default async function CompanyDashboardPage({
   }
 
   // Map shifts to flatten avatar_url and phone_number from worker_details
-  const mappedArchivedShifts = (archivedShifts || []).map(shift => ({
+  const mappedArchivedShifts = (archivedShifts || []).map((shift) => ({
     ...shift,
+    locations: shift.location, // Mapowanie dla kompatybilności
     shift_applications: (shift.shift_applications || []).map((app: any) => {
-      const details = app.profiles?.worker_details?.[0] || app.profiles?.worker_details;
+      const worker = app.worker;
+
+      // FIX: Obsługa worker_details jako tablicy LUB obiektu
+      let details = null;
+      if (worker?.worker_details) {
+        details = Array.isArray(worker.worker_details) 
+          ? worker.worker_details[0] 
+          : worker.worker_details;
+      }
+
       return {
         ...app,
-        profiles: {
-          ...app.profiles,
-          avatar_url: details?.avatar_url,
-          phone_number: details?.phone_number
-        }
+        // Spłaszczamy strukturę do formatu oczekiwanego przez ArchivedShiftsList
+        profiles: worker ? {
+          id: worker.id,
+          first_name: worker.first_name,
+          last_name: worker.last_name,
+          email: worker.email,
+          avatar_url: details?.avatar_url || null,
+          phone_number: details?.phone_number || null
+        } : null
       };
     })
   }));

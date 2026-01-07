@@ -1,22 +1,34 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
-import { getDictionary } from '@/app/[lang]/dictionaries';
-import { formatCurrency } from '@/lib/utils';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { formatDateShort } from '@/lib/date-utils';
 import { Badge } from '@/components/ui/badge';
+import { getDictionary } from '@/app/[lang]/dictionaries';
+import { formatDateShort } from '@/lib/date-utils';
+import { Wallet, Clock, TrendingUp, Receipt } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+
+interface Timesheet {
+  id: string;
+  status: 'pending' | 'approved' | 'disputed' | 'paid';
+  total_pay: number | null;
+  manager_approved_start: string | null;
+  manager_approved_end: string | null;
+  shift: {
+    id: string;
+    title: string;
+    start_time: string;
+    end_time: string;
+    hourly_rate: number;
+    company_id: string;
+  } | null;
+  company: {
+    id: string;
+    company_details: {
+      company_name: string;
+    } | null;
+  } | null;
+}
 
 export default async function FinancesPage({
   params,
@@ -37,58 +49,129 @@ export default async function FinancesPage({
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile || profile.role !== 'worker') {
     redirect(`/${lang}`);
   }
 
-  // Fetch payments for this worker
-  const { data: payments, error: paymentsError } = await supabase
-    .from('payments')
-    .select('*')
+  // Fetch timesheets with shift and company data
+  const { data: timesheets, error } = await supabase
+    .from('timesheets')
+    .select(`
+      id,
+      status,
+      total_pay,
+      manager_approved_start,
+      manager_approved_end,
+      created_at,
+      shift:shifts!timesheets_shift_id_fkey (
+        id,
+        title,
+        start_time,
+        end_time,
+        hourly_rate,
+        company_id
+      ),
+      company:shifts!timesheets_shift_id_fkey (
+        company:profiles!shifts_company_id_fkey (
+          id,
+          company_details:company_details!company_details_profile_id_fkey (
+            company_name
+          )
+        )
+      )
+    `)
     .eq('worker_id', user.id)
-    .order('created_at', { ascending: false });
+    .order('manager_approved_end', { ascending: false, nullsFirst: false });
 
-  if (paymentsError) {
-    console.error('Error fetching payments:', paymentsError);
+  if (error) {
+    console.error('SERVER ERROR FETCHING FINANCES:', JSON.stringify(error, null, 2));
   }
 
-  // Calculate totals as per requirements
-  // Total Earned: sum of all payments (regardless of status)
-  const totalEarned = payments?.reduce((sum, payment) => {
-    return sum + parseFloat(payment.amount?.toString() || '0');
-  }, 0) || 0;
+  // Calculate totals and map data
+  let pendingBalance = 0;
+  let totalEarnings = 0;
 
-  // Awaiting Payment: sum of payments with status 'pending'
-  const awaitingPayment = payments?.reduce((sum, payment) => {
-    return sum + (payment.status === 'pending' ? parseFloat(payment.amount?.toString() || '0') : 0);
-  }, 0) || 0;
+  const transactions = (timesheets || []).map((ts: any) => {
+    const shift = Array.isArray(ts.shift) ? ts.shift[0] : ts.shift;
+    const companyData = Array.isArray(ts.company) ? ts.company[0] : ts.company;
+    const companyProfile = companyData?.company;
+    const companyDetails = Array.isArray(companyProfile?.company_details) 
+      ? companyProfile?.company_details[0] 
+      : companyProfile?.company_details;
 
-  // Already Paid: sum of payments with status 'paid'
-  const alreadyPaid = payments?.reduce((sum, payment) => {
-    return sum + (payment.status === 'paid' ? parseFloat(payment.amount?.toString() || '0') : 0);
-  }, 0) || 0;
-
-  // Get all payments for history table (sorted by created_at desc)
-  const paymentHistory = payments || [];
-
-  // Status badge colors
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
-      case 'paid':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Paid</Badge>;
-      case 'cancelled':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+    // Calculate total_pay if not present
+    let totalPay = ts.total_pay;
+    if (totalPay === null && shift) {
+      // Use manager_approved times if available, otherwise fall back to shift scheduled times
+      const startTime = ts.manager_approved_start || shift.start_time;
+      const endTime = ts.manager_approved_end || shift.end_time;
+      
+      if (startTime && endTime) {
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        totalPay = hours * (shift.hourly_rate || 0);
+      } else {
+        totalPay = 0;
+      }
     }
+
+    // Sum up balances
+    if (ts.status === 'pending') {
+      pendingBalance += totalPay || 0;
+    } else if (ts.status === 'approved' || ts.status === 'paid') {
+      totalEarnings += totalPay || 0;
+    }
+
+    return {
+      id: ts.id,
+      status: ts.status,
+      totalPay: totalPay || 0,
+      shiftTitle: shift?.title || 'Unknown Shift',
+      shiftDate: shift?.end_time || ts.manager_approved_end || '',
+      companyName: companyDetails?.company_name || 'Unknown Company',
+    };
+  });
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      pending: 'secondary',
+      approved: 'default',
+      paid: 'default',
+      disputed: 'destructive',
+    };
+    const labels: Record<string, string> = {
+      pending: dict.workerFinances.statusPending,
+      approved: dict.workerFinances.statusApproved,
+      paid: dict.workerFinances.statusPaid,
+      disputed: dict.workerFinances.statusDisputed,
+    };
+    const colors: Record<string, string> = {
+      pending: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
+      approved: 'bg-green-100 text-green-800 hover:bg-green-100',
+      paid: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+      disputed: 'bg-red-100 text-red-800 hover:bg-red-100',
+    };
+    return (
+      <Badge variant={variants[status] || 'secondary'} className={colors[status] || ''}>
+        {labels[status] || status}
+      </Badge>
+    );
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('da-DK', {
+      style: 'currency',
+      currency: 'DKK',
+      minimumFractionDigits: 2,
+    }).format(amount);
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{dict.workerFinances.title}</h1>
         <p className="text-muted-foreground">
@@ -96,96 +179,134 @@ export default async function FinancesPage({
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Earned</CardTitle>
-            <CardDescription>Sum of all payments</CardDescription>
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 mb-8">
+        {/* Pending Balance */}
+        <Card className="border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-800">
+              {dict.workerFinances.pendingBalance}
+            </CardTitle>
+            <Clock className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold mb-2">
-              {formatCurrency(totalEarned, { locale: lang === 'da' ? 'da-DK' : 'en-US' })}
+            <div className="text-3xl font-bold text-yellow-900">
+              {formatCurrency(pendingBalance)}
             </div>
-            <p className="text-sm text-muted-foreground">
-              {payments?.length || 0} total payments
+            <p className="text-xs text-yellow-700 mt-1">
+              {dict.workerFinances.pendingBalanceDescription}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Awaiting Payment</CardTitle>
-            <CardDescription>Sum of payments with status 'pending'</CardDescription>
+        {/* Total Earnings */}
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-800">
+              {dict.workerFinances.totalEarnings}
+            </CardTitle>
+            <TrendingUp className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold mb-2">
-              {formatCurrency(awaitingPayment, { locale: lang === 'da' ? 'da-DK' : 'en-US' })}
+            <div className="text-3xl font-bold text-green-900">
+              {formatCurrency(totalEarnings)}
             </div>
-            <p className="text-sm text-muted-foreground">
-              {payments?.filter(p => p.status === 'pending').length || 0} pending payments
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Already Paid</CardTitle>
-            <CardDescription>Sum of payments with status 'paid'</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">
-              {formatCurrency(alreadyPaid, { locale: lang === 'da' ? 'da-DK' : 'en-US' })}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {payments?.filter(p => p.status === 'paid').length || 0} paid payments
+            <p className="text-xs text-green-700 mt-1">
+              {dict.workerFinances.totalEarningsDescription}
             </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Transaction History */}
       <Card>
         <CardHeader>
-          <CardTitle>Payment History</CardTitle>
-          <CardDescription>Your payment history with date, shift title, amount, and status</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            {dict.workerFinances.transactionHistory}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {paymentHistory.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No payments found yet.
-            </p>
+          {transactions.length === 0 ? (
+            <div className="text-center py-12">
+              <Wallet className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                {dict.workerFinances.noTransactions}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {dict.workerFinances.noTransactionsDescription}
+              </p>
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Shift Title</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paymentHistory.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      {payment.created_at ? formatDateShort(payment.created_at) : 'N/A'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {payment.shift_title_snapshot || 'N/A'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(parseFloat(payment.amount?.toString() || '0'), { locale: lang === 'da' ? 'da-DK' : 'en-US' })}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(payment.status)}
-                    </TableCell>
-                  </TableRow>
+            <div className="space-y-4">
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 font-medium text-muted-foreground">
+                        {dict.workerFinances.shift}
+                      </th>
+                      <th className="pb-3 font-medium text-muted-foreground">
+                        {dict.workerFinances.company}
+                      </th>
+                      <th className="pb-3 font-medium text-muted-foreground">
+                        {dict.workerFinances.date}
+                      </th>
+                      <th className="pb-3 font-medium text-muted-foreground text-right">
+                        {dict.workerFinances.amount}
+                      </th>
+                      <th className="pb-3 font-medium text-muted-foreground text-right">
+                        {dict.workerFinances.status}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => (
+                      <tr key={tx.id} className="border-b last:border-0">
+                        <td className="py-4 font-medium">{tx.shiftTitle}</td>
+                        <td className="py-4 text-muted-foreground">{tx.companyName}</td>
+                        <td className="py-4 text-muted-foreground">
+                          {tx.shiftDate ? formatDateShort(tx.shiftDate) : '-'}
+                        </td>
+                        <td className="py-4 text-right font-semibold">
+                          {formatCurrency(tx.totalPay)}
+                        </td>
+                        <td className="py-4 text-right">
+                          {getStatusBadge(tx.status)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium">{tx.shiftTitle}</p>
+                        <p className="text-sm text-muted-foreground">{tx.companyName}</p>
+                      </div>
+                      {getStatusBadge(tx.status)}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="text-sm text-muted-foreground">
+                        {tx.shiftDate ? formatDateShort(tx.shiftDate) : '-'}
+                      </span>
+                      <span className="font-semibold text-lg">
+                        {formatCurrency(tx.totalPay)}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-

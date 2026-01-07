@@ -38,16 +38,16 @@ export default async function ShiftsPage({
     .from('shifts')
     .select(`
       *,
-      locations!location_id (*),
-      shift_applications (
+      location:locations!shifts_location_id_fkey(*), 
+      shift_applications(
         id,
         status,
-        profiles!worker_id (
+        worker:profiles!shift_applications_worker_id_fkey(
           id,
           first_name,
           last_name,
           email,
-          worker_details (
+          worker_details:worker_details!worker_details_profile_id_fkey(
             avatar_url,
             phone_number
           )
@@ -66,15 +66,20 @@ export default async function ShiftsPage({
   // Map worker_details data to profile level and rename shift_applications to applications
   const mappedShifts = (shifts || []).map((shift: any) => {
     const applications = (shift.shift_applications || []).map((app: any) => {
-      if (app.profiles?.worker_details) {
-        // Flatten worker_details to profile level
-        app.profiles.avatar_url = app.profiles.worker_details.avatar_url;
-        app.profiles.phone_number = app.profiles.worker_details.phone_number;
-      }
-      return app;
+      const worker = app.worker;
+      const workerDetails = worker?.worker_details;
+      return {
+        ...app,
+        profiles: worker ? {
+          ...worker,
+          avatar_url: workerDetails?.avatar_url,
+          phone_number: workerDetails?.phone_number
+        } : null
+      };
     });
     return {
       ...shift,
+      locations: shift.location, // Map location alias to locations for backward compatibility
       applications,
     };
   });

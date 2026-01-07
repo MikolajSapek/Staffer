@@ -4,14 +4,17 @@ import CompanyLayoutWrapper from './CompanyLayoutWrapper';
 
 export default async function CompanyLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ lang: string }>;
 }) {
+  const { lang } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect(`/${lang}/login`);
   }
 
   // Get user profile to check role
@@ -23,7 +26,7 @@ export default async function CompanyLayout({
 
   // If user doesn't have a profile or role is not 'company', redirect to home
   if (!profile || profile.role !== 'company') {
-    redirect('/');
+    redirect(`/${lang}`);
   }
 
   // Check if company_details exists

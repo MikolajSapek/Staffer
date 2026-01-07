@@ -22,14 +22,12 @@ interface Shift {
     address: string;
   } | null;
   shift_applications?: Array<{
-    id?: string;
     status: string;
-    worker_id?: string;
     profiles?: {
       id: string;
       first_name: string;
       last_name: string;
-      worker_details?: Array<{ avatar_url: string | null; phone_number: string | null }> | { avatar_url: string | null; phone_number: string | null } | null;
+      worker_details?: Array<{ avatar_url: string | null }> | { avatar_url: string | null } | null;
     } | null;
   }> | null;
 }
@@ -98,17 +96,6 @@ export default function ShiftsTabs({
   };
 
   const renderShiftCard = (shift: Shift, isArchived: boolean = false) => {
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Shift Data:', shift);
-      console.log('Shift Applications:', shift.shift_applications);
-      if (shift.shift_applications && shift.shift_applications.length > 0) {
-        console.log('First Application:', shift.shift_applications[0]);
-        console.log('First App Profiles:', shift.shift_applications[0]?.profiles);
-        console.log('First App Worker Details:', shift.shift_applications[0]?.profiles?.worker_details);
-      }
-    }
-
     // Extract approved workers from applications
     const approvedApplications = (shift.shift_applications as any[])?.filter(
       (app: any) => app.status === 'accepted'
@@ -117,17 +104,10 @@ export default function ShiftsTabs({
     // Helper to get worker details from application
     const getWorkerDetails = (app: any) => {
       const profile = app.profiles;
-      if (!profile) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('No profile found for application:', app);
-        }
-        return null;
-      }
-      // worker_details is returned as an object, not an array
-      const workerDetails = profile.worker_details;
-      if (process.env.NODE_ENV === 'development' && !workerDetails) {
-        console.warn('No worker_details found for profile:', profile);
-      }
+      if (!profile) return null;
+      const workerDetails = Array.isArray(profile.worker_details)
+        ? profile.worker_details[0]
+        : profile.worker_details;
       return {
         firstName: profile.first_name || '',
         lastName: profile.last_name || '',
@@ -154,7 +134,7 @@ export default function ShiftsTabs({
           <CardHeader>
             <div className="flex items-start justify-between">
               <CardTitle className="text-xl">{shift.title}</CardTitle>
-              {!isArchived && getStatusBadge(shift.status)}
+              {getStatusBadge(shift.status)}
             </div>
             <CardDescription>
               {shift.locations?.name || dict.jobBoard.locationNotSpecified}
