@@ -3,6 +3,7 @@
 import React from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { da } from 'date-fns/locale/da';
+import { formatInTimeZone } from 'date-fns-tz';
 import { MapPin, Clock, Building2, Calendar, Flame } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -48,8 +49,12 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
   const durationHours = differenceInMinutes(end, start) / 60;
   const totalPay = Math.round(durationHours * shift.hourly_rate);
 
-  const dateFormatted = format(start, 'dd/MM', { locale: da });
-  const timeFormatted = `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`;
+  // Force Copenhagen display time
+  const timeZone = 'Europe/Copenhagen';
+  const dateFormatted = formatInTimeZone(start, timeZone, 'dd/MM', { locale: da });
+  const startTimeFormatted = formatInTimeZone(start, timeZone, 'HH:mm', { locale: da });
+  const endTimeFormatted = formatInTimeZone(end, timeZone, 'HH:mm', { locale: da });
+  const timeFormatted = `${startTimeFormatted} - ${endTimeFormatted}`;
 
   const companyName = shift.profiles?.company_details?.company_name || 'Company';
   const locationName = shift.locations?.name || shift.locations?.address || dict.jobBoard.locationNotSpecified;

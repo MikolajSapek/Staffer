@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/utils/supabase/client';
 import { Loader2, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
 import CreateLocationModal from '@/components/CreateLocationModal';
+import { fromZonedTime } from 'date-fns-tz';
 
 interface CreateShiftFormProps {
   companyId: string;
@@ -341,6 +342,13 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         throw new Error('User not authenticated');
       }
 
+      // Convert local time strings to UTC using Copenhagen timezone
+      const timeZone = 'Europe/Copenhagen';
+      
+      // Convert "2026-01-01T09:00" (Denmark time) -> UTC Date Object
+      const startUtc = fromZonedTime(formData.start_time, timeZone);
+      const endUtc = fromZonedTime(formData.end_time, timeZone);
+
       // Construct the payload with proper data types
       const payload = {
         company_id: user.id, // CRITICAL: Must match auth.uid() for RLS policy
@@ -348,8 +356,8 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         category: formData.category,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
+        start_time: startUtc.toISOString(), // Send explicit UTC
+        end_time: endUtc.toISOString(),
         hourly_rate: parseFloat(formData.hourly_rate),
         vacancies_total: parseInt(formData.vacancies_total),
         vacancies_taken: 0,
