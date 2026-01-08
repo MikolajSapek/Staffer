@@ -40,11 +40,12 @@ export default async function CreateShiftPage({
     redirect(`/${lang}/company-setup`);
   }
 
-  // Fetch company locations
+  // Fetch company locations (only non-archived)
   const { data: locations } = await supabase
     .from('locations')
     .select('id, name, address')
     .eq('company_id', user.id)
+    .eq('is_archived', false)
     .order('name', { ascending: true });
 
   return (

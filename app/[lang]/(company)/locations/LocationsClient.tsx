@@ -86,6 +86,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
         .from('locations')
         .select('id, name, address, created_at')
         .eq('company_id', user.id)
+        .eq('is_archived', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -154,7 +155,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
       const supabase = createClient();
       const { error } = await supabase
         .from('locations')
-        .delete()
+        .update({ is_archived: true })
         .eq('id', locationId);
 
       if (error) throw error;

@@ -143,6 +143,39 @@ interface ShiftTemplate {
   location_id: string;
 }
 
+// Generate time options with 10-minute intervals (00:00, 00:10, 00:20, ... 23:50)
+const generateTimeOptions = (): string[] => {
+  const timeOptions: string[] = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 10) {
+      const hour = h.toString().padStart(2, '0');
+      const minute = m.toString().padStart(2, '0');
+      timeOptions.push(`${hour}:${minute}`);
+    }
+  }
+  return timeOptions;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
+// Helper to split ISO datetime string into date and time parts
+const splitDateTime = (isoString: string): { date: string; time: string } => {
+  if (!isoString) {
+    return { date: '', time: '' };
+  }
+  const [date, timeWithSeconds] = isoString.split('T');
+  const time = timeWithSeconds ? timeWithSeconds.substring(0, 5) : '';
+  return { date, time };
+};
+
+// Helper to combine date and time into ISO datetime string
+const combineDateTime = (date: string, time: string): string => {
+  if (!date || !time) {
+    return '';
+  }
+  return `${date}T${time}:00`;
+};
+
 export default function CreateShiftForm({ companyId, locations: initialLocations, locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -216,6 +249,31 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     setLocations((prev) => [newLocation, ...prev]);
     // Auto-select the new location
     setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
+  };
+
+  // Handlers for date/time updates
+  const handleStartDateChange = (newDate: string) => {
+    const { time } = splitDateTime(formData.start_time);
+    const combined = combineDateTime(newDate, time || '00:00');
+    setFormData({ ...formData, start_time: combined });
+  };
+
+  const handleStartTimeChange = (newTime: string) => {
+    const { date } = splitDateTime(formData.start_time);
+    const combined = combineDateTime(date || new Date().toISOString().split('T')[0], newTime);
+    setFormData({ ...formData, start_time: combined });
+  };
+
+  const handleEndDateChange = (newDate: string) => {
+    const { time } = splitDateTime(formData.end_time);
+    const combined = combineDateTime(newDate, time || '00:00');
+    setFormData({ ...formData, end_time: combined });
+  };
+
+  const handleEndTimeChange = (newTime: string) => {
+    const { date } = splitDateTime(formData.end_time);
+    const combined = combineDateTime(date || new Date().toISOString().split('T')[0], newTime);
+    setFormData({ ...formData, end_time: combined });
   };
 
   const validateForm = (): string | null => {
@@ -498,32 +556,70 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
             {/* Date & Time */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="start_time">
+                <Label>
                   {dict.startTime} <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="start_time"
-                  type="datetime-local"
-                  value={formData.start_time}
-                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  required
-                  disabled={loading}
-                  className="w-full"
-                />
+                <div className="grid gap-2 grid-cols-2">
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={splitDateTime(formData.start_time).date}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="w-full"
+                  />
+                  <Select
+                    value={splitDateTime(formData.start_time).time}
+                    onValueChange={handleStartTimeChange}
+                    disabled={loading}
+                    required
+                  >
+                    <SelectTrigger id="start_time" className="w-full">
+                      <SelectValue placeholder="--:--" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_OPTIONS.map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="end_time">
+                <Label>
                   {dict.endTime} <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="end_time"
-                  type="datetime-local"
-                  value={formData.end_time}
-                  onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                  required
-                  disabled={loading}
-                  className="w-full"
-                />
+                <div className="grid gap-2 grid-cols-2">
+                  <Input
+                    id="end_date"
+                    type="date"
+                    value={splitDateTime(formData.end_time).date}
+                    onChange={(e) => handleEndDateChange(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="w-full"
+                  />
+                  <Select
+                    value={splitDateTime(formData.end_time).time}
+                    onValueChange={handleEndTimeChange}
+                    disabled={loading}
+                    required
+                  >
+                    <SelectTrigger id="end_time" className="w-full">
+                      <SelectValue placeholder="--:--" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_OPTIONS.map((time) => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 

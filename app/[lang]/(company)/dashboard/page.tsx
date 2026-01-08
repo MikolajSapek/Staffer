@@ -111,11 +111,12 @@ export default async function CompanyDashboardPage({
     })
   }));
 
-  // Query 1: Count locations for this company
+  // Query 1: Count locations for this company (only non-archived)
   const { count: locationsCount } = await supabase
     .from('locations')
     .select('*', { count: 'exact', head: true })
-    .eq('company_id', user.id);
+    .eq('company_id', user.id)
+    .eq('is_archived', false);
 
   // Query 2: Count active shifts (end_time > now AND status != 'cancelled')
   const { count: activeShiftsCount } = await supabase
