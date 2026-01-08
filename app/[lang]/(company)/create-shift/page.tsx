@@ -61,6 +61,7 @@ export default async function CreateShiftPage({
           companyId={user.id} 
           locations={locations || []} 
           dict={dict.createShift}
+          locationFormDict={dict.companyLocations.form}
           shiftOptions={dict.shiftOptions}
           lang={lang} 
         />

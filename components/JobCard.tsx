@@ -34,7 +34,7 @@ interface JobCardProps {
   userRole: string;
   dict: any;
   lang: string;
-  applicationStatus?: string;
+  applicationStatus?: string | null; // e.g. 'pending', 'accepted', 'rejected'
   getStatusBadge?: (shiftId: string) => React.ReactNode;
 }
 
@@ -53,6 +53,9 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
   const companyName = shift.profiles?.company_details?.company_name || 'Company';
   const locationName = shift.locations?.name || shift.locations?.address || dict.jobBoard.locationNotSpecified;
   const logoUrl = shift.profiles?.company_details?.logo_url;
+
+  // Hide buttons if user has applied (any status), if job is fully booked, or if user is not a worker
+  const shouldHideButtons = hasApplied || isFullyBooked || (userRole && userRole !== 'worker');
 
   return (
     <Card className="flex flex-col overflow-hidden transition-all hover:shadow-md border border-gray-100 bg-white">
@@ -98,35 +101,28 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
       </div>
 
       {/* FOOTER ACTION */}
-      <div className="mt-auto p-4 pt-2 border-t border-gray-100 flex items-center justify-between gap-3">
-        <div className="flex flex-col">
-          <span className="text-xs text-gray-500">Total Pay</span>
-          <span className="text-lg font-bold text-red-600">{totalPay} kr</span>
+      <div className="mt-auto p-4 pt-2 flex items-center justify-between border-t border-gray-50 bg-gray-50/50 min-h-[50px]">
+        
+        {/* Always show the money */}
+        <div className="text-lg font-bold text-red-700">
+          {totalPay} DKK
         </div>
-        <div className="flex-1 max-w-[200px]">
-          {isFullyBooked ? (
-            <Badge variant="outline" className="w-full justify-center">
-              {dict.jobBoard.fullyBooked}
-            </Badge>
-          ) : canApply ? (
-            <Button
-              onClick={() => onApply(shift)}
-              className="w-full"
-            >
-              {dict.jobBoard.apply}
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                window.location.href = `/${lang}/login`;
-              }}
-            >
-              {dict.jobBoard.loginToApply}
-            </Button>
-          )}
-        </div>
+
+        {/* Buttons - Only show if user hasn't applied AND job is not full */}
+        {!shouldHideButtons && (
+          <div className="w-1/3 min-w-[120px] flex justify-end">
+             {canApply ? (
+               <Button onClick={() => onApply(shift)} size="sm" className="w-full h-8 text-xs bg-black text-white hover:bg-gray-800">
+                 {dict.jobBoard.apply}
+               </Button>
+             ) : (
+               // User not logged in (or not a worker role)
+               <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => window.location.href = `/${lang}/login`}>
+                 {dict.jobBoard.loginToApply}
+               </Button>
+             )}
+          </div>
+        )}
       </div>
     </Card>
   );

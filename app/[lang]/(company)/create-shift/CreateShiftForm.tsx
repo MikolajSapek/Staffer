@@ -14,12 +14,26 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
+import CreateLocationModal from '@/components/CreateLocationModal';
 
 interface CreateShiftFormProps {
   companyId: string;
   locations: Array<{ id: string; name: string; address: string }>;
+  locationFormDict: {
+    addTitle: string;
+    addDescription: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    addressLabel: string;
+    addressPlaceholder: string;
+    save: string;
+    creating: string;
+    cancel: string;
+    nameRequired: string;
+    notLoggedIn: string;
+    createError: string;
+  };
   dict: {
     formTitle: string;
     formDescription: string;
@@ -129,7 +143,7 @@ interface ShiftTemplate {
   location_id: string;
 }
 
-export default function CreateShiftForm({ companyId, locations, dict, shiftOptions, lang }: CreateShiftFormProps) {
+export default function CreateShiftForm({ companyId, locations: initialLocations, locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,12 +152,14 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
+  const [locations, setLocations] = useState<Array<{ id: string; name: string; address: string }>>(initialLocations);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
-    location_id: locations.length > 0 ? locations[0].id : '',
+    location_id: initialLocations.length > 0 ? initialLocations[0].id : '',
     start_time: '',
     end_time: '',
     hourly_rate: '',
@@ -192,6 +208,14 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
         // Don't overwrite start_time and end_time
       });
     }
+  };
+
+  // Handle location creation success
+  const handleLocationCreated = (newLocation: { id: string; name: string; address: string }) => {
+    // Add the new location to the list
+    setLocations((prev) => [newLocation, ...prev]);
+    // Auto-select the new location
+    setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
   };
 
   const validateForm = (): string | null => {
@@ -398,32 +422,50 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
                   {dict.location} <span className="text-red-500">*</span>
                 </Label>
                 {locations.length > 0 ? (
-                  <Select
-                    value={formData.location_id}
-                    onValueChange={(value) => setFormData({ ...formData, location_id: value })}
-                    disabled={loading}
-                    required
-                  >
-                    <SelectTrigger id="location_id" className="w-full">
-                      <SelectValue placeholder={dict.selectLocation} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Select
+                      value={formData.location_id}
+                      onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+                      disabled={loading}
+                      required
+                    >
+                      <SelectTrigger id="location_id" className="w-full">
+                        <SelectValue placeholder={dict.selectLocation} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.id}>
+                            {loc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLocationModalOpen(true)}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {dict.goToLocations}
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       {dict.noLocations}
                     </p>
-                    <Button type="button" variant="outline" asChild>
-                      <Link href={`/${lang}/locations`}>
-                        {dict.goToLocations}
-                      </Link>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setLocationModalOpen(true)}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {dict.goToLocations}
                     </Button>
                   </div>
                 )}
@@ -617,6 +659,12 @@ export default function CreateShiftForm({ companyId, locations, dict, shiftOptio
           </form>
         )}
       </CardContent>
+      <CreateLocationModal
+        open={locationModalOpen}
+        onOpenChange={setLocationModalOpen}
+        dict={locationFormDict}
+        onSuccess={handleLocationCreated}
+      />
     </Card>
   );
 }
