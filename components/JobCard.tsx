@@ -3,7 +3,7 @@
 import React from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { da } from 'date-fns/locale/da';
-import { MapPin, Clock, Building2, Calendar } from 'lucide-react';
+import { MapPin, Clock, Building2, Calendar, Flame } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ interface Shift {
   vacancies_taken: number;
   status: string;
   company_id: string;
+  is_urgent: boolean;
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
@@ -61,7 +62,7 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
     <Card className="flex flex-col overflow-hidden transition-all hover:shadow-md border border-gray-100 bg-white">
       {/* HEADER */}
       <div className="p-4 pb-2 flex justify-between items-start gap-3">
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-3 items-center flex-1 min-w-0">
           <div className="h-10 w-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
             {logoUrl ? (
               <img src={logoUrl} alt={companyName} className="h-full w-full object-cover" />
@@ -69,15 +70,23 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
               <Building2 className="h-5 w-5 text-gray-400" />
             )}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-xs text-gray-500 font-medium mb-0.5">{companyName}</div>
             <h3 className="text-base font-bold text-gray-900 leading-tight">{shift.title}</h3>
+            {shift.is_urgent && (
+              <Badge className="bg-red-600 text-white font-bold flex items-center gap-1 shadow-sm mt-2 w-fit">
+                <Flame className="h-3 w-3" />
+                URGENT
+              </Badge>
+            )}
           </div>
         </div>
         
-        {hasApplied && getStatusBadge && getStatusBadge(shift.id)}
-        {hasApplied && !getStatusBadge && <Badge className="bg-blue-600 text-xs px-2 py-0.5">Applied</Badge>}
-        {isFullyBooked && !hasApplied && <Badge variant="outline" className="text-gray-500 text-xs">Full</Badge>}
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {hasApplied && getStatusBadge && getStatusBadge(shift.id)}
+          {hasApplied && !getStatusBadge && <Badge className="bg-blue-600 text-xs px-2 py-0.5">Applied</Badge>}
+          {isFullyBooked && !hasApplied && <Badge variant="outline" className="text-gray-500 text-xs">Full</Badge>}
+        </div>
       </div>
 
       {/* DETAILS GRID */}

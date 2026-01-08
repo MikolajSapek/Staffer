@@ -176,6 +176,7 @@ export interface Database {
           vacancies_taken: number;
           requirements: Json;
           status: 'published' | 'full' | 'completed' | 'cancelled';
+          is_urgent: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -193,6 +194,7 @@ export interface Database {
           vacancies_taken?: number;
           requirements?: Json;
           status?: 'published' | 'full' | 'completed' | 'cancelled';
+          is_urgent?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -210,6 +212,7 @@ export interface Database {
           vacancies_taken?: number;
           requirements?: Json;
           status?: 'published' | 'full' | 'completed' | 'cancelled';
+          is_urgent?: boolean;
           created_at?: string;
           updated_at?: string;
         };

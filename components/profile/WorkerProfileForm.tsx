@@ -296,9 +296,9 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       // Send plain text to RPC, database will handle encryption
       let cprNumber = '';
       if (formData.cpr_number.trim()) {
-        // Validate CPR format
-        const cprRegex = /^\d{6}-?\d{4}$/;
-        if (!cprRegex.test(formData.cpr_number.replace(/-/g, ''))) {
+        // Validate CPR format - must be exactly 10 digits
+        const cprRegex = /^\d{10}$/;
+        if (!cprRegex.test(formData.cpr_number.trim())) {
           setSubmitError(dict.profile.validation.cprFormat);
           setSubmitLoading(false);
           return;
@@ -732,9 +732,16 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                   type="text"
                   placeholder={workerDetails?.cpr_number ? dict.profile.cprNumberUpdate : dict.profile.cprNumberPlaceholder}
                   value={formData.cpr_number || ''}
-                  onChange={(e) => setFormData({ ...formData, cpr_number: e.target.value })}
+                  onChange={(e) => {
+                    // Remove any non-digit characters immediately
+                    const value = e.target.value.replace(/\D/g, '');
+                    // Only update state if length is <= 10
+                    if (value.length <= 10) {
+                      setFormData({ ...formData, cpr_number: value });
+                    }
+                  }}
                   required={!workerDetails?.cpr_number}
-                  maxLength={11}
+                  maxLength={10}
                   disabled={submitLoading}
                 />
                 <p className="text-xs text-muted-foreground">

@@ -267,7 +267,9 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-[100]">
                   {/* SEKCJA 1: ZAWSZE WIDOCZNA - HEADER */}
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">{user?.email || dict.common.user}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={user?.email || dict.common.user}>
+                      {user?.email || dict.common.user}
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {role === 'worker' 
                         ? dict.workerNav.roleLabel

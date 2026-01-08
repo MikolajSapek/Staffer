@@ -16,6 +16,7 @@ interface Shift {
   vacancies_taken: number;
   status: string;
   company_id: string;
+  is_urgent: boolean;
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
@@ -102,10 +103,19 @@ export default function JobBoardClient({
     return appliedShiftIds.includes(shiftId);
   };
 
+  // Sort shifts: urgent first, then by start_time
+  const sortedShifts = [...shifts].sort((a, b) => {
+    // Priority 1: Urgent shifts first
+    if (a.is_urgent && !b.is_urgent) return -1;
+    if (!a.is_urgent && b.is_urgent) return 1;
+    // Priority 2: Sort by start_time (ascending)
+    return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+  });
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {shifts.map((shift) => {
+        {sortedShifts.map((shift) => {
           const applied = hasApplied(shift.id);
 
           return (

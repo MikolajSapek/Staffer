@@ -197,6 +197,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     end_time: '',
     hourly_rate: '',
     vacancies_total: '1',
+    is_urgent: false,
   });
 
   // Fetch templates on mount
@@ -353,6 +354,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         vacancies_total: parseInt(formData.vacancies_total),
         vacancies_taken: 0,
         status: 'published' as const,
+        is_urgent: formData.is_urgent,
       };
 
       // Insert the shift
@@ -691,6 +693,28 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
               <p className="text-xs text-muted-foreground">
                 {dict.descriptionHint}
               </p>
+            </div>
+
+            {/* Mark as Urgent */}
+            <div className="space-y-2 pt-4 border-t">
+              <div className="flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  id="is_urgent"
+                  checked={formData.is_urgent}
+                  onChange={(e) => setFormData({ ...formData, is_urgent: e.target.checked })}
+                  disabled={loading}
+                  className="h-4 w-4 mt-1 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="is_urgent" className="cursor-pointer font-medium">
+                    Mark as Urgent / High Priority
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Highlight this shift to attract workers faster.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Save as Template */}
