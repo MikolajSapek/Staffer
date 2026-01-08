@@ -143,18 +143,22 @@ export default function CandidateProfileModal({
 
       if (result.error) {
         setError(result.error);
-        setActionLoading(null);
         return;
       }
 
-      // Success - refresh the page to get updated data
-      router.refresh();
+      // Success - close modal first and reset state BEFORE refresh
+      // This ensures UI is responsive immediately
       onOpenChange(false);
       if (onSuccess) {
         onSuccess();
       }
+      
+      // Refresh the page to get updated data (this happens after modal closes)
+      router.refresh();
     } catch (err: unknown) {
       setError(dict.error);
+    } finally {
+      // ALWAYS reset loading state, even if there's an error
       setActionLoading(null);
     }
   };

@@ -1,11 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Users } from 'lucide-react';
-import { formatTime, formatDateLong } from '@/lib/date-utils';
+import { JobCard } from '@/components/JobCard';
 import ApplyModal from '@/components/worker/ApplyModal';
 import type { User } from '@supabase/supabase-js';
 
@@ -101,14 +98,6 @@ export default function JobBoardClient({
     );
   };
 
-  const availableSpots = (shift: Shift) => {
-    return shift.vacancies_total - shift.vacancies_taken;
-  };
-
-  const isFullyBooked = (shift: Shift) => {
-    return availableSpots(shift) <= 0 || shift.status === 'full';
-  };
-
   const hasApplied = (shiftId: string) => {
     return appliedShiftIds.includes(shiftId);
   };
@@ -117,90 +106,20 @@ export default function JobBoardClient({
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {shifts.map((shift) => {
-          const spotsAvailable = availableSpots(shift);
-          const fullyBooked = isFullyBooked(shift);
           const applied = hasApplied(shift.id);
-          const canApply = userRole === 'worker' && !applied && !fullyBooked;
 
           return (
-            <Card key={shift.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{shift.title}</CardTitle>
-                  <Badge variant="secondary" className="ml-2">
-                    {shift.hourly_rate} DKK/t
-                  </Badge>
-                </div>
-                {applied && getStatusBadge(shift.id)}
-              </CardHeader>
-              <CardContent className="flex-1 space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{dict.jobBoard.date}:</span>{' '}
-                      {formatDateLong(shift.start_time)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{dict.jobBoard.time}:</span>{' '}
-                      {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{dict.jobBoard.address}:</span>{' '}
-                      {shift.locations?.address || dict.jobBoard.locationNotSpecified}
-                    </span>
-                  </div>
-                  {shift.locations?.name && (
-                    <div className="text-muted-foreground ml-6 text-xs">
-                      {shift.locations.name}
-                    </div>
-                  )}
-                  {shift.profiles?.company_details?.company_name && (
-                    <div className="text-muted-foreground ml-6 text-xs">
-                      {shift.profiles.company_details.company_name}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{dict.jobBoard.availableSpots}:</span>{' '}
-                      {spotsAvailable} / {shift.vacancies_total}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  {fullyBooked ? (
-                    <Badge variant="outline" className="w-full justify-center">
-                      {dict.jobBoard.fullyBooked}
-                    </Badge>
-                  ) : canApply ? (
-                    <Button
-                      onClick={() => handleApply(shift)}
-                      className="w-full"
-                    >
-                      {dict.jobBoard.apply}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => {
-                        window.location.href = `/${lang}/login`;
-                      }}
-                    >
-                      {dict.jobBoard.loginToApply}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <JobCard
+              key={shift.id}
+              shift={shift}
+              onApply={handleApply}
+              hasApplied={applied}
+              userRole={userRole || ''}
+              dict={dict}
+              lang={lang}
+              applicationStatus={applicationStatusMap[shift.id]}
+              getStatusBadge={getStatusBadge}
+            />
           );
         })}
       </div>

@@ -149,6 +149,14 @@ export default function CandidatesClient({
     router.refresh();
   };
 
+  const handleModalClose = (open: boolean) => {
+    setModalOpen(open);
+    // Reset selected application when modal is closed
+    if (!open) {
+      setSelectedApplication(null);
+    }
+  };
+
   // Group applications by shift_id
   const groupedByShift = applications.reduce((acc, app) => {
     const shiftId = app.shift_id;
@@ -281,7 +289,7 @@ export default function CandidatesClient({
       {selectedApplication && (
         <CandidateProfileModal
           open={modalOpen}
-          onOpenChange={setModalOpen}
+          onOpenChange={handleModalClose}
           application={selectedApplication}
           dict={dict.candidatesPage.modal}
           lang={lang}
