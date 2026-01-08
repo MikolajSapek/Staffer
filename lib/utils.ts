@@ -65,4 +65,3 @@ export function formatDKK(
 
   return `${formatter.format(amount)} DKK`;
 }
-
