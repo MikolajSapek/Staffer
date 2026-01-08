@@ -32,7 +32,7 @@ export default async function ApplicationsPage({
   }
 
   // Fetch user's applications with company details
-  const { data: applications } = await supabase
+  const { data: applicationsRaw } = await supabase
     .from('shift_applications')
     .select(`
       id,
@@ -51,8 +51,21 @@ export default async function ApplicationsPage({
         )
       )
     `)
-    .eq('worker_id', user.id)
-    .order('applied_at', { ascending: false });
+    .eq('worker_id', user.id);
+
+  // Sort applications by shift start_time (ascending) - from nearest shift to furthest
+  // Handle both array and object formats for shifts relation
+  const applications = (applicationsRaw || []).sort((a: any, b: any) => {
+    const shiftA = Array.isArray(a.shifts) ? a.shifts[0] : a.shifts;
+    const shiftB = Array.isArray(b.shifts) ? b.shifts[0] : b.shifts;
+    
+    if (!shiftA?.start_time || !shiftB?.start_time) return 0;
+    
+    const dateA = new Date(shiftA.start_time).getTime();
+    const dateB = new Date(shiftB.start_time).getTime();
+    
+    return dateA - dateB; // Ascending order (earliest first)
+  });
 
 
   const getStatusBadge = (status: string) => {
@@ -119,7 +132,8 @@ export default async function ApplicationsPage({
       ) : (
         <div className="space-y-4">
           {applications.map((app) => {
-            const shift = app.shifts;
+            // Handle both array and object formats for shifts relation
+            const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
             if (!shift) return null;
 
             const companyName = getCompanyName(shift);

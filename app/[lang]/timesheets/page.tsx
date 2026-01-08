@@ -85,7 +85,8 @@ export default async function TimesheetsPage({
         start_time,
         end_time,
         hourly_rate,
-        company_id
+        company_id,
+        status
       )
     `)
     .in('status', ['pending', 'disputed'])
@@ -96,12 +97,29 @@ export default async function TimesheetsPage({
     console.error('SERVER ERROR FETCHING TIMESHEETS:', JSON.stringify(error, null, 2));
   }
 
+  // Get current time for filtering completed shifts
+  const now = new Date().toISOString();
+
   // Map and calculate total_pay for each timesheet
-  // Filter to ensure we only show timesheets for this company's shifts
+  // Filter to ensure we only show timesheets for this company's shifts AND only completed shifts
+  // Logic: Show timesheet IF: status = 'pending' AND shift.status = 'completed' (or shift.end_time < now)
   const mappedTimesheets = (timesheets || [])
     .filter((timesheet: any) => {
       const shift = Array.isArray(timesheet.shift) ? timesheet.shift[0] : timesheet.shift;
-      return shift?.company_id === user.id;
+      
+      // First check: must be for this company's shift
+      if (shift?.company_id !== user.id) {
+        return false;
+      }
+      
+      // Second check: shift must be completed
+      // Check if shift.status === 'completed' OR shift.end_time < now
+      const isShiftCompleted = shift?.status === 'completed' || 
+                               (shift?.end_time && new Date(shift.end_time) < new Date(now));
+      
+      // Only show if timesheet is pending/disputed AND shift is completed
+      // This prevents showing future shifts with 0 hours in the timesheets list
+      return isShiftCompleted;
     })
     .map((timesheet: any) => {
     const shift = Array.isArray(timesheet.shift) ? timesheet.shift[0] : timesheet.shift;
@@ -144,6 +162,7 @@ export default async function TimesheetsPage({
         start_time: shift?.start_time || '',
         end_time: shift?.end_time || '',
         hourly_rate: hourlyRate,
+        status: shift?.status || '',
       },
       profiles: worker ? {
         first_name: worker.first_name || null,

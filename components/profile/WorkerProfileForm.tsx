@@ -453,11 +453,16 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
     );
   }
 
-  // Helper function to mask CPR (show only last 4 digits)
+  // Helper function to mask CPR (Privacy Mode: show first 6 digits, mask last 4)
   const maskCPR = (cpr: string) => {
-    if (!cpr || cpr.length < 4) return '******-****';
-    const last4 = cpr.slice(-4);
-    return `******-${last4}`;
+    if (!cpr) return '******-****';
+    // Remove any existing dashes for processing
+    const cleanCPR = cpr.replace(/-/g, '');
+    if (cleanCPR.length < 10) return '******-****';
+    // Get first 6 digits (birth date)
+    const first6 = cleanCPR.slice(0, 6);
+    // Mask last 4 digits
+    return `${first6}-****`;
   };
 
   // Check if profile is complete (has required fields)
