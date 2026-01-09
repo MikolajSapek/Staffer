@@ -9,6 +9,8 @@ import type { User } from '@supabase/supabase-js';
 interface Shift {
   id: string;
   title: string;
+  description: string | null;
+  category: string;
   hourly_rate: number;
   start_time: string;
   end_time: string;
@@ -20,6 +22,7 @@ interface Shift {
   company_id: string;
   is_urgent: boolean;
   possible_overtime: boolean;
+  requirements: any; // JSONB field
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
@@ -47,12 +50,19 @@ interface JobBoardClientProps {
       locationNotSpecified: string;
       notSpecified: string;
       possibleOvertime?: string;
+      viewDetails?: string;
     };
     workerApplications: {
       statusPending: string;
       statusAccepted: string;
       statusRejected: string;
       statusWaitlist: string;
+    };
+    createShift?: {
+      categories: Record<string, string>;
+      breakPaid: string;
+      breakUnpaid: string;
+      description?: string;
     };
   };
   lang: string;
@@ -129,10 +139,12 @@ export default function JobBoardClient({
               onApply={handleApply}
               hasApplied={applied}
               userRole={userRole || ''}
+              user={user}
               dict={dict}
               lang={lang}
               applicationStatus={applicationStatusMap[shift.id]}
               getStatusBadge={getStatusBadge}
+              onApplySuccess={handleApplySuccess}
             />
           );
         })}

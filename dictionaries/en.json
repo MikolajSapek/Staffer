@@ -90,7 +90,8 @@
     "notSpecified": "Not specified",
     "breakPaidDisplay": "Includes {x} min PAID break",
     "breakUnpaidDisplay": "Includes {x} min unpaid break",
-    "possibleOvertime": "Possible Overtime"
+    "possibleOvertime": "Possible Overtime",
+    "viewDetails": "View Details"
   },
   "dashboard": {
     "welcome": "Welcome",

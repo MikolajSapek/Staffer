@@ -4,22 +4,29 @@ import React from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { da } from 'date-fns/locale/da';
 import { formatInTimeZone } from 'date-fns-tz';
-import { MapPin, Clock, Building2, Calendar, Flame } from 'lucide-react';
+import { MapPin, Clock, Building2, Calendar, Flame, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { JobDetailsDialog } from '@/components/JobDetailsDialog';
+import type { User } from '@supabase/supabase-js';
 
 interface Shift {
   id: string;
   title: string;
+  description: string | null;
+  category: string;
   hourly_rate: number;
   start_time: string;
   end_time: string;
+  break_minutes: number;
+  is_break_paid: boolean;
+  possible_overtime: boolean;
   vacancies_total: number;
   vacancies_taken: number;
   status: string;
   company_id: string;
   is_urgent: boolean;
+  requirements: any; // JSONB field
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
@@ -34,16 +41,15 @@ interface JobCardProps {
   onApply: (shift: Shift) => void;
   hasApplied: boolean;
   userRole: string;
+  user: User | null;
   dict: any;
   lang: string;
   applicationStatus?: string | null; // e.g. 'pending', 'accepted', 'rejected'
   getStatusBadge?: (shiftId: string) => React.ReactNode;
+  onApplySuccess?: () => void;
 }
 
-export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, applicationStatus, getStatusBadge }: JobCardProps) {
-  const isFullyBooked = shift.vacancies_taken >= shift.vacancies_total || shift.status === 'full';
-  const canApply = userRole === 'worker' && !hasApplied && !isFullyBooked;
-
+export function JobCard({ shift, onApply, hasApplied, userRole, user, dict, lang, applicationStatus, getStatusBadge, onApplySuccess }: JobCardProps) {
   const start = new Date(shift.start_time);
   const end = new Date(shift.end_time);
   const durationHours = differenceInMinutes(end, start) / 60;
@@ -60,11 +66,19 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
   const locationName = shift.locations?.name || shift.locations?.address || dict.jobBoard.locationNotSpecified;
   const logoUrl = shift.profiles?.company_details?.logo_url;
 
-  // Hide buttons if user has applied (any status), if job is fully booked, or if user is not a worker
-  const shouldHideButtons = hasApplied || isFullyBooked || (userRole && userRole !== 'worker');
-
   return (
-    <Card className="flex flex-col overflow-hidden transition-all hover:shadow-md border border-gray-100 bg-white">
+    <JobDetailsDialog
+      shift={shift}
+      isApplied={hasApplied}
+      userRole={userRole}
+      user={user}
+      dict={dict}
+      lang={lang}
+      applicationStatus={applicationStatus}
+      onApply={onApply}
+      onApplySuccess={onApplySuccess}
+    >
+      <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg hover:border-gray-300 border border-gray-100 bg-white cursor-pointer">
       {/* HEADER */}
       <div className="p-4 pb-2 flex justify-between items-start gap-3">
         <div className="flex gap-3 items-center flex-1 min-w-0">
@@ -90,7 +104,9 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
         <div className="flex flex-col items-end gap-2 shrink-0">
           {hasApplied && getStatusBadge && getStatusBadge(shift.id)}
           {hasApplied && !getStatusBadge && <Badge className="bg-blue-600 text-xs px-2 py-0.5">Applied</Badge>}
-          {isFullyBooked && !hasApplied && <Badge variant="outline" className="text-gray-500 text-xs">Full</Badge>}
+          {shift.vacancies_taken >= shift.vacancies_total && !hasApplied && (
+            <Badge variant="outline" className="text-gray-500 text-xs">Full</Badge>
+          )}
         </div>
       </div>
 
@@ -112,33 +128,23 @@ export function JobCard({ shift, onApply, hasApplied, userRole, dict, lang, appl
           <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
           <span className="truncate">{locationName}</span>
         </div>
+        <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
+          <Users className="h-4 w-4 text-gray-400 shrink-0" />
+          <span className="text-gray-600">
+            {shift.vacancies_total} {shift.vacancies_total === 1 ? 'person' : 'persons'} needed
+          </span>
+        </div>
       </div>
 
-      {/* FOOTER ACTION */}
-      <div className="mt-auto p-4 pt-2 flex items-center justify-between border-t border-gray-50 bg-gray-50/50 min-h-[50px]">
-        
-        {/* Always show the money */}
+      {/* FOOTER - Summary Only */}
+      <div className="mt-auto p-4 pt-2 border-t border-gray-50 bg-gray-50/50">
+        {/* Total Pay Display */}
         <div className="text-lg font-bold text-red-700">
           {totalPay} DKK
         </div>
-
-        {/* Buttons - Only show if user hasn't applied AND job is not full */}
-        {!shouldHideButtons && (
-          <div className="w-1/3 min-w-[120px] flex justify-end">
-             {canApply ? (
-               <Button onClick={() => onApply(shift)} size="sm" className="w-full h-8 text-xs bg-black text-white hover:bg-gray-800">
-                 {dict.jobBoard.apply}
-               </Button>
-             ) : (
-               // User not logged in (or not a worker role)
-               <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => window.location.href = `/${lang}/login`}>
-                 {dict.jobBoard.loginToApply}
-               </Button>
-             )}
-          </div>
-        )}
       </div>
     </Card>
+    </JobDetailsDialog>
   );
 }
 

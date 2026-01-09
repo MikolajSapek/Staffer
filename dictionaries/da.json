@@ -90,7 +90,8 @@
     "notSpecified": "Ikke angivet",
     "breakPaidDisplay": "Inkluderer {x} min BETALT pause",
     "breakUnpaidDisplay": "Inkluderer {x} min ubetalt pause",
-    "possibleOvertime": "Mulig overarbejde"
+    "possibleOvertime": "Mulig overarbejde",
+    "viewDetails": "Se detaljer"
   },
   "dashboard": {
     "welcome": "Velkommen",
