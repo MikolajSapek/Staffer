@@ -87,7 +87,10 @@
     "address": "Adresse",
     "availableSpots": "Ledige pladser",
     "locationNotSpecified": "Lokation ikke angivet",
-    "notSpecified": "Ikke angivet"
+    "notSpecified": "Ikke angivet",
+    "breakPaidDisplay": "Inkluderer {x} min BETALT pause",
+    "breakUnpaidDisplay": "Inkluderer {x} min ubetalt pause",
+    "possibleOvertime": "Mulig overarbejde"
   },
   "dashboard": {
     "welcome": "Velkommen",
@@ -135,6 +138,15 @@
     "hourlyRate": "Timeløn (DKK)",
     "hourlyRatePlaceholder": "150.00",
     "hourlyRateHint": "Minimum 0.01 DKK",
+    "breakDuration": "Pausevarighed",
+    "breakDurationHint": "Ubetalt pausetid fratrækkes fra den samlede lønberegning",
+    "breakPaymentStatus": "Pausebetalingstatus",
+    "breakPaid": "Betalt",
+    "breakUnpaid": "Ubetalt",
+    "breakPaidHint": "Betalt pausetid vil blive inkluderet i den samlede lønberegning",
+    "breakUnpaidHint": "Ubetalt pausetid fratrækkes fra den samlede lønberegning",
+    "possibleOvertime": "Mulig overarbejde",
+    "possibleOvertimeHint": "Signalér at ekstra timer kan være tilgængelige/påkrævet.",
     "vacancies": "Antal pladser",
     "vacanciesHint": "Standard: 1",
     "location": "Lokation",
@@ -354,9 +366,9 @@
     "date": "Dato",
     "amount": "Beløb",
     "status": "Status",
-    "statusPending": "Afventer",
-    "statusApproved": "Godkendt",
-    "statusPaid": "Betalt",
+    "statusPending": "Afventer Godkendelse",
+    "statusApproved": "Godkendt/Betalt",
+    "statusPaid": "Godkendt/Betalt",
     "statusDisputed": "Anfægtet"
   },
   "companyShifts": {

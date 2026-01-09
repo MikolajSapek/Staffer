@@ -38,6 +38,8 @@ export default async function ShiftDetailsPage({
       start_time,
       end_time,
       hourly_rate,
+      break_minutes,
+      is_break_paid,
       vacancies_total,
       vacancies_taken,
       status,

@@ -87,7 +87,10 @@
     "address": "Address",
     "availableSpots": "Available spots",
     "locationNotSpecified": "Location not specified",
-    "notSpecified": "Not specified"
+    "notSpecified": "Not specified",
+    "breakPaidDisplay": "Includes {x} min PAID break",
+    "breakUnpaidDisplay": "Includes {x} min unpaid break",
+    "possibleOvertime": "Possible Overtime"
   },
   "dashboard": {
     "welcome": "Welcome",
@@ -135,6 +138,15 @@
     "hourlyRate": "Hourly Rate (DKK)",
     "hourlyRatePlaceholder": "150.00",
     "hourlyRateHint": "Minimum 0.01 DKK",
+    "breakDuration": "Break Duration",
+    "breakDurationHint": "Unpaid break time will be subtracted from total pay calculation",
+    "breakPaymentStatus": "Break Payment Status",
+    "breakPaid": "Paid",
+    "breakUnpaid": "Unpaid",
+    "breakPaidHint": "Paid break time will be included in total pay calculation",
+    "breakUnpaidHint": "Unpaid break time will be subtracted from total pay calculation",
+    "possibleOvertime": "Possible Overtime",
+    "possibleOvertimeHint": "Signal that extra hours might be available/required.",
     "vacancies": "Number of Positions",
     "vacanciesHint": "Default: 1",
     "location": "Location",
@@ -354,9 +366,9 @@
     "date": "Date",
     "amount": "Amount",
     "status": "Status",
-    "statusPending": "Pending",
-    "statusApproved": "Approved",
-    "statusPaid": "Paid",
+    "statusPending": "Pending Approval",
+    "statusApproved": "Approved/Paid",
+    "statusPaid": "Approved/Paid",
     "statusDisputed": "Disputed"
   },
   "companyShifts": {

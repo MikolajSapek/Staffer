@@ -27,6 +27,9 @@ interface Shift {
   start_time: string;
   end_time: string;
   hourly_rate: number;
+  break_minutes: number;
+  is_break_paid: boolean;
+  possible_overtime: boolean;
   vacancies_total: number;
   vacancies_taken: number;
   status: string;

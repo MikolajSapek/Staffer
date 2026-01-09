@@ -12,11 +12,14 @@ interface Shift {
   hourly_rate: number;
   start_time: string;
   end_time: string;
+  break_minutes: number;
+  is_break_paid: boolean;
   vacancies_total: number;
   vacancies_taken: number;
   status: string;
   company_id: string;
   is_urgent: boolean;
+  possible_overtime: boolean;
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
@@ -43,6 +46,7 @@ interface JobBoardClientProps {
       availableSpots: string;
       locationNotSpecified: string;
       notSpecified: string;
+      possibleOvertime?: string;
     };
     workerApplications: {
       statusPending: string;

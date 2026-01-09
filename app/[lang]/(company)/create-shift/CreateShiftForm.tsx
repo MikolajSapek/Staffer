@@ -48,6 +48,15 @@ interface CreateShiftFormProps {
     hourlyRate: string;
     hourlyRatePlaceholder: string;
     hourlyRateHint: string;
+    breakDuration?: string;
+    breakDurationHint?: string;
+    breakPaymentStatus?: string;
+    breakPaid?: string;
+    breakUnpaid?: string;
+    breakPaidHint?: string;
+    breakUnpaidHint?: string;
+    possibleOvertime?: string;
+    possibleOvertimeHint?: string;
     vacancies: string;
     vacanciesHint: string;
     location: string;
@@ -197,8 +206,11 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     start_time: '',
     end_time: '',
     hourly_rate: '',
+    break_minutes: '0',
+    is_break_paid: false,
     vacancies_total: '1',
     is_urgent: false,
+    possible_overtime: false,
   });
 
   // Fetch templates on mount
@@ -359,10 +371,13 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         start_time: startUtc.toISOString(), // Send explicit UTC
         end_time: endUtc.toISOString(),
         hourly_rate: parseFloat(formData.hourly_rate),
+        break_minutes: parseInt(formData.break_minutes) || 0,
+        is_break_paid: parseInt(formData.break_minutes) > 0 ? formData.is_break_paid : false,
         vacancies_total: parseInt(formData.vacancies_total),
         vacancies_taken: 0,
         status: 'published' as const,
         is_urgent: formData.is_urgent,
+        possible_overtime: formData.possible_overtime,
       };
 
       // Insert the shift
@@ -687,6 +702,89 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
               </div>
             </div>
 
+            {/* Break Duration */}
+            <div className="space-y-2">
+              <Label htmlFor="break_minutes">
+                {dict.breakDuration || 'Break Duration'}
+              </Label>
+              <Select
+                value={formData.break_minutes}
+                onValueChange={(value) => {
+                  const breakMinutes = value;
+                  setFormData({ 
+                    ...formData, 
+                    break_minutes: breakMinutes,
+                    // Reset is_break_paid to false when break is set to 0
+                    is_break_paid: breakMinutes === '0' ? false : formData.is_break_paid
+                  });
+                }}
+                disabled={loading}
+              >
+                <SelectTrigger id="break_minutes" className="w-full">
+                  <SelectValue placeholder={shiftOptions.breaks?.placeholder || 'Select break duration'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">
+                    No break
+                  </SelectItem>
+                  <SelectItem value="15">
+                    15 minutes
+                  </SelectItem>
+                  <SelectItem value="30">
+                    30 minutes
+                  </SelectItem>
+                  <SelectItem value="45">
+                    45 minutes
+                  </SelectItem>
+                  <SelectItem value="60">
+                    60 minutes
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* Break Payment Status - Only show if break_minutes > 0 */}
+              {Number(formData.break_minutes) > 0 && (
+                <div className="mt-4 p-4 border rounded-md bg-gray-50 space-y-3">
+                  <Label className="text-base font-semibold">
+                    {dict.breakPaymentStatus || 'Is this break paid?'}
+                  </Label>
+                  <div className="flex flex-col gap-2">
+                    {/* Option: UNPAID */}
+                    <label className="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-gray-200">
+                      <input 
+                        type="radio" 
+                        name="is_break_paid" 
+                        checked={formData.is_break_paid === false} 
+                        onChange={() => setFormData({ ...formData, is_break_paid: false })}
+                        disabled={loading}
+                        className="h-4 w-4 text-primary"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium">Unpaid (Deducted)</span>
+                        <span className="text-xs text-muted-foreground">Time is deducted from total pay</span>
+                      </div>
+                    </label>
+
+                    {/* Option: PAID */}
+                    <label className="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-gray-200">
+                      <input 
+                        type="radio" 
+                        name="is_break_paid" 
+                        checked={formData.is_break_paid === true} 
+                        onChange={() => setFormData({ ...formData, is_break_paid: true })}
+                        disabled={loading}
+                        className="h-4 w-4 text-green-600 focus:ring-green-500"
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-medium text-green-700">Paid (Included)</span>
+                        <span className="text-xs text-green-600">Worker gets paid for this time</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">{dict.description}</Label>
@@ -703,8 +801,9 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
               </p>
             </div>
 
-            {/* Mark as Urgent */}
-            <div className="space-y-2 pt-4 border-t">
+            {/* Boolean Flags - Urgent and Possible Overtime */}
+            <div className="space-y-4 pt-4 border-t">
+              {/* Mark as Urgent */}
               <div className="flex items-start space-x-2">
                 <input
                   type="checkbox"
@@ -720,6 +819,26 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1">
                     Highlight this shift to attract workers faster.
+                  </p>
+                </div>
+              </div>
+
+              {/* Possible Overtime */}
+              <div className="flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  id="possible_overtime"
+                  checked={formData.possible_overtime}
+                  onChange={(e) => setFormData({ ...formData, possible_overtime: e.target.checked })}
+                  disabled={loading}
+                  className="h-4 w-4 mt-1 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="possible_overtime" className="cursor-pointer font-medium">
+                    {dict.possibleOvertime || 'Possible Overtime'}
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {dict.possibleOvertimeHint || 'Signal that extra hours might be available/required.'}
                   </p>
                 </div>
               </div>

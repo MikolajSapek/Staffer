@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 interface Timesheet {
   id: string;
   status: 'pending' | 'approved' | 'disputed' | 'paid';
-  total_pay: number | null;
   manager_approved_start: string | null;
   manager_approved_end: string | null;
+  created_at: string;
   shift: {
     id: string;
     title: string;
@@ -21,12 +21,6 @@ interface Timesheet {
     end_time: string;
     hourly_rate: number;
     company_id: string;
-  } | null;
-  company: {
-    id: string;
-    company_details: {
-      company_name: string;
-    } | null;
   } | null;
 }
 
@@ -55,38 +49,48 @@ export default async function FinancesPage({
     redirect(`/${lang}`);
   }
 
-  // Fetch timesheets with shift and company data
+  // Fetch timesheets with shift data (only existing timesheets - not applications)
   const { data: timesheets, error } = await supabase
     .from('timesheets')
     .select(`
-      id,
-      status,
-      total_pay,
-      manager_approved_start,
-      manager_approved_end,
-      created_at,
-      shift:shifts!timesheets_shift_id_fkey (
+      *,
+      shift:shifts (
         id,
         title,
+        hourly_rate,
         start_time,
         end_time,
-        hourly_rate,
         company_id
-      ),
-      company:shifts!timesheets_shift_id_fkey (
-        company:profiles!shifts_company_id_fkey (
-          id,
-          company_details:company_details!company_details_profile_id_fkey (
-            company_name
-          )
-        )
       )
     `)
     .eq('worker_id', user.id)
-    .order('manager_approved_end', { ascending: false, nullsFirst: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('SERVER ERROR FETCHING FINANCES:', JSON.stringify(error, null, 2));
+  }
+
+  // Fetch company names for all unique company IDs
+  const companyIds = new Set<string>();
+  (timesheets || []).forEach((ts: any) => {
+    const shift = Array.isArray(ts.shift) ? ts.shift[0] : ts.shift;
+    if (shift?.company_id) {
+      companyIds.add(shift.company_id);
+    }
+  });
+
+  let companyNameMap: Record<string, string> = {};
+  if (companyIds.size > 0) {
+    const { data: companyDetails } = await supabase
+      .from('company_details')
+      .select('profile_id, company_name')
+      .in('profile_id', Array.from(companyIds));
+
+    if (companyDetails) {
+      companyDetails.forEach((cd) => {
+        companyNameMap[cd.profile_id] = cd.company_name;
+      });
+    }
   }
 
   // Calculate totals and map data
@@ -95,15 +99,10 @@ export default async function FinancesPage({
 
   const transactions = (timesheets || []).map((ts: any) => {
     const shift = Array.isArray(ts.shift) ? ts.shift[0] : ts.shift;
-    const companyData = Array.isArray(ts.company) ? ts.company[0] : ts.company;
-    const companyProfile = companyData?.company;
-    const companyDetails = Array.isArray(companyProfile?.company_details) 
-      ? companyProfile?.company_details[0] 
-      : companyProfile?.company_details;
-
-    // Calculate total_pay if not present
-    let totalPay = ts.total_pay;
-    if (totalPay === null && shift) {
+    
+    // Calculate total_pay based on manager_approved times or shift scheduled times
+    let totalPay = 0;
+    if (shift) {
       // Use manager_approved times if available, otherwise fall back to shift scheduled times
       const startTime = ts.manager_approved_start || shift.start_time;
       const endTime = ts.manager_approved_end || shift.end_time;
@@ -113,25 +112,23 @@ export default async function FinancesPage({
         const end = new Date(endTime);
         const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
         totalPay = hours * (shift.hourly_rate || 0);
-      } else {
-        totalPay = 0;
       }
     }
 
-    // Sum up balances
+    // Sum up balances based on status
     if (ts.status === 'pending') {
-      pendingBalance += totalPay || 0;
+      pendingBalance += totalPay;
     } else if (ts.status === 'approved' || ts.status === 'paid') {
-      totalEarnings += totalPay || 0;
+      totalEarnings += totalPay;
     }
 
     return {
       id: ts.id,
       status: ts.status,
-      totalPay: totalPay || 0,
+      totalPay,
       shiftTitle: shift?.title || 'Unknown Shift',
-      shiftDate: shift?.end_time || ts.manager_approved_end || '',
-      companyName: companyDetails?.company_name || 'Unknown Company',
+      shiftDate: shift?.end_time || ts.manager_approved_end || ts.created_at || '',
+      companyName: shift?.company_id ? (companyNameMap[shift.company_id] || 'Unknown Company') : 'Unknown Company',
     };
   });
 
@@ -142,16 +139,17 @@ export default async function FinancesPage({
       paid: 'default',
       disputed: 'destructive',
     };
+    // Status mapping per requirements: pending = "Pending Approval", approved/paid = "Approved/Paid"
     const labels: Record<string, string> = {
-      pending: dict.workerFinances.statusPending,
-      approved: dict.workerFinances.statusApproved,
-      paid: dict.workerFinances.statusPaid,
+      pending: dict.workerFinances.statusPending, // "Pending Approval"
+      approved: dict.workerFinances.statusApproved, // "Approved/Paid"
+      paid: dict.workerFinances.statusPaid, // "Approved/Paid" (same as approved)
       disputed: dict.workerFinances.statusDisputed,
     };
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
       approved: 'bg-green-100 text-green-800 hover:bg-green-100',
-      paid: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+      paid: 'bg-green-100 text-green-800 hover:bg-green-100', // Same as approved
       disputed: 'bg-red-100 text-red-800 hover:bg-red-100',
     };
     return (
