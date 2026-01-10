@@ -59,6 +59,8 @@ export default async function ShiftDetailsPage({
           first_name,
           last_name,
           email,
+          average_rating,
+          total_reviews,
           worker_details (
             avatar_url,
             phone_number
@@ -79,10 +81,36 @@ export default async function ShiftDetailsPage({
     (app: any) => app.status === 'accepted'
   ) || [];
 
+  // Fetch existing reviews for all workers in hired team if shift is completed/archived
+  let reviewsMap: Record<string, { rating: number; comment: string | null; tags: string[] | null }> = {};
+  if (shift.status === 'completed' || shift.status === 'cancelled') {
+    const workerIds = hiredTeam.map((app: any) => app.profiles?.id).filter(Boolean);
+    if (workerIds.length > 0) {
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select('reviewee_id, rating, comment, tags')
+        .eq('shift_id', id)
+        .eq('reviewer_id', user.id)
+        .in('reviewee_id', workerIds);
+
+      if (reviews) {
+        reviewsMap = reviews.reduce((acc, review) => {
+          acc[review.reviewee_id] = {
+            rating: review.rating,
+            comment: review.comment || null,
+            tags: review.tags || null,
+          };
+          return acc;
+        }, {} as Record<string, { rating: number; comment: string | null; tags: string[] | null }>);
+      }
+    }
+  }
+
   return (
     <ShiftDetailsClient
       shift={shift}
       hiredTeam={hiredTeam}
+      reviewsMap={reviewsMap}
       lang={lang}
       dict={dict}
     />

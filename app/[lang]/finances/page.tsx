@@ -139,11 +139,11 @@ export default async function FinancesPage({
       paid: 'default',
       disputed: 'destructive',
     };
-    // Status mapping per requirements: pending = "Pending Approval", approved/paid = "Approved/Paid"
+    // Status labels: simplified to "Pending" and "Approved"
     const labels: Record<string, string> = {
-      pending: dict.workerFinances.statusPending, // "Pending Approval"
-      approved: dict.workerFinances.statusApproved, // "Approved/Paid"
-      paid: dict.workerFinances.statusPaid, // "Approved/Paid" (same as approved)
+      pending: 'Pending',
+      approved: 'Approved',
+      paid: 'Approved',
       disputed: dict.workerFinances.statusDisputed,
     };
     const colors: Record<string, string> = {

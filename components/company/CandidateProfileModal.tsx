@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { updateApplicationStatus } from '@/app/actions/applications';
-import { Loader2, Mail, Phone, User, Briefcase } from 'lucide-react';
+import { Loader2, Mail, Phone, User, Briefcase, Star } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-utils';
 
 interface WorkerDetails {
@@ -29,6 +29,8 @@ interface Profile {
   first_name: string | null;
   last_name: string | null;
   email: string;
+  average_rating: number | null;
+  total_reviews: number;
   // worker_details is returned as an object
   worker_details: WorkerDetails | null;
 }
@@ -188,8 +190,31 @@ export default function CandidateProfileModal({
                 <DialogDescription className="sr-only">
                   Worker details and contact information for {fullName}
                 </DialogDescription>
-                <div className="mt-2">
+                <div className="mt-2 flex items-center gap-3">
                   {getStatusBadge(application.status)}
+                  {profile.average_rating !== null && profile.total_reviews > 0 ? (() => {
+                    const rating = profile.average_rating!;
+                    const roundedRating = Math.round(rating);
+                    return (
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-4 w-4 ${
+                              star <= roundedRating
+                                ? 'fill-yellow-400 stroke-yellow-400'
+                                : 'fill-muted stroke-muted'
+                            }`}
+                          />
+                        ))}
+                        <span className="text-sm text-muted-foreground ml-1">
+                          {rating.toFixed(1)} ({profile.total_reviews})
+                        </span>
+                      </div>
+                    );
+                  })() : (
+                    <span className="text-sm text-muted-foreground">No reviews yet</span>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">

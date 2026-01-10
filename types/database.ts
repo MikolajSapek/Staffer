@@ -15,6 +15,8 @@ export interface Database {
           role: 'worker' | 'company' | 'admin';
           email: string;
           is_verified: boolean;
+          average_rating: number | null;
+          total_reviews: number;
           created_at: string;
           updated_at: string;
         };
@@ -23,6 +25,8 @@ export interface Database {
           role: 'worker' | 'company' | 'admin';
           email: string;
           is_verified?: boolean;
+          average_rating?: number | null;
+          total_reviews?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -31,6 +35,8 @@ export interface Database {
           role?: 'worker' | 'company' | 'admin';
           email?: string;
           is_verified?: boolean;
+          average_rating?: number | null;
+          total_reviews?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -409,6 +415,41 @@ export interface Database {
           accepted?: boolean;
           accepted_at?: string | null;
           created_at?: string;
+        };
+      };
+      reviews: {
+        Row: {
+          id: string;
+          reviewee_id: string;
+          reviewer_id: string;
+          shift_id: string;
+          rating: number;
+          comment: string | null;
+          tags: string[] | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          reviewee_id: string;
+          reviewer_id: string;
+          shift_id: string;
+          rating: number;
+          comment?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          reviewee_id?: string;
+          reviewer_id?: string;
+          shift_id?: string;
+          rating?: number;
+          comment?: string | null;
+          tags?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
         };
       };
     };

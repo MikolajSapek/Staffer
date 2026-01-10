@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Star } from 'lucide-react';
 import CandidateProfileModal from '@/components/company/CandidateProfileModal';
+import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
 import { formatDateTime, formatDateShort, formatTime } from '@/lib/date-utils';
 
 interface WorkerDetails {
@@ -29,6 +30,8 @@ interface Profile {
   first_name: string | null;
   last_name: string | null;
   email: string;
+  average_rating: number | null;
+  total_reviews: number;
   // worker_details is returned as an object
   worker_details: WorkerDetails | null;
 }
@@ -138,6 +141,41 @@ export default function CandidatesClient({
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const renderRating = (averageRating: number | null, totalReviews: number) => {
+    if (averageRating === null || totalReviews === 0) {
+      return (
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className="h-4 w-4 fill-muted stroke-muted"
+            />
+          ))}
+          <span className="text-xs text-muted-foreground ml-1">No reviews</span>
+        </div>
+      );
+    }
+
+    const rating = Math.round(averageRating);
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-4 w-4 ${
+              star <= rating
+                ? 'fill-yellow-400 stroke-yellow-400'
+                : 'fill-muted stroke-muted'
+            }`}
+          />
+        ))}
+        <span className="text-xs text-muted-foreground ml-1">
+          {averageRating.toFixed(1)} ({totalReviews})
+        </span>
+      </div>
+    );
   };
 
   const handleRowClick = (application: Application) => {
@@ -253,14 +291,12 @@ export default function CandidatesClient({
                           </div>
                         </TableCell>
                         <TableCell className="py-4">
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className="h-4 w-4 fill-muted stroke-muted"
-                              />
-                            ))}
-                          </div>
+                          <WorkerReviewsDialog
+                            workerId={profile.id}
+                            workerName={fullName}
+                          >
+                            {renderRating(profile.average_rating, profile.total_reviews)}
+                          </WorkerReviewsDialog>
                         </TableCell>
                         <TableCell className="py-4">{getStatusBadge(app.status)}</TableCell>
                         <TableCell className="py-4">

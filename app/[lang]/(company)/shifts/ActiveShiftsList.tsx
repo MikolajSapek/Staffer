@@ -17,6 +17,8 @@ interface Profile {
   email?: string;
   avatar_url: string | null;
   phone_number: string | null;
+  average_rating: number | null;
+  total_reviews: number;
 }
 
 interface Application {

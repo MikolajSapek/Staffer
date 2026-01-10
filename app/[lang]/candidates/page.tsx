@@ -53,6 +53,8 @@ export default async function CandidatesPage({
         first_name,
         last_name,
         email,
+        average_rating,
+        total_reviews,
         worker_details (
           avatar_url,
           phone_number,

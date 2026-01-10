@@ -34,9 +34,7 @@ export function formatCurrency(
     maximumFractionDigits,
   });
 
-  const formatted = formatter.format(amount);
-
-  // For Danish locale, the formatter returns "1.250,00 kr."
+  const formatted = formatter.format(amount);  // For Danish locale, the formatter returns "1.250,00 kr."
   // For English locale, it returns "DKK 1,250.00" or "1,250.00 DKK"
   // We can customize the output if needed
   if (!showSymbol && locale === 'da-DK') {

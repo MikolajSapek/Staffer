@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { ArrowLeft, Mail, Phone, Users, Archive, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { archiveShift } from '@/app/actions/shifts';
+import RateWorkerDialog from '@/components/RateWorkerDialog';
 
 interface WorkerDetails {
   avatar_url: string | null;
@@ -21,6 +22,8 @@ interface Profile {
   first_name: string;
   last_name: string;
   email: string;
+  average_rating: number | null;
+  total_reviews: number;
   worker_details?: WorkerDetails | WorkerDetails[] | null;
 }
 
@@ -59,6 +62,7 @@ interface Shift {
 interface ShiftDetailsClientProps {
   shift: Shift;
   hiredTeam: Application[];
+  reviewsMap?: Record<string, { rating: number; comment: string | null; tags: string[] | null }>;
   lang: string;
   dict: any;
 }
@@ -66,6 +70,7 @@ interface ShiftDetailsClientProps {
 export default function ShiftDetailsClient({
   shift,
   hiredTeam,
+  reviewsMap = {},
   lang,
   dict,
 }: ShiftDetailsClientProps) {
@@ -73,6 +78,11 @@ export default function ShiftDetailsClient({
   const [isPending, startTransition] = useTransition();
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  const [selectedWorker, setSelectedWorker] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Helper to safely extract worker_details
   const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
@@ -106,6 +116,24 @@ export default function ShiftDetailsClient({
   };
 
   const isArchived = shift.status === 'completed' || shift.status === 'cancelled';
+  const canRateWorkers = shift.status === 'completed' || shift.status === 'cancelled';
+
+  const handleRateClick = (workerId: string, workerName: string) => {
+    setSelectedWorker({ id: workerId, name: workerName });
+    setRatingDialogOpen(true);
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setRatingDialogOpen(open);
+    if (!open) {
+      // Reset selected worker when dialog closes
+      setSelectedWorker(null);
+    }
+  };
+
+  const handleReviewSubmitted = () => {
+    router.refresh();
+  };
 
   // Helper to get status badge
   const getStatusBadge = (status: string) => {
@@ -299,6 +327,32 @@ export default function ShiftDetailsClient({
                               </div>
                             )}
                           </div>
+                          {/* Rating Button/Status */}
+                          {canRateWorkers && (
+                            <div className="mt-3">
+                              {reviewsMap[profile.id] ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled
+                                  className="gap-2"
+                                >
+                                  <Star className="h-4 w-4 fill-yellow-400 stroke-yellow-400" />
+                                  <span>Rated ({reviewsMap[profile.id].rating}/5)</span>
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRateClick(profile.id, fullName)}
+                                  className="gap-2"
+                                >
+                                  <Star className="h-4 w-4" />
+                                  <span>Rate Worker</span>
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -309,6 +363,20 @@ export default function ShiftDetailsClient({
           )}
         </CardContent>
       </Card>
+
+      {/* Rating Dialog */}
+      {selectedWorker && (
+        <RateWorkerDialog
+          open={ratingDialogOpen}
+          onOpenChange={handleDialogOpenChange}
+          workerId={selectedWorker.id}
+          shiftId={shift.id}
+          workerName={selectedWorker.name}
+          existingReview={reviewsMap[selectedWorker.id] || null}
+          lang={lang}
+          onReviewSubmitted={handleReviewSubmitted}
+        />
+      )}
     </div>
   );
 }

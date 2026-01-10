@@ -3,8 +3,10 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Star } from 'lucide-react';
 import { formatTime, formatDateShort, formatDateTime } from '@/lib/date-utils';
 import { getDictionary } from '@/app/[lang]/dictionaries';
+import { cn } from '@/lib/utils';
 
 export default async function ApplicationsPage({
   params,
@@ -31,7 +33,7 @@ export default async function ApplicationsPage({
     redirect(`/${lang}`);
   }
 
-  // Fetch user's applications with company details
+  // Step 1: Fetch user's applications with company details
   const { data: applicationsRaw } = await supabase
     .from('shift_applications')
     .select(`
@@ -53,9 +55,15 @@ export default async function ApplicationsPage({
     `)
     .eq('worker_id', user.id);
 
+  // Step 2: Fetch all reviews for this worker
+  const { data: reviews } = await supabase
+    .from('reviews')
+    .select('id, shift_id, rating, comment, tags, created_at')
+    .eq('reviewee_id', user.id);
+
   // Sort applications by shift start_time (ascending) - from nearest shift to furthest
   // Handle both array and object formats for shifts relation
-  const applications = (applicationsRaw || []).sort((a: any, b: any) => {
+  const applicationsSorted = (applicationsRaw || []).sort((a: any, b: any) => {
     const shiftA = Array.isArray(a.shifts) ? a.shifts[0] : a.shifts;
     const shiftB = Array.isArray(b.shifts) ? b.shifts[0] : b.shifts;
     
@@ -66,6 +74,12 @@ export default async function ApplicationsPage({
     
     return dateA - dateB; // Ascending order (earliest first)
   });
+
+  // Step 3: Merge reviews with applications based on shift_id
+  const applications = applicationsSorted.map((app) => ({
+    ...app,
+    review: reviews?.find((r) => r.shift_id === app.shift_id) || null,
+  }));
 
 
   const getStatusBadge = (status: string) => {
@@ -192,6 +206,51 @@ export default async function ApplicationsPage({
                       </div>
                     )}
                   </div>
+
+                  {/* Company Feedback Section */}
+                  {app.review && (
+                    <div className="mt-4 pt-4 border-t bg-muted/30 rounded-lg p-4 space-y-3">
+                      <div className="font-medium text-sm">Company Feedback:</div>
+                      
+                      {/* Star Rating */}
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={cn(
+                              'h-4 w-4',
+                              star <= app.review.rating
+                                ? 'fill-yellow-400 stroke-yellow-400'
+                                : 'fill-muted stroke-muted'
+                            )}
+                          />
+                        ))}
+                        <span className="text-xs text-muted-foreground ml-1">
+                          {app.review.rating}/5
+                        </span>
+                      </div>
+
+                      {/* Comment */}
+                      {app.review.comment && (
+                        <div>
+                          <p className="text-sm text-foreground whitespace-pre-wrap">
+                            {app.review.comment}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Tags */}
+                      {app.review.tags && app.review.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {app.review.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

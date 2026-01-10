@@ -47,6 +47,8 @@ export default async function ShiftsPage({
           first_name,
           last_name,
           email,
+          average_rating,
+          total_reviews,
           worker_details:worker_details!worker_details_profile_id_fkey(
             avatar_url,
             phone_number
@@ -73,7 +75,9 @@ export default async function ShiftsPage({
         profiles: worker ? {
           ...worker,
           avatar_url: workerDetails?.avatar_url,
-          phone_number: workerDetails?.phone_number
+          phone_number: workerDetails?.phone_number,
+          average_rating: worker.average_rating,
+          total_reviews: worker.total_reviews
         } : null
       };
     });
