@@ -12,6 +12,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
+import { ImageCropperModal } from '@/components/ImageCropperModal';
 
 type TaxCardType = 'Hovedkort' | 'Bikort' | 'Frikort';
 
@@ -54,6 +55,10 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [avatarError, setAvatarError] = useState(false);
   const [idCardFile, setIdCardFile] = useState<File | null>(null);
+  
+  // Image cropper states
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
 
   // Initialize form data with empty strings
   const [formData, setFormData] = useState({
@@ -169,7 +174,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
     fetchData();
   }, [dict]);
 
-  // Handle avatar file selection
+  // Handle avatar file selection - opens cropper instead of directly setting file
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -183,14 +188,55 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         setSubmitError(dict.profile.validation.avatarSize);
         return;
       }
-      setAvatarFile(file);
-      setAvatarError(false); // Reset error state when new file is selected
-      // Create preview
+      // Create object URL for the cropper
+      const url = URL.createObjectURL(file);
+      setSelectedImageSrc(url);
+      setIsCropperOpen(true);
+      // Reset file input
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle crop confirmation - converts blob to file and sets it
+  const handleCropSave = async (croppedBlob: Blob) => {
+    try {
+      // Convert blob to File
+      const fileToUpload = new File([croppedBlob], 'avatar.jpg', { type: 'image/jpeg' });
+      setAvatarFile(fileToUpload);
+      setAvatarError(false);
+      
+      // Create preview from the cropped blob
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(croppedBlob);
+      
+      // Close cropper and clean up
+      setIsCropperOpen(false);
+      if (selectedImageSrc) {
+        URL.revokeObjectURL(selectedImageSrc);
+        setSelectedImageSrc(null);
+      }
+    } catch (error) {
+      console.error('Error processing cropped image:', error);
+      setSubmitError('Failed to process image');
+    }
+  };
+
+  // Handle cropper close
+  const handleCropperClose = () => {
+    setIsCropperOpen(false);
+    // Clean up object URL
+    if (selectedImageSrc) {
+      URL.revokeObjectURL(selectedImageSrc);
+      setSelectedImageSrc(null);
+    }
+    // Reset file input
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = '';
     }
   };
 
@@ -1090,6 +1136,14 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
           </CardContent>
         </Card>
       </div>
+
+      {/* Image Cropper Modal */}
+      <ImageCropperModal
+        imageSrc={selectedImageSrc}
+        isOpen={isCropperOpen}
+        onClose={handleCropperClose}
+        onCropComplete={handleCropSave}
+      />
     </div>
   );
 }
