@@ -7,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Upload, X, FileText, User, CheckCircle2, Star } from 'lucide-react';
+import { Upload, X, FileText, User, CheckCircle2, Star, Clock, XCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { ImageCropperModal } from '@/components/ImageCropperModal';
+import VerificationWizard from '@/components/verification/VerificationWizard';
 
 type TaxCardType = 'Hovedkort' | 'Bikort' | 'Frikort';
 
@@ -40,6 +41,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [workerDetails, setWorkerDetails] = useState<Record<string, unknown> | null>(null);
+  const [profile, setProfile] = useState<{ verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected' } | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -59,6 +61,9 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   // Image cropper states
   const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
+  
+  // Verification wizard states
+  const [showVerificationWizard, setShowVerificationWizard] = useState(false);
 
   // Initialize form data with empty strings
   const [formData, setFormData] = useState({
@@ -75,6 +80,20 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
     experience: '',
     cpr_number: '',
   });
+
+  // Fetch profile data function
+  const fetchProfileData = async (userId: string) => {
+    const supabase = createClient();
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('verification_status')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (!profileError && profileData) {
+      setProfile(profileData);
+    }
+  };
 
   // Fetch user and profile data on mount
   useEffect(() => {
@@ -98,6 +117,9 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         }
 
         setUser(authUser);
+
+        // Fetch profile data to get verification_status
+        await fetchProfileData(authUser.id);
 
         // Fetch worker details using secure RPC (decrypts CPR)
         const { data: workerData, error: workerError } = await supabase.rpc('get_worker_profile_secure');
@@ -546,10 +568,27 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{dict.profile.title}</h1>
-        <p className="text-muted-foreground">
-          {dict.profile.subtitle}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{dict.profile.title}</h1>
+            <p className="text-muted-foreground">
+              {dict.profile.subtitle}
+            </p>
+          </div>
+          {/* Verification Action Button (only for actionable states) */}
+          {user && profile && (!profile.verification_status || profile.verification_status === 'unverified' || profile.verification_status === 'rejected') && (
+            <div className="flex flex-col gap-2 items-end">
+                  {profile.verification_status === 'rejected' && (
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {dict.Verification?.status_rejected || 'Verification Rejected'}. {dict.Verification?.pending_tooltip || 'Please check the quality of your photos and try again.'}
+                    </p>
+                  )}
+                  <Button onClick={() => setShowVerificationWizard(true)} variant="outline">
+                    {profile.verification_status === 'rejected' ? dict.Verification?.try_again_btn || 'Try Again' : dict.Verification?.start_btn || 'Start Verification'}
+                  </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Fetch Error Message */}
@@ -574,19 +613,11 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                 {/* Worker ID Card Preview */}
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
                   {/* Header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Staffer
-                      </h3>
-                      <p className="text-xs text-gray-500">{dict.profile.preview.workerIdCard}</p>
-                    </div>
-                    {isProfileComplete && (
-                      <div className="flex items-center gap-1 text-green-600">
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span className="text-xs font-medium">{dict.profile.preview.verified}</span>
-                      </div>
-                    )}
+                  <div className="mb-6">
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Staffer
+                    </h3>
+                    <p className="text-xs text-gray-500">{dict.profile.preview.workerIdCard}</p>
                   </div>
 
                   {/* Avatar */}
@@ -609,15 +640,30 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
 
                   {/* Name */}
                   <div className="text-center mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {formData.first_name && formData.last_name
-                        ? `${formData.first_name} ${formData.last_name}`
-                        : formData.first_name
-                        ? formData.first_name
-                        : formData.last_name
-                        ? formData.last_name
-                        : `${dict.profile.firstName} ${dict.profile.lastName}`}
-                    </h2>
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        {formData.first_name && formData.last_name
+                          ? `${formData.first_name} ${formData.last_name}`
+                          : formData.first_name
+                          ? formData.first_name
+                          : formData.last_name
+                          ? formData.last_name
+                          : `${dict.profile.firstName} ${dict.profile.lastName}`}
+                      </h2>
+                      {/* Verification Status Badge */}
+                      {profile?.verification_status === 'verified' && (
+                        <Badge className="bg-green-600 hover:bg-green-700 gap-1 text-white">
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span className="text-xs">{dict.Verification?.status_verified || 'Account Verified'}</span>
+                        </Badge>
+                      )}
+                      {profile?.verification_status === 'pending' && (
+                        <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span className="text-xs">{dict.Verification?.status_pending || 'Verification Pending'}</span>
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600 mt-1">{dict.profile.preview.worker}</p>
                   </div>
 
@@ -1144,6 +1190,23 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         onClose={handleCropperClose}
         onCropComplete={handleCropSave}
       />
+      
+      {/* Verification Wizard */}
+      {user && (
+        <VerificationWizard
+          open={showVerificationWizard}
+          onOpenChange={(open) => {
+            setShowVerificationWizard(open);
+            // Refresh profile data when wizard closes to update verification status
+            if (!open && user) {
+              fetchProfileData(user.id);
+            }
+          }}
+          userId={user.id}
+          lang={lang}
+          dict={dict}
+        />
+      )}
     </div>
   );
 }

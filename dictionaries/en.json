@@ -541,6 +541,32 @@
     "notSpecified": "Not specified",
     "notRecorded": "Not recorded",
     "notCheckedOut": "Not checked out"
+  },
+  "Verification": {
+    "status_verified": "Account Verified",
+    "status_pending": "Verification Pending",
+    "status_rejected": "Verification Rejected",
+    "status_unverified": "Unverified",
+    "start_btn": "Start Verification",
+    "try_again_btn": "Try Again",
+    "pending_tooltip": "Your documents are currently being reviewed by our team.",
+    "apply_locked": "Verification Required to Apply",
+    "wizard": {
+      "title": "Identity Verification",
+      "step_id_title": "ID Card Photo",
+      "step_selfie_title": "Selfie with Date",
+      "instruction_intro": "Please prepare your ID Card and a piece of paper with today's date written on it.",
+      "instruction_date": "Today is:",
+      "btn_take_photo": "Take Photo",
+      "btn_take_selfie": "Take Selfie",
+      "btn_retake": "Retake",
+      "btn_confirm": "Confirm",
+      "btn_submit": "Submit Verification",
+      "btn_ready": "I am ready",
+      "btn_close": "Close",
+      "btn_go_back": "Go Back",
+      "success_msg": "Documents submitted successfully!"
+    }
   }
 }
 

@@ -543,6 +543,32 @@
     "notSpecified": "Ikke angivet",
     "notRecorded": "Ikke registreret",
     "notCheckedOut": "Ikke afmeldt"
+  },
+  "Verification": {
+    "status_verified": "Konto verificeret",
+    "status_pending": "Verificering afventer",
+    "status_rejected": "Verificering afvist",
+    "status_unverified": "Ikke verificeret",
+    "start_btn": "Start verificering",
+    "try_again_btn": "Prøv igen",
+    "pending_tooltip": "Dine dokumenter bliver i øjeblikket gennemgået af vores team.",
+    "apply_locked": "Verificering påkrævet for at ansøge",
+    "wizard": {
+      "title": "Identitetsbekræftelse",
+      "step_id_title": "Foto af ID-kort",
+      "step_selfie_title": "Selfie med dato",
+      "instruction_intro": "Forbered venligst dit ID-kort og et stykke papir med dagens dato påskrevet.",
+      "instruction_date": "I dag er:",
+      "btn_take_photo": "Tag billede",
+      "btn_take_selfie": "Tag selfie",
+      "btn_retake": "Tag om",
+      "btn_confirm": "Bekræft",
+      "btn_submit": "Indsend verificering",
+      "btn_ready": "Jeg er klar",
+      "btn_close": "Luk",
+      "btn_go_back": "Gå tilbage",
+      "success_msg": "Dokumenter indsendt succesfuldt!"
+    }
   }
 }
 

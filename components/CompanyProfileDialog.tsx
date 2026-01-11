@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Star, Building2, MapPin, Calendar, Loader2, CheckCircle2 } from 'lucide-react';
+import { Star, Building2, MapPin, Calendar, Loader2, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -26,7 +26,7 @@ interface CompanyProfileDialogProps {
 interface CompanyProfile {
   id: string;
   email: string;
-  is_verified: boolean;
+  verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
   average_rating: number | null;
   total_reviews: number;
   created_at: string;
@@ -68,7 +68,7 @@ export default function CompanyProfileDialog({
         .select(`
           id,
           email,
-          is_verified,
+          verification_status,
           average_rating,
           total_reviews,
           created_at,
@@ -172,10 +172,22 @@ export default function CompanyProfileDialog({
                     <h2 className="text-2xl font-bold">
                       {companyName}
                     </h2>
-                    {profile.is_verified && (
-                      <Badge variant="default" className="gap-1">
+                    {profile.verification_status === 'verified' && (
+                      <Badge variant="default" className="gap-1 bg-green-600">
                         <CheckCircle2 className="h-3 w-3" />
                         Verified
+                      </Badge>
+                    )}
+                    {profile.verification_status === 'pending' && (
+                      <Badge variant="outline" className="gap-1 border-orange-500 text-orange-700">
+                        <Clock className="h-3 w-3" />
+                        Pending
+                      </Badge>
+                    )}
+                    {profile.verification_status === 'rejected' && (
+                      <Badge variant="destructive" className="gap-1">
+                        <XCircle className="h-3 w-3" />
+                        Rejected
                       </Badge>
                     )}
                   </div>

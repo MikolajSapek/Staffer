@@ -14,7 +14,7 @@ export interface Database {
           id: string;
           role: 'worker' | 'company' | 'admin';
           email: string;
-          is_verified: boolean;
+          verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
           average_rating: number | null;
           total_reviews: number;
           created_at: string;
@@ -24,7 +24,7 @@ export interface Database {
           id: string;
           role: 'worker' | 'company' | 'admin';
           email: string;
-          is_verified?: boolean;
+          verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
           average_rating?: number | null;
           total_reviews?: number;
           created_at?: string;
@@ -34,7 +34,7 @@ export interface Database {
           id?: string;
           role?: 'worker' | 'company' | 'admin';
           email?: string;
-          is_verified?: boolean;
+          verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
           average_rating?: number | null;
           total_reviews?: number;
           created_at?: string;
