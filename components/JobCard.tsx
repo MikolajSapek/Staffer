@@ -8,6 +8,8 @@ import { MapPin, Clock, Building2, Calendar, Flame, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { JobDetailsDialog } from '@/components/JobDetailsDialog';
+import CompanyProfileDialog from '@/components/CompanyProfileDialog';
+import { getMapsLink } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
 
 interface Shift {
@@ -81,16 +83,22 @@ export function JobCard({ shift, onApply, hasApplied, userRole, user, dict, lang
       <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg hover:border-gray-300 border border-gray-100 bg-white cursor-pointer">
       {/* HEADER */}
       <div className="p-4 pb-2 flex justify-between items-start gap-3">
-        <div className="flex gap-3 items-center flex-1 min-w-0">
-          <div className="h-10 w-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-            {logoUrl ? (
-              <img src={logoUrl} alt={companyName} className="h-full w-full object-cover" />
-            ) : (
-              <Building2 className="h-5 w-5 text-gray-400" />
-            )}
-          </div>
+        <div className="flex gap-3 items-start flex-1 min-w-0">
+          <CompanyProfileDialog companyId={shift.company_id} lang={lang}>
+            <div className="h-10 w-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+              {logoUrl ? (
+                <img src={logoUrl} alt={companyName} className="h-full w-full object-cover" />
+              ) : (
+                <Building2 className="h-5 w-5 text-gray-400" />
+              )}
+            </div>
+          </CompanyProfileDialog>
           <div className="flex-1 min-w-0">
-            <div className="text-xs text-gray-500 font-medium mb-0.5">{companyName}</div>
+            <CompanyProfileDialog companyId={shift.company_id} lang={lang}>
+              <div className="text-xs text-gray-500 font-medium mb-0.5 cursor-pointer hover:underline transition-opacity">
+                {companyName}
+              </div>
+            </CompanyProfileDialog>
             <h3 className="text-base font-bold text-gray-900 leading-tight">{shift.title}</h3>
             {shift.is_urgent && (
               <Badge className="bg-red-600 text-white font-bold flex items-center gap-1 shadow-sm mt-2 w-fit">
@@ -124,10 +132,16 @@ export function JobCard({ shift, onApply, hasApplied, userRole, user, dict, lang
           <div className="flex items-center justify-center text-gray-400 text-[10px] font-bold border rounded-full border-gray-400 w-4 h-4 shrink-0">kr</div>
           <span>{shift.hourly_rate} kr/h</span>
         </div>
-        <div className="flex items-center gap-2 col-span-2 sm:col-span-1 truncate">
+        <a
+          href={getMapsLink(shift.locations)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 col-span-2 sm:col-span-1 truncate text-gray-600 hover:text-blue-600 hover:underline transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
           <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
           <span className="truncate">{locationName}</span>
-        </div>
+        </a>
         <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
           <Users className="h-4 w-4 text-gray-400 shrink-0" />
           <span className="text-gray-600">

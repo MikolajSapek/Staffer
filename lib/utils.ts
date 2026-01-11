@@ -63,3 +63,19 @@ export function formatDKK(
 
   return `${formatter.format(amount)} DKK`;
 }
+
+/**
+ * Generate a Google Maps search URL for a location
+ * @param location - Location object with name and address fields
+ * @returns Google Maps URL or '#' if location is invalid
+ */
+export function getMapsLink(location: { name?: string; address?: string } | null | undefined): string {
+  if (!location) return '#';
+  
+  // Combine available fields (address takes precedence, fallback to name)
+  const query = location.address || location.name || '';
+  
+  if (!query.trim()) return '#';
+  
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}

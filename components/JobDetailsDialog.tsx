@@ -15,7 +15,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import ApplyModal from '@/components/worker/ApplyModal';
-import { cn } from '@/lib/utils';
+import CompanyProfileDialog from '@/components/CompanyProfileDialog';
+import { cn, getMapsLink } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
 
 interface Shift {
@@ -202,18 +203,22 @@ export function JobDetailsDialog({
           {/* Header Section */}
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100">
             <div className="flex items-start gap-4">
-              {logoUrl && (
-                <div className="h-12 w-12 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                  <img src={logoUrl} alt={companyName} className="h-full w-full object-cover" />
-                </div>
-              )}
               <div className="flex-1 min-w-0">
                 <DialogTitle className="text-2xl font-bold text-gray-900 mb-1">
                   {shift.title}
                 </DialogTitle>
-                <DialogDescription className="text-base text-gray-900 font-medium">
-                  {companyName}
-                </DialogDescription>
+                <CompanyProfileDialog companyId={shift.company_id} lang={lang}>
+                  <div className="flex items-center gap-3 cursor-pointer group">
+                    {logoUrl && (
+                      <div className="h-12 w-12 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden group-hover:opacity-80 transition-opacity">
+                        <img src={logoUrl} alt={companyName} className="h-full w-full object-cover" />
+                      </div>
+                    )}
+                    <DialogDescription className="text-base text-gray-900 font-medium group-hover:underline transition-all">
+                      {companyName}
+                    </DialogDescription>
+                  </div>
+                </CompanyProfileDialog>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-red-700">
@@ -268,15 +273,20 @@ export function JobDetailsDialog({
                   </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
+              <a
+                href={getMapsLink(shift.locations)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 text-gray-900 hover:text-blue-600 hover:underline transition-colors"
+              >
                 <MapPin className="h-5 w-5 text-gray-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-gray-900">{locationName}</div>
+                  <div className="font-semibold">{locationName}</div>
                   {locationAddress && locationAddress !== locationName && (
-                    <div className="text-sm text-gray-900 mt-1">{locationAddress}</div>
+                    <div className="text-sm mt-1">{locationAddress}</div>
                   )}
                 </div>
-              </div>
+              </a>
             </div>
 
             {/* Description Section */}
