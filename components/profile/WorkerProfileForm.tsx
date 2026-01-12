@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Upload, X, FileText, User, CheckCircle2, Star, Clock, XCircle } from 'lucide-react';
+import { Upload, X, User, CheckCircle2, Star, Clock, XCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/date-utils';
@@ -73,7 +73,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
     tax_card_type: 'Hovedkort' as TaxCardType,
     bank_reg_number: '',
     bank_account_number: '',
-    su_limit_amount: '',
     shirt_size: '',
     shoe_size: '',
     description: '',
@@ -145,7 +144,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
               tax_card_type: (data.tax_card_type || 'Hovedkort') as TaxCardType,
               bank_reg_number: data.bank_reg_number || '',
               bank_account_number: data.bank_account_number || '',
-              su_limit_amount: data.su_limit_amount?.toString() || '',
               shirt_size: data.shirt_size || '',
               shoe_size: data.shoe_size || '',
               description: data.description || '',
@@ -388,6 +386,13 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         return;
       }
 
+      // Validate account number length (max 10 digits)
+      if (formData.bank_account_number.trim().length > 10) {
+        setSubmitError('Account number cannot exceed 10 digits');
+        setSubmitLoading(false);
+        return;
+      }
+
       // Handle CPR - validate format if provided
       // Send plain text to RPC, database will handle encryption
       let cprNumber = '';
@@ -501,7 +506,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
             tax_card_type: ((data.tax_card_type as TaxCardType) || 'Hovedkort'),
             bank_reg_number: (data.bank_reg_number as string) || '',
             bank_account_number: (data.bank_account_number as string) || '',
-            su_limit_amount: (data.su_limit_amount as number)?.toString() || '',
             shirt_size: (data.shirt_size as string) || '',
             shoe_size: (data.shoe_size as string) || '',
             description: (data.description as string) || '',
@@ -916,26 +920,10 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                     onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
                     required
                     placeholder={dict.profile.bankAccountNumberPlaceholder}
+                    maxLength={10}
                     disabled={submitLoading}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="su_limit_amount">{dict.profile.suLimit}</Label>
-                <Input
-                  id="su_limit_amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.su_limit_amount || ''}
-                  onChange={(e) => setFormData({ ...formData, su_limit_amount: e.target.value })}
-                  placeholder={dict.profile.suLimitPlaceholder}
-                  disabled={submitLoading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {dict.profile.suLimitHint}
-                </p>
               </div>
             </div>
 
@@ -1000,63 +988,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                     placeholder={dict.profile.shoeSizePlaceholder}
                     disabled={submitLoading}
                   />
-                </div>
-              </div>
-            </div>
-
-                {/* ID Verification Section */}
-                <div className="space-y-4">
-                  <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">{dict.profile.documents}</h3>
-                    <p className="text-sm text-muted-foreground">{dict.profile.documentsDescription}</p>
-                  </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="id-card-upload">{dict.profile.idCard}</Label>
-                <div className="flex items-center gap-4">
-                  {idCardFile && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <FileText className="w-5 h-5" />
-                      <span>{idCardFile.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIdCardFile(null);
-                          if (idCardInputRef.current) idCardInputRef.current.value = '';
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                  {!idCardFile && (workerDetails as any)?.id_card_url && (
-                    <div className="flex items-center gap-2 text-sm text-green-600">
-                      <FileText className="w-5 h-5" />
-                      <span>{dict.profile.idCardUploaded}</span>
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <input
-                      ref={idCardInputRef}
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={handleIdCardChange}
-                      disabled={submitLoading || uploadingIdCard}
-                      className="hidden"
-                      id="id-card-upload"
-                    />
-                    <label
-                      htmlFor="id-card-upload"
-                      className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Upload className="w-4 h-4" />
-                      {idCardFile ? dict.profile.changeFile : dict.profile.uploadIdCard}
-                    </label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {dict.profile.idCardHint}
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>

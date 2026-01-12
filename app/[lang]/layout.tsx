@@ -5,6 +5,8 @@ import '../globals.css';
 import dynamic from 'next/dynamic';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getDictionary } from './dictionaries';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -49,6 +51,8 @@ export default async function RootLayout({
         <LanguageSwitcher />
         <Navbar dict={dict} lang={lang} />
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -22,6 +22,7 @@
     "locations": "Lokationer",
     "timesheets": "Timesedler",
     "candidates": "Kandidater",
+    "finances": "Økonomi",
     "settings": "Indstillinger",
     "profile": "Profil",
     "logout": "Log ud"
@@ -593,6 +594,28 @@
       "btn_go_back": "Gå tilbage",
       "success_msg": "Dokumenter indsendt succesfuldt!"
     }
+  },
+  "finances": {
+    "title": "Økonomi",
+    "totalPending": "Samlet afventende betaling",
+    "description": "Oversigt over dine vagtbetalinger",
+    "history": "Betalingshistorik",
+    "table": {
+      "date": "Dato",
+      "worker": "Medarbejder",
+      "shift": "Vagt",
+      "hours": "Timer",
+      "rate": "Sats",
+      "amount": "Beløb",
+      "status": "Status"
+    },
+    "status": {
+      "pending": "Afventende",
+      "paid": "Betalt",
+      "cancelled": "Annulleret"
+    },
+    "noPayments": "Ingen betalinger fundet",
+    "error": "Fejl ved indlæsning af økonomi"
   }
 }
 

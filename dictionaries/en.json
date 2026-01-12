@@ -22,6 +22,7 @@
     "locations": "Locations",
     "timesheets": "Timesheets",
     "candidates": "Candidates",
+    "finances": "Finances",
     "settings": "Settings",
     "profile": "Profile",
     "logout": "Log out"
@@ -591,6 +592,28 @@
       "btn_go_back": "Go Back",
       "success_msg": "Documents submitted successfully!"
     }
+  },
+  "finances": {
+    "title": "Finances",
+    "totalPending": "Total Pending Payment",
+    "description": "Overview of your shift payments",
+    "history": "Payment History",
+    "table": {
+      "date": "Date",
+      "worker": "Worker",
+      "shift": "Shift",
+      "hours": "Hours",
+      "rate": "Rate",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "status": {
+      "pending": "Pending",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "noPayments": "No payments found",
+    "error": "Error loading finances"
   }
 }
 

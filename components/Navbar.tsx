@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { getCompanyNotificationCounts } from '@/app/actions/notifications';
 import { 
   User, 
   LogOut, 
@@ -19,7 +20,8 @@ import {
   FileText,
   MapPin,
   Clock,
-  Globe
+  Globe,
+  Wallet
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -71,6 +73,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState({ candidates: 0, finances: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -188,6 +191,18 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Fetch notification counts for company users
+  useEffect(() => {
+    if (role === 'company' && user) {
+      getCompanyNotificationCounts().then(setCounts).catch(() => {
+        // Silently fail if there's an error
+        setCounts({ candidates: 0, finances: 0 });
+      });
+    } else {
+      setCounts({ candidates: 0, finances: 0 });
+    }
+  }, [role, user]);
 
   const handleLogout = async () => {
     try {
@@ -341,7 +356,14 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         <Users className="mr-2 h-4 w-4" />
-                        {dict.nav?.candidates || dict.navigation.candidates}
+                        <span className="flex items-center">
+                          {dict.nav?.candidates || dict.navigation.candidates}
+                          {counts.candidates > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
+                              {counts.candidates}
+                            </span>
+                          )}
+                        </span>
                       </Link>
                       <Link
                         href={`/${lang}/timesheets`}
@@ -350,6 +372,21 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                       >
                         <FileText className="mr-2 h-4 w-4" />
                         {dict.nav?.timesheets || dict.navigation.timesheets}
+                      </Link>
+                      <Link
+                        href={`/${lang}/billing`}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <Wallet className="mr-2 h-4 w-4" />
+                        <span className="flex items-center">
+                          {dict.nav?.finances || dict.navigation.finances}
+                          {counts.finances > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
+                              {counts.finances}
+                            </span>
+                          )}
+                        </span>
                       </Link>
                     </>
                   )}
