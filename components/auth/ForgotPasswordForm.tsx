@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,44 +9,46 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/utils/supabase/client';
 import Link from 'next/link';
 
-interface LoginFormProps {
+interface ForgotPasswordFormProps {
   dict: {
-    loginTitle: string;
-    loginDescription: string;
+    forgotPasswordTitle: string;
+    forgotPasswordDesc: string;
+    sendLink: string;
+    sendingLink: string;
+    backToLogin: string;
+    successEmailSent: string;
+    error: string;
     email: string;
     emailPlaceholder: string;
-    password: string;
-    signIn: string;
-    signingIn: string;
-    forgotPassword: string;
-    error: string;
     validation: {
       emailRequired: string;
       invalidEmail: string;
       unknownError: string;
-      loginFailed: string;
     };
   };
   lang: string;
 }
 
-export default function LoginForm({ dict, lang }: LoginFormProps) {
+export default function ForgotPasswordForm({ dict, lang: langProp }: ForgotPasswordFormProps) {
+  const params = useParams();
+  // Use lang from params if available, otherwise fallback to prop
+  const lang = (params?.lang as string) || langProp || 'en-US';
+  
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    // Trim inputs
+    // Trim input
     const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
 
     // Basic validation
-    if (!trimmedEmail || !trimmedPassword) {
+    if (!trimmedEmail) {
       setError(dict.validation.emailRequired);
       setLoading(false);
       return;
@@ -61,40 +64,59 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
 
     try {
       const supabase = createClient();
+      // Build redirect URL: /auth/callback (without locale) with next param containing locale
+      const redirectTo = `${window.location.origin}/auth/callback?next=/${lang}/update-password`;
       
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password: trimmedPassword,
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo,
       });
 
-      if (signInError) {
-        // Display the actual error message from Supabase
-        const errorMessage = signInError.message || dict.validation.unknownError;
+      if (resetError) {
+        const errorMessage = resetError.message || dict.validation.unknownError;
         setError(errorMessage);
         setLoading(false);
         return;
       }
 
-      if (data?.user) {
-        // Force redirect to home page with locale - this ensures Navbar updates
-        window.location.href = '/en-US';
-      } else {
-        setError(dict.validation.loginFailed);
-        setLoading(false);
-      }
+      // Success - show success message
+      setSuccess(true);
+      setLoading(false);
     } catch (err: unknown) {
-      // Catch any unexpected errors
       const errorMessage = err instanceof Error ? err.message : dict.validation.unknownError;
       setError(errorMessage);
       setLoading(false);
     }
   };
 
+  if (success) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{dict.forgotPasswordTitle}</CardTitle>
+          <CardDescription>{dict.forgotPasswordDesc}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+            {dict.successEmailSent}
+          </div>
+          <div className="mt-4 text-center">
+            <Link 
+              href={`/${lang}/login`} 
+              className="text-primary hover:underline text-sm"
+            >
+              {dict.backToLogin}
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{dict.loginTitle}</CardTitle>
-        <CardDescription>{dict.loginDescription}</CardDescription>
+        <CardTitle>{dict.forgotPasswordTitle}</CardTitle>
+        <CardDescription>{dict.forgotPasswordDesc}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -116,29 +138,17 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
               autoComplete="email"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">{dict.password}</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              required
-              autoComplete="current-password"
-            />
-          </div>
-          <div className="text-right">
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? dict.sendingLink : dict.sendLink}
+          </Button>
+          <div className="text-center">
             <Link 
-              href={`/${lang}/forgot-password`} 
+              href={`/${lang}/login`} 
               className="text-sm text-primary hover:underline"
             >
-              {dict.forgotPassword}
+              {dict.backToLogin}
             </Link>
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? dict.signingIn : dict.signIn}
-          </Button>
         </form>
       </CardContent>
     </Card>

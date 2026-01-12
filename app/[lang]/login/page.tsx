@@ -34,7 +34,7 @@ export default async function LoginPage({
   return (
     <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[calc(100vh-200px)]">
       <div className="w-full max-w-md">
-        <LoginForm dict={dict.auth} />
+        <LoginForm dict={dict.auth} lang={lang} />
         <div className="mt-4 text-center text-sm text-muted-foreground">
           {dict.auth.noAccount}{' '}
           <Link href={`/${lang}/register`} className="text-primary hover:underline">

@@ -82,12 +82,10 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
             company_name: '',
           };
 
-      // Fixed redirect URL to production login page for email confirmation
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email.trim(),
         password: formData.password,
         options: {
-          emailRedirectTo: 'https://staffer-rho.vercel.app/en-US/login',
           data: metadata,
         },
       });

@@ -80,6 +80,7 @@ interface CreateShiftFormProps {
       hourlyRateRequired: string;
       vacanciesRequired: string;
       endTimeAfterStart: string;
+      companyProfileIncomplete?: string;
     };
     templates: {
       loadTemplate: string;
@@ -352,6 +353,36 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
       
       if (!user) {
         throw new Error('User not authenticated');
+      }
+
+      // Check if company profile is complete
+      const { data: companyDetails, error: companyError } = await supabase
+        .from('company_details')
+        .select('company_name, cvr_number, main_address')
+        .eq('profile_id', user.id)
+        .single();
+
+      if (companyError || !companyDetails) {
+        throw new Error('Company profile not found. Please complete your company setup first.');
+      }
+
+      // Validate that required fields are filled
+      const profile = companyDetails as {
+        company_name: string | null;
+        cvr_number: string | null;
+        main_address: string | null;
+      };
+
+      if (!profile.company_name || !profile.company_name.trim()) {
+        throw new Error(dict.validation.companyProfileIncomplete || 'Company profile is incomplete. Please complete your company profile first.');
+      }
+
+      if (!profile.cvr_number || !profile.cvr_number.trim()) {
+        throw new Error(dict.validation.companyProfileIncomplete || 'Company profile is incomplete. Please complete your company profile first.');
+      }
+
+      if (!profile.main_address || !profile.main_address.trim()) {
+        throw new Error(dict.validation.companyProfileIncomplete || 'Company profile is incomplete. Please complete your company profile first.');
       }
 
       // Convert local time strings to UTC using Copenhagen timezone

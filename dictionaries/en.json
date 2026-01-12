@@ -61,6 +61,29 @@
       "serverError": "Cannot connect to server. Check if Supabase environment variables are set in Vercel."
     }
   },
+  "authReset": {
+    "forgotPasswordTitle": "Reset Password",
+    "forgotPasswordDesc": "Enter your email address and we'll send you a link to reset your password.",
+    "sendLink": "Send Reset Link",
+    "sendingLink": "Sending...",
+    "backToLogin": "Back to Login",
+    "updatePasswordTitle": "Update Password",
+    "updatePasswordDesc": "Enter your new password below.",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "updatePasswordBtn": "Update Password",
+    "updatingPassword": "Updating...",
+    "successEmailSent": "Password reset link has been sent to your email. Please check your inbox.",
+    "successPasswordUpdated": "Password updated successfully! Redirecting...",
+    "errorPasswordsDoNotMatch": "Passwords do not match",
+    "error": "Error",
+    "validation": {
+      "emailRequired": "Email is required",
+      "invalidEmail": "Invalid email format",
+      "passwordRequired": "Password must be at least 6 characters",
+      "unknownError": "Unknown error occurred"
+    }
+  },
   "common": {
     "welcome": "Welcome",
     "loading": "Loading...",
@@ -170,7 +193,8 @@
       "endTimeRequired": "End time is required",
       "hourlyRateRequired": "Hourly rate must be greater than 0",
       "vacanciesRequired": "Number of positions must be at least 1",
-      "endTimeAfterStart": "End time must be after start time"
+      "endTimeAfterStart": "End time must be after start time",
+      "companyProfileIncomplete": "Your company profile is incomplete. Please complete your company name, CVR number, and main address in your profile settings before creating a shift."
     },
     "templates": {
       "loadTemplate": "Load from Template",

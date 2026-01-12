@@ -61,6 +61,29 @@
       "serverError": "Kan ikke oprette forbindelse til serveren. Tjek om Supabase miljøvariabler er sat i Vercel."
     }
   },
+  "authReset": {
+    "forgotPasswordTitle": "Nulstil Adgangskode",
+    "forgotPasswordDesc": "Indtast din email adresse, og vi sender dig et link til at nulstille din adgangskode.",
+    "sendLink": "Send Nulstillingslink",
+    "sendingLink": "Sender...",
+    "backToLogin": "Tilbage til Login",
+    "updatePasswordTitle": "Opdater Adgangskode",
+    "updatePasswordDesc": "Indtast din nye adgangskode nedenfor.",
+    "newPassword": "Ny Adgangskode",
+    "confirmNewPassword": "Bekræft Ny Adgangskode",
+    "updatePasswordBtn": "Opdater Adgangskode",
+    "updatingPassword": "Opdaterer...",
+    "successEmailSent": "Nulstillingslink er blevet sendt til din email. Tjek venligst din indbakke.",
+    "successPasswordUpdated": "Adgangskode opdateret! Omdirigerer...",
+    "errorPasswordsDoNotMatch": "Adgangskoder matcher ikke",
+    "error": "Fejl",
+    "validation": {
+      "emailRequired": "Email er påkrævet",
+      "invalidEmail": "Ugyldig email-format",
+      "passwordRequired": "Adgangskode skal være mindst 6 tegn",
+      "unknownError": "Ukendt fejl opstod"
+    }
+  },
   "common": {
     "welcome": "Velkommen",
     "loading": "Indlæser...",
@@ -170,7 +193,8 @@
       "endTimeRequired": "Sluttid er påkrævet",
       "hourlyRateRequired": "Timeløn skal være større end 0",
       "vacanciesRequired": "Antal pladser skal være mindst 1",
-      "endTimeAfterStart": "Sluttid skal være efter starttid"
+      "endTimeAfterStart": "Sluttid skal være efter starttid",
+      "companyProfileIncomplete": "Din virksomhedsprofil er ufuldstændig. Udfyld venligst dit virksomhedsnavn, CVR-nummer og hovedadresse i dine profilindstillinger, før du opretter en vagt."
     },
     "templates": {
       "loadTemplate": "Indlæs fra skabelon",
