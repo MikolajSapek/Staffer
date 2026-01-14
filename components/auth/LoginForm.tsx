@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 interface LoginFormProps {
   dict: {
@@ -30,10 +32,14 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ dict, lang }: LoginFormProps) {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const isVerified = searchParams?.get('verified') === 'true';
+  const nextParam = searchParams?.get('next');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -76,8 +82,22 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
       }
 
       if (data?.user) {
-        // Force redirect to home page with locale - this ensures Navbar updates
-        window.location.href = '/en-US';
+        // Determine redirect path: prioritize 'next' parameter, otherwise go to dashboard
+        let redirectPath = `/${lang}/dashboard`;
+        
+        if (nextParam) {
+          // Validate next parameter to prevent open redirect attacks
+          // Only allow relative paths starting with /
+          const trimmedNext = nextParam.trim();
+          if (trimmedNext.startsWith('/') && !trimmedNext.match(/^https?:\/\//i)) {
+            // Ensure the path includes locale if it doesn't already
+            const hasLocale = trimmedNext.startsWith(`/${lang}/`) || trimmedNext === `/${lang}`;
+            redirectPath = hasLocale ? trimmedNext : `/${lang}${trimmedNext}`;
+          }
+        }
+        
+        // Use router.push for SPA navigation instead of full page reload
+        router.push(redirectPath);
       } else {
         setError(dict.validation.loginFailed);
         setLoading(false);
@@ -101,6 +121,11 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
           {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
               <strong>{dict.error}:</strong> {error}
+            </div>
+          )}
+          {isVerified && (
+            <div className="p-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-md">
+              Email verified successfully! Please login.
             </div>
           )}
           <div className="space-y-2">

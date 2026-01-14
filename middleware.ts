@@ -32,8 +32,16 @@ function getLocale(request: NextRequest): string {
 }
 
 export async function middleware(request: NextRequest) {
-  // First, handle i18n routing
   const pathname = request.nextUrl.pathname
+
+  // Skip locale handling for auth routes (e.g., /auth/callback)
+  // These routes should not have locale prefixes
+  if (pathname.startsWith('/auth')) {
+    // Only handle Supabase session for auth routes
+    return await updateSession(request)
+  }
+
+  // First, handle i18n routing
   const pathnameIsMissingLocale = locales.every(
     (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
   )
