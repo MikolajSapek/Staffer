@@ -23,8 +23,13 @@ export async function updateApplicationStatus(
     .eq('id', applicationId)
     .single();
 
+  if (fetchError?.code === 'PGRST116') {
+    // RLS denied access or row not visible
+    return { error: 'Access denied' };
+  }
+
   if (fetchError || !application) {
-    return { error: 'Application not found' };
+    return { error: fetchError?.message || 'Application not found' };
   }
 
   // Verify the company owns this shift

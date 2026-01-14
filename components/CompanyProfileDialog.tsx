@@ -83,7 +83,11 @@ export default function CompanyProfileDialog({
         .single();
 
       if (profileError) {
-        setError(profileError.message);
+        if (profileError.code === 'PGRST116') {
+          setError('Profile is private or you do not have access.');
+        } else {
+          setError(profileError.message);
+        }
         return;
       }
 

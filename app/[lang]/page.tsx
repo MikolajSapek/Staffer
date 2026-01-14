@@ -19,6 +19,7 @@ export default async function JobBoardPage({
 
   const profile = user ? await getCurrentProfile() : null;
   const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
+  const verificationStatus = profile?.verification_status ?? null;
   
   let appliedShiftIds: string[] = [];
   let applicationStatusMap: Record<string, string> = {};
@@ -78,6 +79,7 @@ export default async function JobBoardPage({
           user={user}
           appliedShiftIds={appliedShiftIds}
           applicationStatusMap={applicationStatusMap}
+          verificationStatus={verificationStatus}
           dict={dict}
           lang={lang}
         />

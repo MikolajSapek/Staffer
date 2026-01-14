@@ -85,6 +85,12 @@ export default function ApplyModal({
         // Check if it's a unique constraint violation (already applied)
         if (insertError.code === '23505') {
           setError(dict.alreadyApplied);
+        } else if (
+          insertError.code === '42501' ||
+          insertError.message?.toLowerCase().includes('row-level security') ||
+          insertError.message?.toLowerCase().includes('policy')
+        ) {
+          setError('You must verify your identity first.');
         } else {
           setError(dict.error);
         }
@@ -96,6 +102,7 @@ export default function ApplyModal({
       setMessage('');
       setError(null);
       onOpenChange(false);
+      setLoading(false);
       
       if (onSuccess) {
         onSuccess();

@@ -41,6 +41,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [workerDetails, setWorkerDetails] = useState<Record<string, unknown> | null>(null);
+  const [workerLoadError, setWorkerLoadError] = useState(false);
   const [profile, setProfile] = useState<{ verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected' } | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -128,11 +129,14 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
           if (workerError.code === 'P0001' || workerError.message?.includes('not found')) {
             // Profile doesn't exist yet - this is fine, form will be empty
             setWorkerDetails(null);
+            setWorkerLoadError(false);
           } else {
             setWorkerDetails(null);
+            setWorkerLoadError(true);
           }
         } else {
           setWorkerDetails(workerData);
+          setWorkerLoadError(false);
           
           // Populate form with existing data (CPR is now decrypted)
           if (workerData) {
@@ -568,6 +572,99 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   // Check if profile is complete (has required fields)
   const isProfileComplete = formData.first_name && formData.last_name && formData.phone_number && 
                             (formData.cpr_number || workerDetails?.cpr_number);
+
+  // Determine whether the viewer is the profile owner. If we hit a load error (likely RLS),
+  // treat as non-owner to avoid exposing sensitive UI.
+  const viewedProfileId = (workerDetails as Record<string, unknown> | null)?.id as string | undefined;
+  const isOwner = !!user && !workerLoadError && (viewedProfileId ? user.id === viewedProfileId : true);
+
+  // Public (non-owner) view: hide sensitive sections (CPR, bank) and show only public info.
+  if (!isOwner) {
+    const displayName = [
+      (workerDetails as Record<string, unknown> | null)?.first_name as string | undefined,
+      (workerDetails as Record<string, unknown> | null)?.last_name as string | undefined,
+    ].filter(Boolean).join(' ') || dict.profile.preview.worker;
+    const avatarUrl = (workerDetails as Record<string, unknown> | null)?.avatar_url as string | undefined;
+    const description = (workerDetails as Record<string, unknown> | null)?.description as string | undefined;
+    const experience = (workerDetails as Record<string, unknown> | null)?.experience as string | undefined;
+
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">{dict.profile.title}</h1>
+          <p className="text-muted-foreground">
+            {dict.profile.subtitle}
+          </p>
+        </div>
+
+        <Card className="shadow-lg">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row gap-6 items-start">
+              <div className="flex-shrink-0">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-gray-200 border-2 border-gray-200 flex items-center justify-center">
+                    <User className="w-12 h-12 text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-gray-900">{displayName}</h2>
+                  {profile?.verification_status === 'verified' && (
+                    <Badge className="bg-green-600 hover:bg-green-700 gap-1 text-white">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span className="text-xs">{dict.Verification?.status_verified || 'Account Verified'}</span>
+                    </Badge>
+                  )}
+                  {profile?.verification_status === 'pending' && (
+                    <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span className="text-xs">{dict.Verification?.status_pending || 'Verification Pending'}</span>
+                    </Badge>
+                  )}
+                </div>
+
+                {description && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800">{dict.profile.description}</h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{description}</p>
+                  </div>
+                )}
+
+                {experience && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800">{dict.profile.experience}</h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{experience}</p>
+                  </div>
+                )}
+
+                {!description && !experience && (
+                  <p className="text-sm text-muted-foreground">
+                    {dict.profile.preview.fillFormToActivate}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Card className="bg-muted">
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">
+                  Bank, tax and CPR details are hidden for privacy.
+                </p>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">

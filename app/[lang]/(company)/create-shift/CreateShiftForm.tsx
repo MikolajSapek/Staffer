@@ -155,39 +155,6 @@ interface ShiftTemplate {
   location_id: string;
 }
 
-// Generate time options with 10-minute intervals (00:00, 00:10, 00:20, ... 23:50)
-const generateTimeOptions = (): string[] => {
-  const timeOptions: string[] = [];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 10) {
-      const hour = h.toString().padStart(2, '0');
-      const minute = m.toString().padStart(2, '0');
-      timeOptions.push(`${hour}:${minute}`);
-    }
-  }
-  return timeOptions;
-};
-
-const TIME_OPTIONS = generateTimeOptions();
-
-// Helper to split ISO datetime string into date and time parts
-const splitDateTime = (isoString: string): { date: string; time: string } => {
-  if (!isoString) {
-    return { date: '', time: '' };
-  }
-  const [date, timeWithSeconds] = isoString.split('T');
-  const time = timeWithSeconds ? timeWithSeconds.substring(0, 5) : '';
-  return { date, time };
-};
-
-// Helper to combine date and time into ISO datetime string
-const combineDateTime = (date: string, time: string): string => {
-  if (!date || !time) {
-    return '';
-  }
-  return `${date}T${time}:00`;
-};
-
 // Ensure start time is in the future
 const formSchema = z.object({
   start_time: z.string(),
@@ -200,14 +167,6 @@ const formSchema = z.object({
   message: 'Start time must be in the future',
   path: ['start_time'],
 });
-
-const getLocalDateString = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 export default function CreateShiftForm({ companyId, locations: initialLocations, locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
   const router = useRouter();
@@ -235,8 +194,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     is_urgent: false,
     possible_overtime: false,
   });
-  const minSelectableDate = getLocalDateString();
-
   // Fetch templates on mount
   useEffect(() => {
     async function fetchTemplates() {
@@ -289,31 +246,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
   };
 
-  // Handlers for date/time updates
-  const handleStartDateChange = (newDate: string) => {
-    const { time } = splitDateTime(formData.start_time);
-    const combined = combineDateTime(newDate, time || '00:00');
-    setFormData({ ...formData, start_time: combined });
-  };
-
-  const handleStartTimeChange = (newTime: string) => {
-    const { date } = splitDateTime(formData.start_time);
-    const combined = combineDateTime(date || new Date().toISOString().split('T')[0], newTime);
-    setFormData({ ...formData, start_time: combined });
-  };
-
-  const handleEndDateChange = (newDate: string) => {
-    const { time } = splitDateTime(formData.end_time);
-    const combined = combineDateTime(newDate, time || '00:00');
-    setFormData({ ...formData, end_time: combined });
-  };
-
-  const handleEndTimeChange = (newTime: string) => {
-    const { date } = splitDateTime(formData.end_time);
-    const combined = combineDateTime(date || new Date().toISOString().split('T')[0], newTime);
-    setFormData({ ...formData, end_time: combined });
-  };
-
   const validateForm = (): string | null => {
     if (!formData.title.trim()) {
       return dict.validation.titleRequired;
@@ -358,6 +290,21 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     return null;
   };
 
+  const minStartDateTime = new Date().toISOString().slice(0, 16);
+  const minEndDateTime = formData.start_time
+    ? formData.start_time.slice(0, 16)
+    : minStartDateTime;
+
+  const handleStartDateTimeChange = (value: string) => {
+    const valueWithSeconds = value ? `${value}:00` : '';
+    setFormData({ ...formData, start_time: valueWithSeconds });
+  };
+
+  const handleEndDateTimeChange = (value: string) => {
+    const valueWithSeconds = value ? `${value}:00` : '';
+    setFormData({ ...formData, end_time: valueWithSeconds });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -388,6 +335,12 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         .select('company_name, cvr_number, main_address')
         .eq('profile_id', user.id)
         .single();
+
+      if (companyError?.code === 'PGRST116') {
+        setError('Access denied. Please contact support if this persists.');
+        setLoading(false);
+        return;
+      }
 
       if (companyError || !companyDetails) {
         throw new Error('Company profile not found. Please complete your company setup first.');
@@ -642,68 +595,41 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                 <Label>
                   {dict.startTime} <span className="text-red-500">*</span>
                 </Label>
-                <div className="grid gap-2 grid-cols-2">
+                <div className="grid gap-2">
                   <Input
-                    id="start_date"
-                    type="date"
-                    value={splitDateTime(formData.start_time).date}
-                    onChange={(e) => handleStartDateChange(e.target.value)}
-                    min={minSelectableDate}
+                    id="start_time"
+                    type="datetime-local"
+                    step={600}
+                    value={formData.start_time ? formData.start_time.slice(0, 16) : ''}
+                    onChange={(e) => handleStartDateTimeChange(e.target.value)}
+                    min={minStartDateTime}
                     required
                     disabled={loading}
                     className="w-full"
                   />
-                  <Select
-                    value={splitDateTime(formData.start_time).time}
-                    onValueChange={handleStartTimeChange}
-                    disabled={loading}
-                    required
-                  >
-                    <SelectTrigger id="start_time" className="w-full">
-                      <SelectValue placeholder="--:--" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_OPTIONS.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {error?.includes('Start time must be in the future') && (
+                    <p className="text-sm text-red-600">
+                      Start time must be in the future
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>
                   {dict.endTime} <span className="text-red-500">*</span>
                 </Label>
-                <div className="grid gap-2 grid-cols-2">
+                <div className="grid gap-2">
                   <Input
-                    id="end_date"
-                    type="date"
-                    value={splitDateTime(formData.end_time).date}
-                    onChange={(e) => handleEndDateChange(e.target.value)}
-                    min={minSelectableDate}
+                    id="end_time"
+                    type="datetime-local"
+                    step={600}
+                    value={formData.end_time ? formData.end_time.slice(0, 16) : ''}
+                    onChange={(e) => handleEndDateTimeChange(e.target.value)}
+                    min={minEndDateTime}
                     required
                     disabled={loading}
                     className="w-full"
                   />
-                  <Select
-                    value={splitDateTime(formData.end_time).time}
-                    onValueChange={handleEndTimeChange}
-                    disabled={loading}
-                    required
-                  >
-                    <SelectTrigger id="end_time" className="w-full">
-                      <SelectValue placeholder="--:--" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_OPTIONS.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
             </div>

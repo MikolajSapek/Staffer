@@ -45,7 +45,7 @@ interface Shift {
   } | null;
 }
 
-interface JobDetailsDialogProps {
+export interface JobDetailsDialogProps {
   shift: Shift;
   isApplied: boolean;
   userRole: string;
@@ -77,6 +77,7 @@ interface JobDetailsDialogProps {
   children: React.ReactNode;
   onApply?: (shift: Shift) => void;
   onApplySuccess?: () => void;
+  verificationStatus?: string | null;
 }
 
 export function JobDetailsDialog({
@@ -90,6 +91,7 @@ export function JobDetailsDialog({
   children,
   onApply,
   onApplySuccess,
+  verificationStatus,
 }: JobDetailsDialogProps) {
   const [open, setOpen] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -152,6 +154,10 @@ export function JobDetailsDialog({
       window.location.href = `/${lang}/login`;
       return;
     }
+    if (verificationStatus !== 'verified') {
+      window.alert('You must verify your identity first.');
+      return;
+    }
     
     // If onApply prop is provided, use it (parent handles ApplyModal)
     if (onApply) {
@@ -175,7 +181,8 @@ export function JobDetailsDialog({
   };
 
   const isFullyBooked = shift.vacancies_taken >= shift.vacancies_total || shift.status === 'full';
-  const canApply = userRole === 'worker' && !isApplied && !isFullyBooked;
+  const mustVerify = userRole === 'worker' && verificationStatus !== 'verified';
+  const canApply = userRole === 'worker' && !isApplied && !isFullyBooked && !mustVerify;
 
   // Helper function to get status-specific button styles
   const getStatusStyles = (status: string | null | undefined): string => {
@@ -340,6 +347,15 @@ export function JobDetailsDialog({
                 size="lg"
               >
                 {dict.jobBoard.fullyBooked || 'Fully Booked'}
+              </Button>
+            ) : mustVerify ? (
+              <Button
+                disabled
+                variant="outline"
+                className="w-full h-12 text-base cursor-not-allowed"
+                size="lg"
+              >
+                Verify account to apply
               </Button>
             ) : canApply ? (
               <Button

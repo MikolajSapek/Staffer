@@ -49,9 +49,22 @@ interface JobCardProps {
   applicationStatus?: string | null; // e.g. 'pending', 'accepted', 'rejected'
   getStatusBadge?: (shiftId: string) => React.ReactNode;
   onApplySuccess?: () => void;
+  verificationStatus?: string | null;
 }
 
-export function JobCard({ shift, onApply, hasApplied, userRole, user, dict, lang, applicationStatus, getStatusBadge, onApplySuccess }: JobCardProps) {
+export function JobCard({
+  shift,
+  onApply,
+  hasApplied,
+  userRole,
+  user,
+  dict,
+  lang,
+  applicationStatus,
+  getStatusBadge,
+  onApplySuccess,
+  verificationStatus,
+}: JobCardProps) {
   const start = new Date(shift.start_time);
   const end = new Date(shift.end_time);
   const durationHours = differenceInMinutes(end, start) / 60;
@@ -79,6 +92,7 @@ export function JobCard({ shift, onApply, hasApplied, userRole, user, dict, lang
       applicationStatus={applicationStatus}
       onApply={onApply}
       onApplySuccess={onApplySuccess}
+      verificationStatus={verificationStatus}
     >
       <Card className="flex flex-col overflow-hidden transition-all hover:shadow-lg hover:border-gray-300 border border-gray-100 bg-white cursor-pointer">
       {/* HEADER */}

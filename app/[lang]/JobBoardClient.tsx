@@ -38,6 +38,7 @@ interface JobBoardClientProps {
   user: User | null;
   appliedShiftIds: string[];
   applicationStatusMap: Record<string, string>;
+  verificationStatus: string | null;
   dict: {
     jobBoard: {
       apply: string;
@@ -74,6 +75,7 @@ export default function JobBoardClient({
   user,
   appliedShiftIds,
   applicationStatusMap,
+  verificationStatus,
   dict,
   lang,
 }: JobBoardClientProps) {
@@ -83,6 +85,10 @@ export default function JobBoardClient({
   const handleApply = (shift: Shift) => {
     if (!user) {
       window.location.href = `/${lang}/login`;
+      return;
+    }
+    if (userRole === 'worker' && verificationStatus !== 'verified') {
+      window.alert('You must verify your identity first.');
       return;
     }
     setSelectedShift(shift);
@@ -145,6 +151,7 @@ export default function JobBoardClient({
               applicationStatus={applicationStatusMap[shift.id]}
               getStatusBadge={getStatusBadge}
               onApplySuccess={handleApplySuccess}
+              verificationStatus={verificationStatus}
             />
           );
         })}
