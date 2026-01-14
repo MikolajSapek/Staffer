@@ -17,6 +17,7 @@ import { createClient } from '@/utils/supabase/client';
 import { Loader2, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
 import CreateLocationModal from '@/components/CreateLocationModal';
 import { fromZonedTime } from 'date-fns-tz';
+import { z } from 'zod';
 
 interface CreateShiftFormProps {
   companyId: string;
@@ -187,6 +188,27 @@ const combineDateTime = (date: string, time: string): string => {
   return `${date}T${time}:00`;
 };
 
+// Ensure start time is in the future
+const formSchema = z.object({
+  start_time: z.string(),
+}).refine(({ start_time }) => {
+  if (!start_time) return false;
+  const start = new Date(start_time);
+  if (Number.isNaN(start.getTime())) return false;
+  return start > new Date();
+}, {
+  message: 'Start time must be in the future',
+  path: ['start_time'],
+});
+
+const getLocalDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function CreateShiftForm({ companyId, locations: initialLocations, locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -213,6 +235,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     is_urgent: false,
     possible_overtime: false,
   });
+  const minSelectableDate = getLocalDateString();
 
   // Fetch templates on mount
   useEffect(() => {
@@ -303,6 +326,10 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     }
     if (!formData.start_time) {
       return dict.validation.startTimeRequired;
+    }
+    const startTimeValidation = formSchema.safeParse({ start_time: formData.start_time });
+    if (!startTimeValidation.success) {
+      return startTimeValidation.error.issues[0]?.message || 'Start time must be in the future';
     }
     if (!formData.end_time) {
       return dict.validation.endTimeRequired;
@@ -621,6 +648,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                     type="date"
                     value={splitDateTime(formData.start_time).date}
                     onChange={(e) => handleStartDateChange(e.target.value)}
+                    min={minSelectableDate}
                     required
                     disabled={loading}
                     className="w-full"
@@ -654,6 +682,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                     type="date"
                     value={splitDateTime(formData.end_time).date}
                     onChange={(e) => handleEndDateChange(e.target.value)}
+                    min={minSelectableDate}
                     required
                     disabled={loading}
                     className="w-full"
