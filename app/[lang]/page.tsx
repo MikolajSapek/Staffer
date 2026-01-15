@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from './dictionaries';
@@ -20,6 +21,21 @@ export default async function JobBoardPage({
   const profile = user ? await getCurrentProfile() : null;
   const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
   const verificationStatus = profile?.verification_status ?? null;
+
+  // If a logged-in company user visits the root page and their company
+  // profile is NOT completed yet, send them to company-setup.
+  // Fully onboarded companies are allowed to view the public job board.
+  if (user && userRole === 'company') {
+    const { data: companyDetails } = await supabase
+      .from('company_details')
+      .select('profile_id')
+      .eq('profile_id', user.id)
+      .maybeSingle();
+
+    if (!companyDetails) {
+      redirect(`/${lang}/company-setup`);
+    }
+  }
   
   let appliedShiftIds: string[] = [];
   let applicationStatusMap: Record<string, string> = {};

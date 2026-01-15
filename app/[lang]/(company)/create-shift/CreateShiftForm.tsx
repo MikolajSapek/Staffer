@@ -599,7 +599,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   <Input
                     id="start_time"
                     type="datetime-local"
-                    step={600}
+                    step={60}
                     value={formData.start_time ? formData.start_time.slice(0, 16) : ''}
                     onChange={(e) => handleStartDateTimeChange(e.target.value)}
                     min={minStartDateTime}
@@ -622,7 +622,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   <Input
                     id="end_time"
                     type="datetime-local"
-                    step={600}
+                    step={60}
                     value={formData.end_time ? formData.end_time.slice(0, 16) : ''}
                     onChange={(e) => handleEndDateTimeChange(e.target.value)}
                     min={minEndDateTime}

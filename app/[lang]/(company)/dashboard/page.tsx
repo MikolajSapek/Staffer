@@ -179,12 +179,6 @@ export default async function CompanyDashboardPage({
       <div id="archive-shifts" className="mb-8 scroll-mt-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-semibold">{dict.companyShifts.archiveShifts}</h2>
-          <Button variant="outline" asChild>
-            <Link href={`/${lang}/create-shift`}>
-              <Plus className="mr-2 h-4 w-4" />
-              {dict.dashboard.createShift}
-            </Link>
-          </Button>
         </div>
 
         <ArchivedShiftsList
