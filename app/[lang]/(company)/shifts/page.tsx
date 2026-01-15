@@ -65,6 +65,17 @@ export default async function ShiftsPage({
     console.error('Error fetching shifts:', shiftsError);
   }
 
+  // Fetch company locations for use in edit shift form/dialog
+  const { data: locationsData, error: locationsError } = await supabase
+    .from('locations')
+    .select('*')
+    .eq('company_id', user.id)
+    .order('name', { ascending: true });
+
+  if (locationsError) {
+    console.error('Error fetching locations for shifts page:', locationsError);
+  }
+
   // Map worker_details data to profile level and rename shift_applications to applications
   const mappedShifts = (shifts || []).map((shift: any) => {
     const applications = (shift.shift_applications || []).map((app: any) => {
@@ -94,6 +105,9 @@ export default async function ShiftsPage({
       dict={dict.companyShifts}
       statusDict={dict.status}
       lang={lang}
+      locations={locationsData || []}
+      createShiftDict={dict.createShift}
+      shiftOptions={dict.shiftOptions}
     />
   );
 }

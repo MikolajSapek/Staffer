@@ -1,14 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { Calendar, Users, Phone, MapPin, ChevronDown } from 'lucide-react';
+import { Calendar, Users, Phone, MapPin, ChevronDown, Trash2, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import CancelWorkerDialog from '@/components/shifts/CancelWorkerDialog';
+import EditShiftDialog from '@/components/shifts/EditShiftDialog';
+import { cancelWorkerAction } from '@/app/actions/shifts';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Profile {
   id: string;
@@ -42,6 +47,15 @@ interface Shift {
   vacancies_taken: number;
   status: string;
   locations: Location | null;
+  // Fields needed for editing (present on the shift rows fetched in page.tsx)
+  description: string | null;
+  category: string;
+  location_id: string;
+  break_minutes: number;
+  is_break_paid: boolean;
+  is_urgent: boolean;
+  possible_overtime: boolean;
+  company_id: string;
   applications?: Application[];
 }
 
@@ -67,6 +81,9 @@ interface ActiveShiftsListProps {
     cancelled: string;
   };
   lang: string;
+  locations: Array<{ id: string; name: string; address: string }>;
+  createShiftDict: any;
+  shiftOptions: any;
 }
 
 export default function ActiveShiftsList({
@@ -74,8 +91,21 @@ export default function ActiveShiftsList({
   dict,
   statusDict,
   lang,
+  locations,
+  createShiftDict,
+  shiftOptions,
 }: ActiveShiftsListProps) {
   const [expandedShift, setExpandedShift] = useState<string | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+  const [selectedWorkerName, setSelectedWorkerName] = useState<string | null>(null);
+  const [selectedShiftStart, setSelectedShiftStart] = useState<string | null>(null);
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [isCancelPending, setIsCancelPending] = useState(false);
+  const [shiftToEdit, setShiftToEdit] = useState<Shift | null>(null);
 
   // Helper to get status badge
   const getStatusBadge = (status: string) => {
@@ -107,6 +137,67 @@ export default function ActiveShiftsList({
 
   const toggleShift = (shiftId: string) => {
     setExpandedShift(expandedShift === shiftId ? null : shiftId);
+  };
+
+  const openCancelDialog = (
+    applicationId: string,
+    workerId: string,
+    workerName: string,
+    shiftStartTime: string
+  ) => {
+    setSelectedApplicationId(applicationId);
+    setSelectedWorkerId(workerId);
+    setSelectedWorkerName(workerName);
+    setSelectedShiftStart(shiftStartTime);
+    setCancelDialogOpen(true);
+  };
+
+  const closeCancelDialog = () => {
+    if (isCancelPending) return;
+    setCancelDialogOpen(false);
+    setSelectedApplicationId(null);
+    setSelectedWorkerId(null);
+    setSelectedWorkerName(null);
+    setSelectedShiftStart(null);
+  };
+
+  const handleCancelConfirm = async (reason: string) => {
+    if (!selectedApplicationId || !selectedShiftStart) return;
+
+    try {
+      setIsCancelPending(true);
+
+      const result = await cancelWorkerAction(
+        selectedApplicationId,
+        reason,
+        `/${lang}/shifts`
+      );
+
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.message || result.error || 'Failed to cancel worker.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      closeCancelDialog();
+      toast({
+        title: 'Worker cancelled',
+        description: 'The worker has been removed from the shift.',
+        variant: 'default',
+      });
+      router.refresh();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred while cancelling the worker.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCancelPending(false);
+    }
   };
 
   if (shifts.length === 0) {
@@ -141,12 +232,27 @@ export default function ActiveShiftsList({
           const hiredTeam = getHiredTeam(shift);
           const capacityText = `${hiredTeam.length}/${shift.vacancies_total} Hired`;
           const isExpanded = expandedShift === shift.id;
+          const isEditable = shift.status !== 'completed' && shift.status !== 'cancelled';
+
+          const handleCardClick = () => {
+            toggleShift(shift.id);
+          };
+
+          const handleCardKeyDown = (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleShift(shift.id);
+            }
+          };
 
           return (
             <div key={shift.id} className="border rounded-lg bg-card">
-              <button
-                onClick={() => toggleShift(shift.id)}
-                className="w-full px-4 py-4 hover:bg-muted/50 transition-colors"
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={handleCardClick}
+                onKeyDown={handleCardKeyDown}
+                className="w-full px-4 py-4 hover:bg-muted/50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 <div className="flex flex-1 items-center justify-between">
                   <div className="flex flex-1 items-center gap-4 min-w-0">
@@ -215,6 +321,21 @@ export default function ActiveShiftsList({
                         {capacityText}
                       </div>
                       {getStatusBadge(shift.status)}
+                      {isEditable && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShiftToEdit(shift);
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                          <span className="hidden sm:inline">Edit</span>
+                        </Button>
+                      )}
                       <ChevronDown
                         className={cn(
                           'h-4 w-4 shrink-0 transition-transform duration-200',
@@ -224,7 +345,7 @@ export default function ActiveShiftsList({
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
               <div
                 className={cn(
                   'overflow-hidden transition-all duration-200',
@@ -311,6 +432,27 @@ export default function ActiveShiftsList({
                                   </button>
                                 )}
                               </div>
+
+                              {/* Cancel Worker */}
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="h-8 w-8 flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!isEditable) return;
+                                  openCancelDialog(
+                                    application.id,
+                                    profile.id,
+                                    fullName,
+                                    shift.start_time
+                                  );
+                                }}
+                                disabled={isCancelPending || !isEditable}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           );
                         })}
@@ -323,6 +465,28 @@ export default function ActiveShiftsList({
           );
         })}
       </div>
+
+      <CancelWorkerDialog
+        isOpen={cancelDialogOpen}
+        onClose={closeCancelDialog}
+        onConfirm={handleCancelConfirm}
+        workerName={selectedWorkerName || ''}
+        shiftStartTime={selectedShiftStart || new Date().toISOString()}
+        isPending={isCancelPending}
+      />
+      <EditShiftDialog
+        open={!!shiftToEdit}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShiftToEdit(null);
+          }
+        }}
+        shift={shiftToEdit as any}
+        lang={lang}
+        locations={locations}
+        createShiftDict={createShiftDict}
+        shiftOptions={shiftOptions}
+      />
     </div>
   );
 }

@@ -7,15 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil } from 'lucide-react';
 import Link from 'next/link';
-import { archiveShift } from '@/app/actions/shifts';
+import { archiveShift, cancelWorkerAction } from '@/app/actions/shifts';
 import RateWorkerDialog from '@/components/RateWorkerDialog';
+import CancelWorkerDialog from '@/components/shifts/CancelWorkerDialog';
+import EditShiftDialog from '@/components/shifts/EditShiftDialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface WorkerDetails {
   avatar_url: string | null;
   phone_number: string | null;
 }
+
 
 interface Profile {
   id: string;
@@ -55,6 +59,9 @@ interface Shift {
   vacancies_taken: number;
   status: string;
   category: string;
+  location_id: string;
+  is_urgent: boolean;
+  company_id: string;
   locations: Location | null;
   shift_applications?: Application[];
 }
@@ -65,6 +72,9 @@ interface ShiftDetailsClientProps {
   reviewsMap?: Record<string, { rating: number; comment: string | null; tags: string[] | null }>;
   lang: string;
   dict: any;
+  locations: Array<{ id: string; name: string; address: string }>;
+  createShiftDict: any;
+  shiftOptions: any;
 }
 
 export default function ShiftDetailsClient({
@@ -73,9 +83,14 @@ export default function ShiftDetailsClient({
   reviewsMap = {},
   lang,
   dict,
+  locations,
+  createShiftDict,
+  shiftOptions,
 }: ShiftDetailsClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const [isCancelPending, startCancelTransition] = useTransition();
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
@@ -83,6 +98,12 @@ export default function ShiftDetailsClient({
     id: string;
     name: string;
   } | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<{
+    applicationId: string;
+    workerName: string;
+  } | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Helper to safely extract worker_details
   const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
@@ -135,6 +156,53 @@ export default function ShiftDetailsClient({
     router.refresh();
   };
 
+  const handleCancelClick = (applicationId: string, workerName: string) => {
+    setCancelTarget({ applicationId, workerName });
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelClose = () => {
+    setCancelDialogOpen(false);
+    setCancelTarget(null);
+  };
+
+  const handleCancelConfirm = (reason: string) => {
+    if (!cancelTarget) return;
+
+    startCancelTransition(async () => {
+      try {
+        const result = await cancelWorkerAction(
+          cancelTarget.applicationId,
+          reason,
+          `/${lang}/shifts/${shift.id}`
+        );
+
+        if (!result.success) {
+          toast({
+            title: 'Error',
+            description: result.error || result.message || 'Failed to cancel worker.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        handleCancelClose();
+        toast({
+          title: 'Worker cancelled',
+          description: 'The worker has been removed from the shift.',
+          variant: 'default',
+        });
+        router.refresh();
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'An unexpected error occurred while cancelling the worker.',
+          variant: 'destructive',
+        });
+      }
+    });
+  };
+
   // Helper to get status badge
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -180,25 +248,37 @@ export default function ShiftDetailsClient({
             </div>
             <div className="flex items-center gap-3">
               {getStatusBadge(shift.status)}
-              {!isArchived && hiredTeam.length > 0 && (
-                <Button
-                  onClick={handleArchive}
-                  disabled={isPending}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Archiving...
-                    </>
-                  ) : (
-                    <>
-                      <Archive className="h-4 w-4" />
-                      Archive Shift
-                    </>
+              {shift.status !== 'completed' && shift.status !== 'cancelled' && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setIsEditOpen(true)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit Shift
+                  </Button>
+                  {hiredTeam.length > 0 && (
+                    <Button
+                      onClick={handleArchive}
+                      disabled={isPending}
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      {isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Archiving...
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="h-4 w-4" />
+                          Archive Shift
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                </>
               )}
             </div>
           </div>
@@ -310,23 +390,38 @@ export default function ShiftDetailsClient({
 
                         {/* Worker Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-base mb-1 truncate">
-                            {fullName}
-                          </div>
-                          <div className="space-y-1 text-sm text-muted-foreground">
-                            {profile.email && (
-                              <div className="flex items-center gap-2 truncate">
-                                <Mail className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{profile.email}</span>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="font-semibold text-base mb-1 truncate">
+                                {fullName}
                               </div>
-                            )}
-                            {phoneNumber && (
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-3 w-3 flex-shrink-0" />
-                                <span>{phoneNumber}</span>
+                              <div className="space-y-1 text-sm text-muted-foreground">
+                                {profile.email && (
+                                  <div className="flex items-center gap-2 truncate">
+                                    <Mail className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{profile.email}</span>
+                                  </div>
+                                )}
+                                {phoneNumber && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="h-3 w-3 flex-shrink-0" />
+                                    <span>{phoneNumber}</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleCancelClick(application.id, fullName)}
+                              disabled={isCancelPending || isArchived}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
+
                           {/* Rating Button/Status */}
                           {canRateWorkers && (
                             <div className="mt-3">
@@ -377,6 +472,46 @@ export default function ShiftDetailsClient({
           onReviewSubmitted={handleReviewSubmitted}
         />
       )}
+
+      {/* Cancel Worker Dialog */}
+      {cancelTarget && (
+        <CancelWorkerDialog
+          isOpen={cancelDialogOpen}
+          onClose={handleCancelClose}
+          onConfirm={handleCancelConfirm}
+          workerName={cancelTarget.workerName}
+          shiftStartTime={shift.start_time}
+          isPending={isCancelPending}
+        />
+      )}
+
+      {/* Edit Shift Dialog */}
+      <EditShiftDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        shift={{
+          id: shift.id,
+          title: shift.title,
+          description: shift.description,
+          category: shift.category,
+          location_id: shift.location_id,
+          start_time: shift.start_time,
+          end_time: shift.end_time,
+          hourly_rate: shift.hourly_rate,
+          break_minutes: shift.break_minutes,
+          is_break_paid: shift.is_break_paid,
+          vacancies_total: shift.vacancies_total,
+          vacancies_taken: shift.vacancies_taken,
+          is_urgent: shift.is_urgent,
+          possible_overtime: shift.possible_overtime,
+          company_id: shift.company_id,
+          locations: shift.locations,
+        }}
+        lang={lang}
+        locations={locations}
+        createShiftDict={createShiftDict}
+        shiftOptions={shiftOptions}
+      />
     </div>
   );
 }

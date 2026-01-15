@@ -44,6 +44,10 @@ export default async function ShiftDetailsPage({
       vacancies_taken,
       status,
       category,
+      location_id,
+      is_urgent,
+      possible_overtime,
+      company_id,
       locations (
         id,
         name,
@@ -106,6 +110,13 @@ export default async function ShiftDetailsPage({
     }
   }
 
+  // Fetch company locations for use in edit shift dialog
+  const { data: locationsData } = await supabase
+    .from('locations')
+    .select('id, name, address')
+    .eq('company_id', user.id)
+    .order('name', { ascending: true });
+
   return (
     <ShiftDetailsClient
       shift={shift}
@@ -113,6 +124,9 @@ export default async function ShiftDetailsPage({
       reviewsMap={reviewsMap}
       lang={lang}
       dict={dict}
+      locations={locationsData || []}
+      createShiftDict={dict.createShift}
+      shiftOptions={dict.shiftOptions}
     />
   );
 }

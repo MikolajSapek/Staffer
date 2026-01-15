@@ -1,1 +1,228 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { createClient } from '@/utils/supabase/server';
+import { redirect } from 'next/navigation';
+
+type CancelWorkerResult = {
+  success: boolean;
+  message: string;
+  error?: string;
+  lateCancellation?: boolean;
+};
+
+type UpdateShiftResult = {
+  success: boolean;
+  message: string;
+  error?: string;
+};
+
+type ArchiveShiftResult = {
+  message?: string;
+  error?: string | null;
+};
+
+/**
+ * Cancel a worker's application (or assignment) for a shift.
+ *
+ * Wraps the `cancel_worker_application` RPC which is responsible for:
+ * - Verifying that the authenticated user is the owning company
+ * - Applying any business rules (late cancellation penalties, etc.)
+ */
+export async function cancelWorkerAction(
+  applicationId: string,
+  reason: string,
+  path: string
+): Promise<CancelWorkerResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    // We follow the same pattern as other company actions and redirect
+    // unauthenticated users to login.
+    // `path` is a full path like `/${lang}/...`, so derive lang from it if needed.
+    // For now, redirect to generic login preserving language-agnostic behaviour.
+    redirect('/login');
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('cancel_worker_application', {
+      p_application_id: applicationId,
+      p_cancel_reason: reason,
+      p_company_id: user!.id,
+    });
+
+    if (error) {
+      return {
+        success: false,
+        message: 'Failed to cancel worker',
+        error: error.message,
+      };
+    }
+
+    // The RPC may optionally return additional metadata, e.g. whether this
+    // was considered a "late" cancellation. We read it defensively.
+    const rpcData = data as any | null;
+    const lateCancellation =
+      rpcData?.late_cancellation ?? rpcData?.lateCancellation ?? undefined;
+
+    // Ensure the latest data is shown wherever this list/details live.
+    revalidatePath(path);
+
+    return {
+      success: true,
+      message: 'Worker has been cancelled successfully',
+      lateCancellation: typeof lateCancellation === 'boolean' ? lateCancellation : undefined,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: 'Unexpected error while cancelling worker',
+      error: err?.message ?? String(err),
+    };
+  }
+}
+
+/**
+ * Update an existing shift using the `update_shift_secure` RPC.
+ *
+ * `formData` should already be shaped to match the RPC's argument signature;
+ * this action will:
+ * - Add the `p_shift_id` parameter
+ * - Normalise any date values to full ISO strings with timezone.
+ */
+export async function updateShiftAction(
+  shiftId: string,
+  formData: any
+): Promise<UpdateShiftResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  try {
+    // Helper to normalise a possible Date/string field into an ISO string
+    const toIsoWithTimezone = (value: unknown): string | null => {
+      if (!value) return null;
+
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+
+      if (typeof value === 'string') {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString();
+        }
+        // Assume already ISO-like; still return string
+        return value;
+      }
+
+      return null;
+    };
+
+    const startIso = toIsoWithTimezone(formData.start_time);
+    const endIso = toIsoWithTimezone(formData.end_time);
+
+    const { error } = await supabase.rpc('update_shift_secure', {
+      p_shift_id: shiftId,
+      p_company_id: user.id,
+      p_title: formData.title,
+      p_description: formData.description ?? null,
+      p_start_time: startIso,
+      p_end_time: endIso,
+      p_location_id: formData.location_id ?? null,
+      p_hourly_rate: formData.hourly_rate,
+      p_vacancies_total: formData.vacancies_total,
+      p_category: formData.category,
+      p_break_minutes: formData.break_minutes,
+      p_is_break_paid: formData.is_break_paid,
+      p_is_urgent: formData.is_urgent,
+      p_possible_overtime: formData.possible_overtime,
+    });
+
+    if (error) {
+      return {
+        success: false,
+        message: 'Failed to update shift',
+        error: error.message,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Shift updated successfully',
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: 'Unexpected error while updating shift',
+      error: err?.message ?? String(err),
+    };
+  }
+}
+
+/**
+ * Archive a shift by marking it as cancelled.
+ * Verifies that the authenticated user owns the shift before archiving.
+ */
+export async function archiveShift({
+  shiftId,
+  lang,
+}: {
+  shiftId: string;
+  lang: string;
+}): Promise<ArchiveShiftResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/${lang}/login`);
+  }
+
+  try {
+    // Verify ownership before updating
+    const { data: shift, error: fetchError } = await supabase
+      .from('shifts')
+      .select('company_id')
+      .eq('id', shiftId)
+      .single();
+
+    if (fetchError || !shift) {
+      return { error: 'Shift not found' };
+    }
+
+    if (shift.company_id !== user.id) {
+      return { error: 'Unauthorized' };
+    }
+
+    // Update status to cancelled (archived)
+    const { error } = await supabase
+      .from('shifts')
+      .update({ status: 'cancelled' })
+      .eq('id', shiftId)
+      .eq('company_id', user.id);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    revalidatePath(`/${lang}/shifts`);
+    revalidatePath(`/${lang}/shifts/${shiftId}`);
+    revalidatePath(`/${lang}/dashboard`);
+
+    return { message: 'Shift archived successfully', error: null };
+  } catch (err: any) {
+    return { error: err?.message ?? 'An unexpected error occurred while archiving the shift' };
+  }
+}
+
 

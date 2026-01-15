@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/utils/supabase/client';
-import { Loader2, Calendar, MapPin } from 'lucide-react';
+import { Loader2, Calendar, MapPin, Pencil } from 'lucide-react';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import Link from 'next/link';
 
@@ -205,6 +205,19 @@ export default function ShiftsClient({ dict, statusDict, lang }: ShiftsClientPro
                       <span className="font-medium">{dict.booked}:</span>{' '}
                       {shift.vacancies_taken || 0} / {shift.vacancies_total}
                     </div>
+                  </div>
+                  <div className="mt-4 flex justify-between gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/${lang}/shifts/${shift.id}`}>
+                        {dict.viewDetails}
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="gap-2">
+                      <Link href={`/${lang}/edit-shift/${shift.id}`}>
+                        <Pencil className="h-4 w-4" />
+                        {dict.edit}
+                      </Link>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
