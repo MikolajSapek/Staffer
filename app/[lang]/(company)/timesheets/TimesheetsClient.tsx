@@ -22,9 +22,10 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { formatDateShort, formatTime } from '@/lib/date-utils';
 import { createClient } from '@/utils/supabase/client';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Pencil } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface Timesheet {
@@ -89,6 +90,9 @@ export default function TimesheetsClient({
   const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
   const [disputingTimesheetId, setDisputingTimesheetId] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
+  const [correctDialogOpen, setCorrectDialogOpen] = useState(false);
+  const [correctingTimesheet, setCorrectingTimesheet] = useState<Timesheet | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState(0);
 
   // Filter to show pending and disputed timesheets
   const filteredTimesheets = timesheets.filter(
@@ -174,6 +178,100 @@ export default function TimesheetsClient({
     const hours = diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
     return parseFloat(hours.toFixed(2));
   };
+
+  const handleOpenCorrectDialog = (timesheet: Timesheet) => {
+    // Use manager-approved times if present, otherwise fall back to original shift times
+    const startTime = timesheet.manager_approved_start || timesheet.shifts.start_time;
+    const endTime = timesheet.manager_approved_end || timesheet.shifts.end_time;
+
+    if (!startTime || !endTime) {
+      setError('Cannot correct hours: missing start or end time for this timesheet.');
+      return;
+    }
+
+    const currentDurationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
+    const currentMinutes = Math.max(0, Math.round(currentDurationMs / (1000 * 60)));
+
+    setCorrectingTimesheet(timesheet);
+    setDurationMinutes(currentMinutes);
+    setCorrectDialogOpen(true);
+  };
+
+  const handleDurationHoursChange = (value: string) => {
+    const parsedHours = parseInt(value || '0', 10);
+    const safeHours = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 0;
+    const minutesPart = durationMinutes % 60;
+    setDurationMinutes(safeHours * 60 + minutesPart);
+  };
+
+  const handleDurationMinutesChange = (value: string) => {
+    let parsedMinutes = parseInt(value || '0', 10);
+    if (!Number.isFinite(parsedMinutes) || parsedMinutes < 0) {
+      parsedMinutes = 0;
+    }
+    if (parsedMinutes > 59) {
+      parsedMinutes = 59;
+    }
+    const hoursPart = Math.floor(durationMinutes / 60);
+    setDurationMinutes(hoursPart * 60 + parsedMinutes);
+  };
+
+  const adjustDuration = (deltaMinutes: number) => {
+    setDurationMinutes((prev) => Math.max(0, prev + deltaMinutes));
+  };
+
+  const handleSaveCorrection = async () => {
+    if (!correctingTimesheet) return;
+
+    const decimalHours = durationMinutes / 60;
+    if (!Number.isFinite(decimalHours) || decimalHours <= 0) {
+      setError('Please enter a valid positive duration.');
+      return;
+    }
+
+    setProcessingId(correctingTimesheet.id);
+    setError(null);
+
+    startTransition(async () => {
+      try {
+        const supabase = createClient();
+        const { data, error: rpcError } = await supabase.rpc(
+          'correct_timesheet_hours',
+          {
+            p_timesheet_id: correctingTimesheet.id,
+            p_new_hours: decimalHours,
+          } as any
+        );
+
+        if (rpcError) {
+          setError(rpcError.message || 'Failed to correct timesheet hours');
+          setProcessingId(null);
+          return;
+        }
+
+        // Close the modal as soon as the update succeeds
+        setCorrectDialogOpen(false);
+        setCorrectingTimesheet(null);
+        setProcessingId(null);
+
+        // Refresh the page to get updated data
+        router.refresh();
+
+        // If a global toast system is introduced later, a minimal
+        // "Timesheet updated." message can be triggered here.
+      } catch (err: any) {
+        setError(err.message || 'An unexpected error occurred while correcting hours');
+        setProcessingId(null);
+      }
+    });
+  };
+
+  const correctingStartTime =
+    correctingTimesheet?.manager_approved_start || correctingTimesheet?.shifts.start_time || null;
+  const correctingEndTime =
+    correctingTimesheet?.manager_approved_end || correctingTimesheet?.shifts.end_time || null;
+  const correctingHours = Math.floor(durationMinutes / 60);
+  const correctingMinutes = durationMinutes % 60;
 
   if (filteredTimesheets.length === 0) {
     return (
@@ -286,6 +384,16 @@ export default function TimesheetsClient({
                           <AlertTriangle className="mr-2 h-4 w-4" />
                           {dict.timesheetsPage.actions.dispute}
                         </Button>
+                        <Button
+                          onClick={() => handleOpenCorrectDialog(timesheet)}
+                          disabled={isProcessing}
+                          size="sm"
+                          variant="secondary"
+                          className="bg-amber-500 hover:bg-amber-600 text-white"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Correct
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -342,6 +450,136 @@ export default function TimesheetsClient({
                 </>
               ) : (
                 'Submit'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Correct Hours Dialog */}
+      <Dialog
+        open={correctDialogOpen}
+        onOpenChange={(open) => {
+          setCorrectDialogOpen(open);
+          if (!open) {
+            setCorrectingTimesheet(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Correct Worked Hours</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* A. Header context line */}
+            {correctingTimesheet && correctingStartTime && correctingEndTime && (
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <span>📅 {formatDateShort(correctingStartTime)}</span>
+                <span className="text-muted-foreground">•</span>
+                <span>⏰ {formatTime(correctingStartTime)} - {formatTime(correctingEndTime)}</span>
+              </div>
+            )}
+
+            {/* B. Hero duration display */}
+            <div className="text-5xl font-bold text-center py-4">
+              {`${Number.isFinite(correctingHours) ? correctingHours : 0}h ${Number.isFinite(
+                correctingMinutes
+              ) ? correctingMinutes : 0}m`}
+            </div>
+
+            {/* C. Controls */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={Number.isFinite(correctingHours) ? correctingHours : 0}
+                    onChange={(e) => handleDurationHoursChange(e.target.value)}
+                    className="w-20 text-center"
+                  />
+                  <span>hours</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={Number.isFinite(correctingMinutes) ? correctingMinutes : 0}
+                    onChange={(e) => handleDurationMinutesChange(e.target.value)}
+                    className="w-20 text-center"
+                  />
+                  <span>minutes</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => adjustDuration(15)}
+                  disabled={!correctDialogOpen}
+                  className="rounded-full px-4"
+                >
+                  +15m
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => adjustDuration(30)}
+                  disabled={!correctDialogOpen}
+                  className="rounded-full px-4"
+                >
+                  +30m
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => adjustDuration(-15)}
+                  disabled={!correctDialogOpen}
+                  className="rounded-full px-4"
+                >
+                  -15m
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => adjustDuration(-30)}
+                  disabled={!correctDialogOpen}
+                  className="rounded-full px-4"
+                >
+                  -30m
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCorrectDialogOpen(false);
+                setCorrectingTimesheet(null);
+              }}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveCorrection}
+              disabled={isPending || durationMinutes <= 0 || !correctingTimesheet}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Correction'
               )}
             </Button>
           </DialogFooter>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,18 @@ interface LoginFormProps {
   lang: string;
 }
 
+// Minimal toast-like helper to satisfy UX requirement.
+// This can be replaced with a proper toast library (e.g. sonner) later.
+const toast = {
+  success: (message: string) => {
+    if (typeof window !== 'undefined') {
+      // For now use a simple, non-intrusive browser alert.
+      // Replace with real toast UI when available.
+      alert(message);
+    }
+  },
+};
+
 export default function LoginForm({ dict, lang }: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -38,8 +50,22 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
-  const isVerified = searchParams?.get('verified') === 'true';
   const nextParam = searchParams?.get('next');
+
+  // Show toast when email has been verified via callback redirect
+  useEffect(() => {
+    const verified = searchParams?.get('verified');
+    if (verified === 'true') {
+      toast.success('Email verified successfully! Please login.');
+
+      // Optionally clean up URL so the message doesn't reappear on refresh
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('verified');
+        window.history.replaceState(null, '', url.toString());
+      }
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -121,11 +147,6 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
           {error && (
             <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
               <strong>{dict.error}:</strong> {error}
-            </div>
-          )}
-          {isVerified && (
-            <div className="p-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-md">
-              Email verified successfully! Please login.
             </div>
           )}
           <div className="space-y-2">
