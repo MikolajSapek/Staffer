@@ -67,6 +67,27 @@ export default function ScheduleCalendar({
     });
   };
 
+  const getShiftStatusForDate = (date: Date): 'past' | 'future' | null => {
+    const shiftsOnDate = getShiftsForDate(date);
+    if (shiftsOnDate.length === 0) return null;
+
+    const now = new Date();
+    // Check if any shift is past (end_time < now)
+    const hasPastShift = shiftsOnDate.some((shift) => {
+      const endTime = new Date(shift.end_time);
+      return endTime < now;
+    });
+
+    // Check if any shift is future (start_time >= now)
+    const hasFutureShift = shiftsOnDate.some((shift) => {
+      const startTime = new Date(shift.start_time);
+      return startTime >= now;
+    });
+
+    // Prioritize past if there's any past shift, otherwise future
+    return hasPastShift ? 'past' : hasFutureShift ? 'future' : null;
+  };
+
   const handlePreviousMonth = () => {
     setCurrentDate(subMonths(currentDate, 1));
   };
@@ -117,7 +138,7 @@ export default function ScheduleCalendar({
         </div>
 
         {/* Calendar days */}
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7 p-1">
           {/* Empty cells for days before month starts */}
           {emptyCells.map((_, index) => (
             <div key={`empty-${index}`} className="aspect-square" />
@@ -126,21 +147,32 @@ export default function ScheduleCalendar({
           {/* Days of the month */}
           {daysInMonth.map((day) => {
             const hasShift = hasShiftOnDate(day);
+            const shiftStatus = getShiftStatusForDate(day);
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const isToday = isSameDay(day, new Date());
+
+            const shiftBgColor = shiftStatus === 'past' ? 'bg-emerald-500' : shiftStatus === 'future' ? 'bg-blue-500' : '';
 
             return (
               <button
                 key={day.toISOString()}
                 onClick={() => onDateSelect(day)}
                 className={cn(
-                  'aspect-square p-1 text-sm border-b border-r hover:bg-muted/50 transition-colors relative',
+                  'aspect-square text-sm transition-colors relative flex items-center justify-center border border-border',
                   !isSameMonth(day, currentDate) && 'text-muted-foreground/50',
-                  isSelected && 'bg-primary/10 ring-2 ring-primary',
-                  isToday && !isSelected && 'bg-muted'
+                  !hasShift && 'hover:bg-muted/30',
+                  isSelected && 'border-2 border-primary',
+                  isToday && !isSelected && !hasShift && 'ring-1 ring-inset ring-gray-200'
                 )}
               >
-                <div className="flex flex-col items-center justify-center h-full">
+                {hasShift ? (
+                  <div className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center font-bold text-white',
+                    shiftBgColor
+                  )}>
+                    {format(day, 'd')}
+                  </div>
+                ) : (
                   <span
                     className={cn(
                       'text-sm',
@@ -150,10 +182,7 @@ export default function ScheduleCalendar({
                   >
                     {format(day, 'd')}
                   </span>
-                  {hasShift && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-0.5" />
-                  )}
-                </div>
+                )}
               </button>
             );
           })}
