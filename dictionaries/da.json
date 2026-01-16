@@ -345,7 +345,7 @@
   "workerNav": {
     "roleLabel": "Rolle: Medarbejder",
     "calendar": "Min Kalender",
-    "applications": "Ansøgninger",
+    "applications": "Mine Vagter",
     "finances": "Økonomi"
   },
   "workerCalendar": {
@@ -359,8 +359,8 @@
     "notSpecified": "Ikke angivet"
   },
   "workerApplications": {
-    "title": "Mine Ansøgninger",
-    "subtitle": "Oversigt over dine ansøgninger til vagter",
+    "title": "Mine Vagter",
+    "subtitle": "Oversigt over dine vagter",
     "noApplications": "Du har ingen ansøgninger endnu.",
     "applied": "Ansøgt",
     "date": "Dato",
@@ -371,7 +371,9 @@
     "statusPending": "Afventer",
     "statusAccepted": "Accepteret",
     "statusRejected": "Afvist",
-    "statusWaitlist": "Venteliste"
+    "statusWaitlist": "Venteliste",
+    "activeTab": "Mine Vagter",
+    "archiveTab": "Arkiverede Vagter"
   },
   "workerFinances": {
     "title": "Økonomi",

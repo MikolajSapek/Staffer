@@ -58,6 +58,8 @@ interface WorkerApplicationsClientProps {
       statusRejected: string;
       statusWaitlist: string;
       message?: string;
+      activeTab?: string;
+      archiveTab?: string;
     };
   };
 }
@@ -284,8 +286,12 @@ export default function WorkerApplicationsClient({
   return (
     <Tabs defaultValue="active" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="active">My Applications</TabsTrigger>
-        <TabsTrigger value="archive">Archive Shifts</TabsTrigger>
+        <TabsTrigger value="active">
+          {dict.workerApplications.activeTab || 'My Shifts'}
+        </TabsTrigger>
+        <TabsTrigger value="archive">
+          {dict.workerApplications.archiveTab || 'Archive Shifts'}
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="active" className="mt-6">

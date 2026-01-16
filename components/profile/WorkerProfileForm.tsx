@@ -141,6 +141,26 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
           // Populate form with existing data (CPR is now decrypted)
           if (workerData) {
             const data = workerData as Record<string, unknown>;
+            
+            // If RPC doesn't return shirt_size/shoe_size, fetch directly from worker_details
+            let shirtSize = data.shirt_size;
+            let shoeSize = data.shoe_size;
+            
+            // Check if values are null/undefined (not just falsy, to allow empty strings)
+            if (shirtSize == null || shoeSize == null) {
+              const { data: sizeData } = await supabase
+                .from('worker_details')
+                .select('shirt_size, shoe_size')
+                .eq('profile_id', authUser.id)
+                .single();
+              
+              if (sizeData) {
+                // Only use fetched values if current values are null/undefined
+                if (shirtSize == null) shirtSize = sizeData.shirt_size;
+                if (shoeSize == null) shoeSize = sizeData.shoe_size;
+              }
+            }
+            
             setFormData({
               first_name: data.first_name || '',
               last_name: data.last_name || '',
@@ -148,8 +168,8 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
               tax_card_type: (data.tax_card_type || 'Hovedkort') as TaxCardType,
               bank_reg_number: data.bank_reg_number || '',
               bank_account_number: data.bank_account_number || '',
-              shirt_size: data.shirt_size || '',
-              shoe_size: data.shoe_size || '',
+              shirt_size: (shirtSize as string) || '',
+              shoe_size: (shoeSize as string) || '',
               description: data.description || '',
               experience: data.experience || '',
               cpr_number: data.cpr_number || '', // Now decrypted, safe to show in form
@@ -487,6 +507,30 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         return;
       }
 
+      // Update shirt_size and shoe_size directly in worker_details table
+      // (these fields are not handled by the RPC function)
+      const { error: sizeUpdateError } = await supabase
+        .from('worker_details')
+        .update({
+          shirt_size: formData.shirt_size.trim() || null,
+          shoe_size: formData.shoe_size.trim() || null,
+        })
+        .eq('profile_id', user.id);
+
+      if (sizeUpdateError) {
+        setSubmitError(sizeUpdateError.message || 'Kunne ikke gemme størrelser');
+        setSubmitLoading(false);
+        return;
+      }
+
+      // Immediately update formData to reflect saved values (no need to wait for refresh)
+      // This ensures the values stay visible in the form
+      setFormData(prev => ({
+        ...prev,
+        shirt_size: formData.shirt_size.trim() || '',
+        shoe_size: formData.shoe_size.trim() || '',
+      }));
+
       setSubmitSuccess(true);
       // Clear file inputs
       setAvatarFile(null);
@@ -494,15 +538,39 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       if (avatarInputRef.current) avatarInputRef.current.value = '';
       if (idCardInputRef.current) idCardInputRef.current.value = '';
 
-      // Refresh data after successful save using secure RPC
+      // Refresh router to get fresh data from database (after all updates)
+      router.refresh();
+
+      // Refresh data after successful save - use setTimeout to ensure DB has committed
       setTimeout(async () => {
-        router.refresh();
-        const supabase = createClient();
-        const { data: refreshedData } = await supabase.rpc('get_worker_profile_secure');
+        const supabaseRefresh = createClient();
+        
+        // First try to get data from RPC
+        const { data: refreshedData } = await supabaseRefresh.rpc('get_worker_profile_secure');
+        
+        // If RPC doesn't return shirt_size/shoe_size, fetch directly from worker_details
+        let shirtSize = refreshedData?.shirt_size;
+        let shoeSize = refreshedData?.shoe_size;
+        
+        // Check if values are null/undefined (not just falsy, to allow empty strings)
+        if (shirtSize == null || shoeSize == null) {
+          const { data: sizeData } = await supabaseRefresh
+            .from('worker_details')
+            .select('shirt_size, shoe_size')
+            .eq('profile_id', user.id)
+            .single();
+          
+          if (sizeData) {
+            // Only use fetched values if current values are null/undefined
+            if (shirtSize == null) shirtSize = sizeData.shirt_size;
+            if (shoeSize == null) shoeSize = sizeData.shoe_size;
+          }
+        }
+        
         if (refreshedData) {
           setWorkerDetails(refreshedData);
           const data = refreshedData as Record<string, unknown>;
-          // Update form with refreshed data (including decrypted CPR)
+          // Update form with refreshed data (including decrypted CPR and sizes)
           setFormData({
             first_name: (data.first_name as string) || '',
             last_name: (data.last_name as string) || '',
@@ -510,8 +578,8 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
             tax_card_type: ((data.tax_card_type as TaxCardType) || 'Hovedkort'),
             bank_reg_number: (data.bank_reg_number as string) || '',
             bank_account_number: (data.bank_account_number as string) || '',
-            shirt_size: (data.shirt_size as string) || '',
-            shoe_size: (data.shoe_size as string) || '',
+            shirt_size: (shirtSize as string) || (data.shirt_size as string) || '',
+            shoe_size: (shoeSize as string) || (data.shoe_size as string) || '',
             description: (data.description as string) || '',
             experience: (data.experience as string) || '',
             cpr_number: (data.cpr_number as string) || '', // Decrypted CPR
@@ -521,7 +589,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
             setAvatarError(false); // Reset error state when loading existing avatar
           }
         }
-      }, 1500);
+      }, 500);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Der opstod en fejl ved gemning af oplysninger';
       setSubmitError(errorMessage);

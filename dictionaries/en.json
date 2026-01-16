@@ -345,7 +345,7 @@
   "workerNav": {
     "roleLabel": "Role: Worker",
     "calendar": "My Calendar",
-    "applications": "Applications",
+    "applications": "My Shifts",
     "finances": "Finances"
   },
   "workerCalendar": {
@@ -359,8 +359,8 @@
     "notSpecified": "Not specified"
   },
   "workerApplications": {
-    "title": "My Applications",
-    "subtitle": "Overview of your job applications",
+    "title": "My Shifts",
+    "subtitle": "Overview of your shifts",
     "noApplications": "You have no applications yet.",
     "applied": "Applied",
     "date": "Date",
@@ -371,7 +371,9 @@
     "statusPending": "Pending",
     "statusAccepted": "Accepted",
     "statusRejected": "Rejected",
-    "statusWaitlist": "Waitlist"
+    "statusWaitlist": "Waitlist",
+    "activeTab": "My Shifts",
+    "archiveTab": "Archive Shifts"
   },
   "workerFinances": {
     "title": "Financial Overview",
