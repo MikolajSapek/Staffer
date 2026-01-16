@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,8 +40,13 @@ export default function ScheduleCalendar({
   dict,
 }: ScheduleCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
 
-  const calendarData = useMemo(() => {
+  useEffect(() => {
+    setMounted(true);
+    setNow(new Date());
+  }, []);
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -65,8 +70,6 @@ export default function ScheduleCalendar({
     return map;
   }, [shifts]);
 
-  const now = useMemo(() => new Date(), []);
-
   const hasShiftOnDate = useMemo(() => {
     return (date: Date) => {
       const dateKey = format(date, 'yyyy-MM-dd');
@@ -76,6 +79,7 @@ export default function ScheduleCalendar({
 
   const getShiftStatusForDate = useMemo(() => {
     return (date: Date): 'past' | 'future' | null => {
+      if (!now) return null;
       const dateKey = format(date, 'yyyy-MM-dd');
       const shiftsOnDate = shiftsByDate.get(dateKey) || [];
       if (shiftsOnDate.length === 0) return null;
@@ -104,6 +108,20 @@ export default function ScheduleCalendar({
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+  // Prevent hydration mismatch by not rendering calendar until mounted
+  if (!mounted || !now) {
+    return (
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-4">
+          <div className="h-8 w-8" />
+          <div className="h-7 w-32 bg-muted animate-pulse rounded" />
+          <div className="h-8 w-8" />
+        </div>
+        <div className="border rounded-lg h-[300px] bg-muted/20 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
@@ -115,7 +133,7 @@ export default function ScheduleCalendar({
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h2 className="text-xl font-semibold">
+        <h2 className="text-xl font-semibold" suppressHydrationWarning>
           {format(calendarData.monthStart, 'MMMM yyyy')}
         </h2>
         <Button
@@ -149,7 +167,7 @@ export default function ScheduleCalendar({
             const hasShift = hasShiftOnDate(day);
             const shiftStatus = getShiftStatusForDate(day);
             const isSelected = selectedDate && isSameDay(day, selectedDate);
-            const isToday = isSameDay(day, new Date());
+            const isToday = isSameDay(day, now);
             const dayNumber = format(day, 'd');
             const shiftBgColor = shiftStatus === 'past' ? 'bg-emerald-500' : shiftStatus === 'future' ? 'bg-blue-500' : '';
 

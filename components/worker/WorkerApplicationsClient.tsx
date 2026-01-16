@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar, Clock, MapPin, Wallet, Star } from 'lucide-react';
@@ -68,8 +68,14 @@ export default function WorkerApplicationsClient({
   applications,
   dict,
 }: WorkerApplicationsClientProps) {
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+  }, []);
+
   const { activeApps, archiveApps } = useMemo(() => {
-    const now = new Date();
+    if (!now) return { activeApps: [], archiveApps: [] };
 
     const filteredApps = (applications || []).filter((app) => {
       const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
@@ -95,7 +101,7 @@ export default function WorkerApplicationsClient({
     });
 
     return { activeApps: active, archiveApps: archive };
-  }, [applications]);
+  }, [applications, now]);
 
   const getStatusBadge = useCallback((status: string, isArchive: boolean = false) => {
     if (isArchive) {
@@ -192,12 +198,12 @@ export default function WorkerApplicationsClient({
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span>{formattedDate}</span>
+                <span suppressHydrationWarning>{formattedDate}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span>
+                <span suppressHydrationWarning>
                   {formattedStartTime} - {formattedEndTime}
                 </span>
               </div>

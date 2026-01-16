@@ -47,7 +47,7 @@ export default async function RootLayout({
   const dict = await getDictionary(lang as 'en-US' | 'da');
   return (
     <html lang={lang}>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <LanguageSwitcher />
         <Navbar dict={dict} lang={lang} />
         {children}
