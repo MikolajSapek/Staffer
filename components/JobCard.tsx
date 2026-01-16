@@ -67,8 +67,9 @@ export function JobCard({
 }: JobCardProps) {
   const start = new Date(shift.start_time);
   const end = new Date(shift.end_time);
-  const durationHours = differenceInMinutes(end, start) / 60;
-  const totalPay = Math.round(durationHours * shift.hourly_rate);
+  const durationMinutes = differenceInMinutes(end, start);
+  const unpaidBreak = !shift.is_break_paid ? (shift.break_minutes || 0) : 0;
+  const totalPay = Math.round(((durationMinutes - unpaidBreak) / 60) * shift.hourly_rate);
 
   // Force Copenhagen display time
   const timeZone = 'Europe/Copenhagen';

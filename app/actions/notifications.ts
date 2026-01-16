@@ -28,7 +28,7 @@ export async function getCompanyNotificationCounts() {
       .from('payments')
       .select('*', { count: 'exact', head: true })
       .eq('company_id', user.id)
-      .eq('status', 'pending'),
+      .eq('payment_status', 'pending'),
   ]);
 
   return {

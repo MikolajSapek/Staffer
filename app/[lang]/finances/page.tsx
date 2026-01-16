@@ -60,6 +60,8 @@ export default async function FinancesPage({
         hourly_rate,
         start_time,
         end_time,
+        break_minutes,
+        is_break_paid,
         company_id
       )
     `)
@@ -101,6 +103,7 @@ export default async function FinancesPage({
     const shift = Array.isArray(ts.shift) ? ts.shift[0] : ts.shift;
     
     // Calculate total_pay based on manager_approved times or shift scheduled times
+    // with unpaid break deduction
     let totalPay = 0;
     if (shift) {
       // Use manager_approved times if available, otherwise fall back to shift scheduled times
@@ -110,8 +113,9 @@ export default async function FinancesPage({
       if (startTime && endTime) {
         const start = new Date(startTime);
         const end = new Date(endTime);
-        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        totalPay = hours * (shift.hourly_rate || 0);
+        const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+        const unpaidBreak = !shift.is_break_paid ? (shift.break_minutes || 0) : 0;
+        totalPay = Math.round(((durationMinutes - unpaidBreak) / 60) * (shift.hourly_rate || 0));
       }
     }
 

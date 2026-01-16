@@ -85,6 +85,8 @@ export default async function TimesheetsPage({
         start_time,
         end_time,
         hourly_rate,
+        break_minutes,
+        is_break_paid,
         company_id,
         status
       )
@@ -137,17 +139,16 @@ export default async function TimesheetsPage({
     const startTime = timesheet.manager_approved_start || shift?.start_time || timesheet.clock_in_time;
     const endTime = timesheet.manager_approved_end || shift?.end_time || timesheet.clock_out_time;
     
-    let hours = 0;
-    if (startTime && endTime) {
+    // Calculate total_pay with unpaid break deduction
+    let totalPay = 0;
+    if (startTime && endTime && shift) {
       const start = new Date(startTime);
       const end = new Date(endTime);
-      const diffMs = end.getTime() - start.getTime();
-      hours = diffMs / (1000 * 60 * 60);
+      const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+      const unpaidBreak = !shift.is_break_paid ? (shift.break_minutes || 0) : 0;
+      const hourlyRate = shift?.hourly_rate || 0;
+      totalPay = Math.round(((durationMinutes - unpaidBreak) / 60) * hourlyRate);
     }
-
-    // Calculate total_pay
-    const hourlyRate = shift?.hourly_rate || 0;
-    const totalPay = hours * hourlyRate;
 
     return {
       id: timesheet.id,

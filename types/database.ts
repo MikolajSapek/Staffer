@@ -467,7 +467,7 @@ export interface Database {
           hours_worked: number;
           shift_title_snapshot: string;
           worker_name_snapshot: string;
-          status: 'pending' | 'paid' | 'cancelled';
+          payment_status: 'pending' | 'paid' | 'cancelled';
           metadata: Json | null;
           created_at: string;
           updated_at: string;
@@ -483,7 +483,7 @@ export interface Database {
           hours_worked: number;
           shift_title_snapshot: string;
           worker_name_snapshot: string;
-          status?: 'pending' | 'paid' | 'cancelled';
+          payment_status?: 'pending' | 'paid' | 'cancelled';
           metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
@@ -499,7 +499,7 @@ export interface Database {
           hours_worked?: number;
           shift_title_snapshot?: string;
           worker_name_snapshot?: string;
-          status?: 'pending' | 'paid' | 'cancelled';
+          payment_status?: 'pending' | 'paid' | 'cancelled';
           metadata?: Json | null;
           created_at?: string;
           updated_at?: string;

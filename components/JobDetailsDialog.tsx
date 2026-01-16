@@ -99,8 +99,9 @@ export function JobDetailsDialog({
   const timeZone = 'Europe/Copenhagen';
   const start = new Date(shift.start_time);
   const end = new Date(shift.end_time);
-  const durationHours = differenceInMinutes(end, start) / 60;
-  const totalPay = Math.round(durationHours * shift.hourly_rate);
+  const durationMinutes = differenceInMinutes(end, start);
+  const unpaidBreak = !shift.is_break_paid ? (shift.break_minutes || 0) : 0;
+  const totalPay = Math.round(((durationMinutes - unpaidBreak) / 60) * shift.hourly_rate);
 
   const dateFormatted = formatInTimeZone(start, timeZone, 'dd/MM/yyyy', { locale: da });
   const startTimeFormatted = formatInTimeZone(start, timeZone, 'HH:mm', { locale: da });

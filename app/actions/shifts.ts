@@ -130,6 +130,34 @@ export async function updateShiftAction(
     const startIso = toIsoWithTimezone(formData.start_time);
     const endIso = toIsoWithTimezone(formData.end_time);
 
+    // Validate minimum shift duration (2 hours)
+    if (startIso && endIso) {
+      const start = new Date(startIso);
+      const end = new Date(endIso);
+      const diffInHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      
+      if (diffInHours < 2) {
+        return {
+          success: false,
+          message: 'Minimum shift duration is 2 hours',
+          error: 'Minimum shift duration is 2 hours',
+        };
+      }
+    }
+
+    // Ensure numeric values are properly converted
+    const hourlyRate = typeof formData.hourly_rate === 'string' 
+      ? parseFloat(formData.hourly_rate) 
+      : Number(formData.hourly_rate);
+    
+    const vacanciesTotal = typeof formData.vacancies_total === 'string'
+      ? parseInt(formData.vacancies_total, 10)
+      : Number(formData.vacancies_total);
+    
+    const breakMinutes = typeof formData.break_minutes === 'string'
+      ? parseInt(formData.break_minutes, 10)
+      : Number(formData.break_minutes) || 0;
+
     const { error } = await supabase.rpc('update_shift_secure', {
       p_shift_id: shiftId,
       p_company_id: user.id,
@@ -138,19 +166,21 @@ export async function updateShiftAction(
       p_start_time: startIso,
       p_end_time: endIso,
       p_location_id: formData.location_id ?? null,
-      p_hourly_rate: formData.hourly_rate,
-      p_vacancies_total: formData.vacancies_total,
+      p_hourly_rate: hourlyRate,
+      p_vacancies_total: vacanciesTotal,
       p_category: formData.category,
-      p_break_minutes: formData.break_minutes,
+      p_break_minutes: breakMinutes,
       p_is_break_paid: formData.is_break_paid,
       p_is_urgent: formData.is_urgent,
       p_possible_overtime: formData.possible_overtime,
     });
 
     if (error) {
+      // Return the specific error message from the database
+      // This could be messages like "Cannot change dates..." from the RPC function
       return {
         success: false,
-        message: 'Failed to update shift',
+        message: error.message || 'Failed to update shift',
         error: error.message,
       };
     }

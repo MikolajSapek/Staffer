@@ -17,6 +17,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { updateShiftAction } from '@/app/actions/shifts';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Location {
   id: string;
@@ -44,8 +45,57 @@ interface EditShiftFormProps {
   vacanciesTaken: number;
   shiftId: string;
   lang: string;
-  dict: CreateShiftFormProps['dict'];
-  shiftOptions: CreateShiftFormProps['shiftOptions'];
+  dict: {
+    formTitle: string;
+    formDescription: string;
+    jobTitle: string;
+    jobTitlePlaceholder: string;
+    description: string;
+    descriptionPlaceholder: string;
+    descriptionHint: string;
+    startTime: string;
+    endTime: string;
+    hourlyRate: string;
+    hourlyRatePlaceholder: string;
+    hourlyRateHint: string;
+    possibleOvertime?: string;
+    possibleOvertimeHint?: string;
+    vacancies: string;
+    vacanciesHint: string;
+    location: string;
+    category: string;
+    selectLocation: string;
+    selectCategory: string;
+    submit: string;
+    creating: string;
+    cancel: string;
+    validation: {
+      titleRequired: string;
+      locationRequired: string;
+      categoryRequired: string;
+      startTimeRequired: string;
+      endTimeRequired: string;
+      hourlyRateRequired: string;
+      vacanciesRequired: string;
+      endTimeAfterStart: string;
+      minShiftDuration: string;
+    };
+  };
+  shiftOptions: {
+    categories: {
+      gastronomy: string;
+      warehouse: string;
+      production: string;
+      retail: string;
+      hospitality: string;
+      cleaning: string;
+      construction: string;
+      logistics: string;
+      office: string;
+      healthcare: string;
+      other: string;
+    };
+  };
   locations: Array<{ id: string; name: string; address: string }>;
   onSuccess?: () => void;
   onClose?: () => void;
@@ -84,6 +134,7 @@ export default function EditShiftForm({
 }: EditShiftFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     title: initialData.title || '',
@@ -183,7 +234,6 @@ export default function EditShiftForm({
       const endUtc = fromZonedTime(formData.end_time, timeZone);
 
       const payload = {
-        company_id: initialData.company_id,
         location_id: formData.location_id || null,
         title: formData.title.trim(),
         description: formData.description.trim() || null,
@@ -201,10 +251,26 @@ export default function EditShiftForm({
       const result = await updateShiftAction(shiftId, payload);
 
       if (!result.success) {
-        setError(result.error || result.message || 'Failed to update shift');
+        const errorMessage = result.error || result.message || 'Failed to update shift';
+        setError(errorMessage);
+        
+        // Show toast with the specific error message from database
+        toast({
+          variant: 'destructive',
+          title: 'Error updating shift',
+          description: errorMessage,
+        });
+        
         setLoading(false);
         return;
       }
+
+      // Show success toast
+      toast({
+        variant: 'default',
+        title: 'Success',
+        description: result.message || 'Shift updated successfully',
+      });
 
       if (onSuccess) onSuccess();
     } catch (err: unknown) {
