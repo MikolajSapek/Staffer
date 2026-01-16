@@ -38,7 +38,8 @@ export async function updateApplicationStatus(
     start_time: string;
     end_time: string;
   }
-  const shift = application.shifts as ShiftData;
+  // Supabase returns joins as arrays even for 1:1 relationships
+  const shift = (Array.isArray(application.shifts) ? application.shifts[0] : application.shifts) as ShiftData;
   if (shift.company_id !== user.id) {
     return { error: 'Unauthorized' };
   }
@@ -76,7 +77,8 @@ export async function updateApplicationStatus(
           start_time: string;
           end_time: string;
         }
-        const appShift = app.shifts as PendingShiftData;
+        // Supabase returns joins as arrays even for 1:1 relationships
+        const appShift = (Array.isArray(app.shifts) ? app.shifts[0] : app.shifts) as PendingShiftData;
         const appStartTime = new Date(appShift.start_time);
         const appEndTime = new Date(appShift.end_time);
 
