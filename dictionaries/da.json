@@ -195,6 +195,7 @@
       "hourlyRateRequired": "Timeløn skal være større end 0",
       "vacanciesRequired": "Antal pladser skal være mindst 1",
       "endTimeAfterStart": "Sluttid skal være efter starttid",
+      "minShiftDuration": "Vagt skal være mindst 2 timer lang",
       "companyProfileIncomplete": "Din virksomhedsprofil er ufuldstændig. Udfyld venligst dit virksomhedsnavn, CVR-nummer og hovedadresse i dine profilindstillinger, før du opretter en vagt."
     },
     "templates": {

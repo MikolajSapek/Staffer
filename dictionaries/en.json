@@ -195,6 +195,7 @@
       "hourlyRateRequired": "Hourly rate must be greater than 0",
       "vacanciesRequired": "Number of positions must be at least 1",
       "endTimeAfterStart": "End time must be after start time",
+      "minShiftDuration": "Shift must be at least 2 hours long",
       "companyProfileIncomplete": "Your company profile is incomplete. Please complete your company name, CVR number, and main address in your profile settings before creating a shift."
     },
     "templates": {

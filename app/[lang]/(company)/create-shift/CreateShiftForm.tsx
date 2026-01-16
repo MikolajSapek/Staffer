@@ -81,6 +81,7 @@ interface CreateShiftFormProps {
       hourlyRateRequired: string;
       vacanciesRequired: string;
       endTimeAfterStart: string;
+      minShiftDuration: string;
       companyProfileIncomplete?: string;
     };
     templates: {
@@ -284,6 +285,11 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
       const end = new Date(formData.end_time);
       if (end <= start) {
         return dict.validation.endTimeAfterStart;
+      }
+      // Validate minimum shift duration (2 hours)
+      const diffInHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      if (diffInHours < 2) {
+        return dict.validation.minShiftDuration;
       }
     }
 
