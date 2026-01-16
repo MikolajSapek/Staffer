@@ -124,3 +124,118 @@ export async function updateApplicationStatus(
   return { success: true };
 }
 
+/**
+ * Fill available vacancies by accepting the first N pending applications for a shift
+ */
+export async function fillVacancies(
+  shiftId: string,
+  applicationIds: string[],
+  lang: string
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/${lang}/login`);
+  }
+
+  // Verify the company owns this shift
+  const { data: shift, error: shiftError } = await supabase
+    .from('shifts')
+    .select('company_id, vacancies_total, vacancies_taken')
+    .eq('id', shiftId)
+    .single();
+
+  if (shiftError || !shift) {
+    return { error: shiftError?.message || 'Shift not found' };
+  }
+
+  if (shift.company_id !== user.id) {
+    return { error: 'Unauthorized' };
+  }
+
+  // Verify all applications belong to this shift and are pending
+  const { data: applications, error: appsError } = await supabase
+    .from('shift_applications')
+    .select('id, status, shift_id')
+    .in('id', applicationIds)
+    .eq('shift_id', shiftId)
+    .eq('status', 'pending');
+
+  if (appsError) {
+    return { error: appsError.message };
+  }
+
+  if (!applications || applications.length === 0) {
+    return { error: 'No valid pending applications found' };
+  }
+
+  // Accept all valid applications
+  const validIds = applications.map(app => app.id);
+  const { error: updateError } = await supabase
+    .from('shift_applications')
+    .update({ status: 'accepted' })
+    .in('id', validIds);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  // Revalidate paths
+  revalidatePath(`/${lang}/candidates`, 'page');
+  revalidatePath(`/${lang}/shifts`, 'page');
+  revalidatePath(`/${lang}/shifts/${shiftId}`, 'page');
+  revalidatePath(`/${lang}/dashboard`, 'page');
+
+  return { success: true, acceptedCount: validIds.length };
+}
+
+/**
+ * Reject all pending applications for a shift
+ */
+export async function rejectAllPending(
+  shiftId: string,
+  lang: string
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/${lang}/login`);
+  }
+
+  // Verify the company owns this shift
+  const { data: shift, error: shiftError } = await supabase
+    .from('shifts')
+    .select('company_id')
+    .eq('id', shiftId)
+    .single();
+
+  if (shiftError || !shift) {
+    return { error: shiftError?.message || 'Shift not found' };
+  }
+
+  if (shift.company_id !== user.id) {
+    return { error: 'Unauthorized' };
+  }
+
+  // Reject all pending applications for this shift
+  const { data: rejectedApps, error: updateError } = await supabase
+    .from('shift_applications')
+    .update({ status: 'rejected' })
+    .eq('shift_id', shiftId)
+    .eq('status', 'pending')
+    .select('id');
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  // Revalidate paths
+  revalidatePath(`/${lang}/candidates`, 'page');
+  revalidatePath(`/${lang}/shifts`, 'page');
+  revalidatePath(`/${lang}/shifts/${shiftId}`, 'page');
+  revalidatePath(`/${lang}/dashboard`, 'page');
+
+  return { success: true, rejectedCount: rejectedApps?.length || 0 };
+}

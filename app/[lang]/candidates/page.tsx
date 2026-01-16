@@ -30,9 +30,12 @@ export default async function CandidatesPage({
   }
 
   // Fetch applications for company's shifts with worker details
+  // Filter: only shifts where end_time > (now - 3 days)
   // Using worker_details table via nested join through profiles (1:1 via profile_id)
   // Fetch from profiles: first_name, last_name, email
   // Fetch from worker_details: avatar_url, phone_number, experience, description
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  
   const { data: allApplications } = await supabase
     .from('shift_applications')
     .select(`
@@ -42,11 +45,22 @@ export default async function CandidatesPage({
       worker_message,
       shift_id,
       worker_id,
-      shifts (
+      shifts!inner (
         id,
         title,
+        description,
         start_time,
-        end_time
+        end_time,
+        hourly_rate,
+        break_minutes,
+        is_break_paid,
+        vacancies_total,
+        vacancies_taken,
+        location_id,
+        locations:location_id (
+          name,
+          address
+        )
       ),
       profiles:worker_id (
         id,
@@ -64,6 +78,7 @@ export default async function CandidatesPage({
       )
     `)
     .eq('company_id', user.id)
+    .gt('shifts.end_time', threeDaysAgo)
     .order('applied_at', { ascending: false });
 
 

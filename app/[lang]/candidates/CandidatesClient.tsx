@@ -2,21 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Star } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Star, Users, X, Clock, Wallet, MapPin } from 'lucide-react';
 import CandidateProfileModal from '@/components/company/CandidateProfileModal';
 import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
 import { formatDateTime, formatDateShort, formatTime } from '@/lib/date-utils';
+import { fillVacancies, rejectAllPending } from '@/app/actions/applications';
 
 interface WorkerDetails {
   avatar_url: string | null;
@@ -36,11 +30,23 @@ interface Profile {
   worker_details: WorkerDetails | null;
 }
 
+interface Location {
+  name: string;
+  address: string;
+}
+
 interface Shift {
   id: string;
   title: string;
+  description: string | null;
   start_time: string;
   end_time: string;
+  hourly_rate: number;
+  break_minutes: number;
+  is_break_paid: boolean;
+  vacancies_total: number;
+  vacancies_taken: number;
+  locations: Location | null;
 }
 
 interface Application {
@@ -104,6 +110,7 @@ export default function CandidatesClient({
   const router = useRouter();
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [loadingShiftId, setLoadingShiftId] = useState<string | null>(null);
 
   // Debug: Log data structure to understand Supabase response format
   if (applications && applications.length > 0) {
@@ -143,37 +150,41 @@ export default function CandidatesClient({
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
-  const renderRating = (averageRating: number | null, totalReviews: number) => {
+  const renderRating = (averageRating: number | null, totalReviews: number, compact: boolean = false) => {
     if (averageRating === null || totalReviews === 0) {
       return (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
               key={star}
-              className="h-4 w-4 fill-muted stroke-muted"
+              className="h-3.5 w-3.5 fill-muted stroke-muted"
             />
           ))}
-          <span className="text-xs text-muted-foreground ml-1">No reviews</span>
+          {!compact && (
+            <span className="text-xs text-muted-foreground ml-1">No reviews</span>
+          )}
         </div>
       );
     }
 
     const rating = Math.round(averageRating);
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-4 w-4 ${
+            className={`h-3.5 w-3.5 ${
               star <= rating
                 ? 'fill-yellow-400 stroke-yellow-400'
                 : 'fill-muted stroke-muted'
             }`}
           />
         ))}
-        <span className="text-xs text-muted-foreground ml-1">
-          {averageRating.toFixed(1)} ({totalReviews})
-        </span>
+        {!compact && (
+          <span className="text-xs text-muted-foreground ml-1">
+            {averageRating.toFixed(1)} ({totalReviews})
+          </span>
+        )}
       </div>
     );
   };
@@ -192,6 +203,61 @@ export default function CandidatesClient({
     // Reset selected application when modal is closed
     if (!open) {
       setSelectedApplication(null);
+    }
+  };
+
+  const handleFillVacancies = async (shift: Shift, pendingApplications: Application[]) => {
+    if (!shift) return;
+
+    const slotsLeft = shift.vacancies_total - shift.vacancies_taken;
+    if (slotsLeft <= 0 || pendingApplications.length === 0) {
+      return;
+    }
+
+    // Get first N pending applications (sorted by applied_at)
+    const sortedPending = [...pendingApplications]
+      .filter(app => app.status === 'pending')
+      .sort((a, b) => new Date(a.applied_at).getTime() - new Date(b.applied_at).getTime())
+      .slice(0, slotsLeft);
+
+    const applicationIds = sortedPending.map(app => app.id);
+
+    setLoadingShiftId(shift.id);
+    try {
+      const result = await fillVacancies(shift.id, applicationIds, lang);
+      if (result.error) {
+        alert(result.error);
+      } else {
+        router.refresh();
+      }
+    } catch (error) {
+      alert('An error occurred while filling vacancies');
+    } finally {
+      setLoadingShiftId(null);
+    }
+  };
+
+  const handleRejectAllPending = async (shiftId: string, pendingCount: number) => {
+    if (pendingCount === 0) return;
+
+    const confirmed = window.confirm(
+      'Czy na pewno chcesz odrzucić wszystkich pozostałych kandydatów?'
+    );
+
+    if (!confirmed) return;
+
+    setLoadingShiftId(shiftId);
+    try {
+      const result = await rejectAllPending(shiftId, lang);
+      if (result.error) {
+        alert(result.error);
+      } else {
+        router.refresh();
+      }
+    } catch (error) {
+      alert('An error occurred while rejecting applications');
+    } finally {
+      setLoadingShiftId(null);
     }
   };
 
@@ -218,7 +284,7 @@ export default function CandidatesClient({
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {shiftGroups.map((group) => {
           // Get shift details from first application in group
           const firstApp = group.applications[0];
@@ -228,78 +294,158 @@ export default function CandidatesClient({
             ? `${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`
             : '';
           
+          const pendingCount = group.applications.filter(a => a.status === 'pending').length;
+          const isFull = shift ? shift.vacancies_taken >= shift.vacancies_total : false;
+          
+          const slotsLeft = shift ? shift.vacancies_total - shift.vacancies_taken : 0;
+          const pendingApps = group.applications.filter(a => a.status === 'pending');
+          const canFillVacancies = slotsLeft > 0 && pendingApps.length > 0;
+          const isLoading = loadingShiftId === group.shiftId;
+
           return (
-          <div key={group.shiftId}>
-            <div className="mb-4">
-              <h3 className="text-xl font-bold">{group.shiftTitle}</h3>
-              {shiftDate && (
-                <div className="text-sm text-muted-foreground mt-1">
-                  {shiftDate} {shiftTime && `• ${shiftTime}`}
+          <Card key={group.shiftId} className="overflow-hidden">
+            <CardHeader className="relative">
+              {/* Actions in top right */}
+              <div className="absolute top-6 right-6 flex items-center gap-2">
+                {canFillVacancies && shift && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleFillVacancies(shift, group.applications)}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Users className="h-4 w-4" />
+                    Fill Remaining
+                  </Button>
+                )}
+                {pendingCount > 0 && shift && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRejectAllPending(shift.id, pendingCount)}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Reject Others
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-4 pr-48">
+                {/* Title - Dark Navy */}
+                <CardTitle className="text-2xl font-bold text-slate-800">
+                  {group.shiftTitle}
+                </CardTitle>
+                
+                {/* Info Badges with Icons */}
+                {shift && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Badge variant="outline" className="text-xs font-normal px-3 py-1.5 bg-slate-50 border-slate-200">
+                      <Clock className="h-3 w-3 mr-1.5 text-slate-600" />
+                      {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs font-normal px-3 py-1.5 bg-slate-50 border-slate-200">
+                      <Wallet className="h-3 w-3 mr-1.5 text-slate-600" />
+                      {shift.hourly_rate} DKK/h
+                    </Badge>
+                    {shift.locations && (
+                      <Badge variant="outline" className="text-xs font-normal px-3 py-1.5 bg-slate-50 border-slate-200">
+                        <MapPin className="h-3 w-3 mr-1.5 text-slate-600" />
+                        {shift.locations.name} ({shift.locations.address})
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                
+                {/* Description - Italic Gray */}
+                {shift?.description && (
+                  <p className="text-sm text-slate-600 italic mt-2">
+                    {shift.description}
+                  </p>
+                )}
+                
+                {/* Stats Row */}
+                <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-slate-200">
+                  {shift && (
+                    <span className="text-sm text-muted-foreground">
+                      Miejsca: {shift.vacancies_taken}/{shift.vacancies_total}
+                    </span>
+                  )}
+                  {pendingCount > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {pendingCount} {dict.candidatesPage.status.pending.toLowerCase()}
+                    </Badge>
+                  )}
+                  {isFull && (
+                    <Badge variant="destructive" className="font-semibold text-xs">
+                      FULL
+                    </Badge>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{dict.candidatesPage.table.candidate}</TableHead>
-                    <TableHead>{dict.candidatesPage.table.rating}</TableHead>
-                    <TableHead>{dict.candidatesPage.table.status}</TableHead>
-                    <TableHead>{dict.candidatesPage.table.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {group.applications.map((app) => {
-                    const profile = app.profiles;
-                    const workerDetails = getWorkerDetails(profile);
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3">
+                {group.applications.map((app) => {
+                  const profile = app.profiles;
+                  const workerDetails = getWorkerDetails(profile);
 
-                    if (!profile) return null;
+                  if (!profile) return null;
 
-                    // Extract name from profiles table, avatar and phone from worker_details
-                    const firstName = profile.first_name || '';
-                    const lastName = profile.last_name || '';
-                    const fullName = `${firstName} ${lastName}`.trim() || profile.email || 'Unknown';
-                    const phoneNumber = workerDetails?.phone_number || '';
-                    const initials = firstName && lastName 
-                      ? getInitials(firstName, lastName)
-                      : profile.email?.charAt(0).toUpperCase() || '??';
-                    const avatarUrl = workerDetails?.avatar_url || null;
+                  // Extract name from profiles table, avatar and phone from worker_details
+                  const firstName = profile.first_name || '';
+                  const lastName = profile.last_name || '';
+                  const fullName = `${firstName} ${lastName}`.trim() || profile.email || 'Unknown';
+                  const phoneNumber = workerDetails?.phone_number || '';
+                  const initials = firstName && lastName 
+                    ? getInitials(firstName, lastName)
+                    : profile.email?.charAt(0).toUpperCase() || '??';
+                  const avatarUrl = workerDetails?.avatar_url || null;
 
-                    return (
-                      <TableRow
-                        key={app.id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleRowClick(app)}
-                      >
-                        <TableCell className="py-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={avatarUrl || undefined} alt={fullName} />
-                              <AvatarFallback>{initials}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-semibold text-foreground">{fullName}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {profile.email || ''}
-                              </div>
-                              {phoneNumber && (
-                                <div className="text-sm text-muted-foreground">
-                                  {phoneNumber}
-                                </div>
-                              )}
+                  return (
+                    <div
+                      key={app.id}
+                      className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
+                      onClick={() => handleRowClick(app)}
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-1">
+                          {/* Larger Avatar */}
+                          <Avatar className="h-14 w-14 border-2 border-slate-100">
+                            <AvatarImage src={avatarUrl || undefined} alt={fullName} />
+                            <AvatarFallback className="bg-slate-100 text-slate-700 text-lg">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          {/* Name and Rating */}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-slate-900 text-base">
+                                {fullName}
+                              </span>
+                              <WorkerReviewsDialog
+                                workerId={profile.id}
+                                workerName={fullName}
+                              >
+                                {renderRating(profile.average_rating, profile.total_reviews, true)}
+                              </WorkerReviewsDialog>
                             </div>
+                            <div className="text-sm text-slate-600">
+                              {profile.email || ''}
+                            </div>
+                            {phoneNumber && (
+                              <div className="text-sm text-slate-500">
+                                {phoneNumber}
+                              </div>
+                            )}
                           </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <WorkerReviewsDialog
-                            workerId={profile.id}
-                            workerName={fullName}
-                          >
-                            {renderRating(profile.average_rating, profile.total_reviews)}
-                          </WorkerReviewsDialog>
-                        </TableCell>
-                        <TableCell className="py-4">{getStatusBadge(app.status)}</TableCell>
-                        <TableCell className="py-4">
+                        </div>
+                        
+                        {/* Status and Action */}
+                        <div className="flex items-center gap-3">
+                          {getStatusBadge(app.status)}
                           <Button
                             variant="outline"
                             size="sm"
@@ -307,17 +453,18 @@ export default function CandidatesClient({
                               e.stopPropagation();
                               handleRowClick(app);
                             }}
+                            className="text-xs"
                           >
                             {dict.candidatesPage.actions.viewProfile}
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
           );
         })}
       </div>
