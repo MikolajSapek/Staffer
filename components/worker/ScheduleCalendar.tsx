@@ -47,6 +47,8 @@ export default function ScheduleCalendar({
     setMounted(true);
     setNow(new Date());
   }, []);
+
+  const calendarData = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
