@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Star, Users, X, Clock, Wallet, MapPin } from 'lucide-react';
+import { Star, Users, X, Clock, Wallet, MapPin, Calendar } from 'lucide-react';
 import CandidateProfileModal from '@/components/company/CandidateProfileModal';
 import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
 import { formatTime } from '@/lib/date-utils';
+import { format } from 'date-fns';
 import { fillVacancies, rejectAllPending } from '@/app/actions/applications';
 
 interface WorkerDetails {
@@ -336,9 +337,19 @@ export default function CandidatesClient({
               </div>
 
               <div className="space-y-4 pr-48">
-                <CardTitle className="text-2xl font-bold text-slate-800">
-                  {group.shiftTitle}
-                </CardTitle>
+                <div>
+                  <CardTitle className="text-2xl font-bold text-slate-800">
+                    {group.shiftTitle}
+                  </CardTitle>
+                  {group.shift && (
+                    <div className="mt-2">
+                      <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full w-fit inline-flex items-center gap-1.5">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(group.shift.start_time), 'dd MMM')}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 
                 {group.shift && (
                   <div className="flex flex-wrap gap-2 mt-3">
