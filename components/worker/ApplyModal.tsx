@@ -144,7 +144,11 @@ export default function ApplyModal({
               onChange={(e) => setMessage(e.target.value)}
               disabled={loading}
               rows={4}
+              maxLength={100}
             />
+            <div className="text-xs text-muted-foreground text-right">
+              {message.length}/100
+            </div>
           </div>
 
           {error && (

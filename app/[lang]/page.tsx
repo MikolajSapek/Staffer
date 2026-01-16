@@ -69,7 +69,12 @@ export default async function JobBoardPage({
     .gt('start_time', new Date().toISOString())
     .order('start_time', { ascending: true });
 
-  const shifts = shiftsError ? [] : (shiftsData || []);
+  // Filtrujemy tylko te zmiany, które mają wolne miejsca
+  const availableShifts = (shiftsData || []).filter(shift => 
+    shift.vacancies_taken < shift.vacancies_total
+  );
+  
+  const shifts = shiftsError ? [] : availableShifts;
 
   return (
     <div className="container mx-auto px-4 py-8">

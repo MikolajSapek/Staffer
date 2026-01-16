@@ -73,7 +73,7 @@ export default async function CompanyDashboardPage({
       )
     `)
     .eq('company_id', user.id)
-    .or('status.eq.cancelled,status.eq.archived,status.eq.completed')
+    .or('status.eq.cancelled,status.eq.completed')
     .order('end_time', { ascending: false })
     .limit(10);
 

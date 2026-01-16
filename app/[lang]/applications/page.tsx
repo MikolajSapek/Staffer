@@ -202,7 +202,9 @@ export default async function ApplicationsPage({
                     {app.worker_message && (
                       <div className="mt-3 pt-3 border-t">
                         <span className="font-medium">{dict.workerApplications.message || 'Your message'}:</span>
-                        <p className="text-muted-foreground mt-1">{app.worker_message}</p>
+                        <p className="text-muted-foreground mt-1 break-words whitespace-pre-wrap overflow-y-auto max-h-[120px] w-full block">
+                          {app.worker_message}
+                        </p>
                       </div>
                     )}
                   </div>

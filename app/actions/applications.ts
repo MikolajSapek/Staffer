@@ -96,6 +96,8 @@ export async function updateApplicationStatus(
   }
 
   // Revalidate all relevant paths to ensure immediate UI updates
+  // This ensures that workers see updated application status immediately
+  // after auto-reject trigger fires (when shift becomes full)
   const shiftId = application.shift_id;
   
   // Dashboard - shows archived shifts and stats
@@ -110,8 +112,11 @@ export async function updateApplicationStatus(
   // Candidates page - shows application status
   revalidatePath(`/${lang}/candidates`, 'page');
   
-  // Job board - remove full shifts
+  // Job board - remove full shifts (workers see updated availability)
   revalidatePath(`/${lang}`, 'page');
+  
+  // Worker applications page - workers see updated status (including auto-rejected)
+  revalidatePath(`/${lang}/applications`, 'page');
   
   // Worker schedule - update worker's calendar
   revalidatePath(`/${lang}/schedule`, 'page');

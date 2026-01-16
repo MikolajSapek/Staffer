@@ -52,6 +52,9 @@ export default async function BillingPage({
     redirect(`/${lang}/company-setup`);
   }
 
+  // Upewnij się, że stare zmiany są oznaczone jako completed
+  await supabase.rpc('update_completed_shifts');
+
   // Fetch finances data
   const financesResult = await getCompanyFinances(user.id);
 

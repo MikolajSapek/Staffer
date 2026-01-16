@@ -30,6 +30,9 @@ export default async function ShiftsPage({
     redirect(`/${lang}`);
   }
 
+  // Upewnij się, że stare zmiany są oznaczone jako completed
+  await supabase.rpc('update_completed_shifts');
+
   // Get current time for filtering
   const now = new Date().toISOString();
 

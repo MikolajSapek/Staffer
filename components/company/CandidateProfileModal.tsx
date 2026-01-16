@@ -279,13 +279,13 @@ export default function CandidateProfileModal({
 
           {/* Application Message */}
           {application.worker_message && (
-            <div className="space-y-2">
+            <div className="space-y-2 w-full max-w-full">
               <div className="text-sm font-medium text-muted-foreground">
                 {dict.applicationMessage}
               </div>
-              <div className="rounded-md border bg-muted/50 p-4">
-                <p className="text-sm whitespace-pre-wrap">{application.worker_message}</p>
-              </div>
+              <p className="break-all overflow-wrap-anywhere whitespace-pre-wrap w-full max-w-full bg-gray-50 p-3 rounded-lg border">
+                {application.worker_message}
+              </p>
             </div>
           )}
 
