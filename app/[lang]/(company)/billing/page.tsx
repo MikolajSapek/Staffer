@@ -106,6 +106,36 @@ export default async function BillingPage({
     return hours.toFixed(2);
   };
 
+  // Format correction note to a concise label
+  const formatCorrectionNote = (note: string | undefined | null, hoursWorked: number): string | null => {
+    if (!note) return null;
+    
+    // If note is short, use it directly
+    if (note.length <= 30) {
+      return note.toUpperCase();
+    }
+    
+    // Extract hour difference from patterns like "Hours reduced by company from 3.00 to 2.75"
+    const fromToMatch = note.match(/from\s+(\d+\.?\d*)\s+to\s+(\d+\.?\d*)/i);
+    if (fromToMatch) {
+      const fromHours = parseFloat(fromToMatch[1]);
+      const toHours = parseFloat(fromToMatch[2]);
+      const diff = toHours - fromHours;
+      const diffFormatted = diff >= 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+      return `CORR: ${diffFormatted}h`;
+    }
+    
+    // Extract "reduced by" pattern
+    const reducedMatch = note.match(/reduced\s+by\s+(\d+\.?\d*)/i);
+    if (reducedMatch) {
+      const reduction = parseFloat(reducedMatch[1]);
+      return `CORR: -${reduction.toFixed(2)}h`;
+    }
+    
+    // Fallback: show MODIFIED with current hours
+    return `MODIFIED: ${hoursWorked.toFixed(2)}h`;
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -172,6 +202,7 @@ export default async function BillingPage({
                   
                   const workerDetails = payment.profiles ? getWorkerDetails(payment.profiles) : null;
                   const avatarUrl = workerDetails?.avatar_url || null;
+                  const correctionLabel = formatCorrectionNote(payment.metadata?.correction_note, payment.hours_worked);
 
                   return (
                     <TableRow 
@@ -198,7 +229,14 @@ export default async function BillingPage({
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
-                        {formatHours(payment.hours_worked)}h
+                        <div className="flex flex-col items-end">
+                          <span className="font-semibold text-gray-900">{Number(payment.hours_worked).toFixed(2)}h</span>
+                          {correctionLabel && (
+                            <span className="text-[9px] uppercase tracking-wider text-orange-500 font-bold bg-orange-50 px-1 rounded-sm w-fit mt-0.5">
+                              {correctionLabel}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                         {formatCurrency(payment.hourly_rate, payment.currency)}

@@ -36,6 +36,7 @@ interface Timesheet {
   manager_approved_end: string | null;
   was_disputed?: boolean;
   total_pay: number | null;
+  rejection_reason?: string | null;
   shifts: {
     id: string;
     title: string;
@@ -86,6 +87,7 @@ export default function TimesheetsClient({
 }: TimesheetsClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isUpdating, setIsUpdating] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
@@ -103,6 +105,7 @@ export default function TimesheetsClient({
   );
 
   const handleApprove = async (timesheetId: string) => {
+    setIsUpdating(true);
     setProcessingId(timesheetId);
     setError(null);
 
@@ -116,13 +119,17 @@ export default function TimesheetsClient({
         if (rpcError) {
           setError(rpcError.message || 'Failed to approve timesheet');
           setProcessingId(null);
+          setIsUpdating(false);
         } else {
+          setProcessingId(null);
+          setIsUpdating(false);
           // Refresh the page to get updated data
           router.refresh();
         }
       } catch (err: any) {
         setError(err.message || 'An unexpected error occurred');
         setProcessingId(null);
+        setIsUpdating(false);
       }
     });
   };
@@ -141,6 +148,7 @@ export default function TimesheetsClient({
       return;
     }
 
+    setIsUpdating(true);
     setProcessingId(disputingTimesheetId);
     setError(null);
 
@@ -155,7 +163,10 @@ export default function TimesheetsClient({
         if (rpcError) {
           setError(rpcError.message || 'Failed to dispute timesheet');
           setProcessingId(null);
+          setIsUpdating(false);
         } else {
+          setProcessingId(null);
+          setIsUpdating(false);
           setDisputeDialogOpen(false);
           setDisputingTimesheetId(null);
           setDisputeReason('');
@@ -165,6 +176,7 @@ export default function TimesheetsClient({
       } catch (err: any) {
         setError(err.message || 'An unexpected error occurred');
         setProcessingId(null);
+        setIsUpdating(false);
       }
     });
   };
@@ -232,6 +244,7 @@ export default function TimesheetsClient({
       return;
     }
 
+    setIsUpdating(true);
     setProcessingId(correctingTimesheet.id);
     setError(null);
 
@@ -249,6 +262,7 @@ export default function TimesheetsClient({
         if (rpcError) {
           setError(rpcError.message || 'Failed to correct timesheet hours');
           setProcessingId(null);
+          setIsUpdating(false);
           return;
         }
 
@@ -256,6 +270,7 @@ export default function TimesheetsClient({
         setCorrectDialogOpen(false);
         setCorrectingTimesheet(null);
         setProcessingId(null);
+        setIsUpdating(false);
 
         // Refresh the page to get updated data
         router.refresh();
@@ -265,6 +280,7 @@ export default function TimesheetsClient({
       } catch (err: any) {
         setError(err.message || 'An unexpected error occurred while correcting hours');
         setProcessingId(null);
+        setIsUpdating(false);
       }
     });
   };
@@ -349,7 +365,14 @@ export default function TimesheetsClient({
                       </span>
                     </TableCell>
                     <TableCell>
-                      {hours} {dict.timesheetsPage.hours}
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900">{hours} {dict.timesheetsPage.hours}</span>
+                        {timesheet.was_disputed && timesheet.rejection_reason && (
+                          <div className="text-[9px] uppercase tracking-tighter text-orange-600 font-bold leading-none mt-1">
+                            MODIFIED: {timesheet.rejection_reason.replace('Correction: ', '')}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">
                       {totalPay.toFixed(2)} DKK
@@ -363,10 +386,10 @@ export default function TimesheetsClient({
                         )}
                         <Button
                           onClick={() => handleApprove(timesheet.id)}
-                          disabled={isProcessing}
+                          disabled={isUpdating || timesheet.status !== 'pending'}
                           size="sm"
                           variant="default"
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isProcessing ? (
                             <>
@@ -382,19 +405,20 @@ export default function TimesheetsClient({
                         </Button>
                         <Button
                           onClick={() => handleDisputeClick(timesheet.id)}
-                          disabled={isProcessing}
+                          disabled={isUpdating || timesheet.status !== 'pending'}
                           size="sm"
                           variant="destructive"
+                          className="disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <AlertTriangle className="mr-2 h-4 w-4" />
                           {dict.timesheetsPage.actions.dispute}
                         </Button>
                         <Button
                           onClick={() => handleOpenCorrectDialog(timesheet)}
-                          disabled={isProcessing}
+                          disabled={isUpdating || timesheet.status !== 'pending'}
                           size="sm"
                           variant="secondary"
-                          className="bg-amber-500 hover:bg-amber-600 text-white"
+                          className="bg-amber-500 hover:bg-amber-600 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Pencil className="mr-2 h-4 w-4" />
                           Correct

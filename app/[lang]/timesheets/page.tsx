@@ -139,6 +139,9 @@ export default async function TimesheetsPage({
     const startTime = timesheet.manager_approved_start || shift?.start_time || timesheet.clock_in_time;
     const endTime = timesheet.manager_approved_end || shift?.end_time || timesheet.clock_out_time;
     
+    // Get hourly rate safely (Supabase returns relations as arrays)
+    const rate = shift?.hourly_rate ?? 0;
+    
     // Calculate total_pay with unpaid break deduction
     let totalPay = 0;
     if (startTime && endTime && shift) {
@@ -146,8 +149,7 @@ export default async function TimesheetsPage({
       const end = new Date(endTime);
       const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
       const unpaidBreak = !shift.is_break_paid ? (shift.break_minutes || 0) : 0;
-      const hourlyRate = shift?.hourly_rate || 0;
-      totalPay = Math.round(((durationMinutes - unpaidBreak) / 60) * hourlyRate);
+      totalPay = Math.round(((durationMinutes - unpaidBreak) / 60) * rate);
     }
 
     return {
@@ -163,7 +165,7 @@ export default async function TimesheetsPage({
         title: shift?.title || '',
         start_time: shift?.start_time || '',
         end_time: shift?.end_time || '',
-        hourly_rate: hourlyRate,
+        hourly_rate: rate,
         status: shift?.status || '',
       },
       profiles: worker ? {
