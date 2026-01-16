@@ -192,7 +192,7 @@ export async function archiveShift({
     // Verify ownership before updating
     const { data: shift, error: fetchError } = await supabase
       .from('shifts')
-      .select('company_id')
+      .select('company_id, status')
       .eq('id', shiftId)
       .single();
 
@@ -204,6 +204,19 @@ export async function archiveShift({
       return { error: 'Unauthorized' };
     }
 
+    // Check if any timesheets for this shift had disputes
+    const { data: timesheets, error: timesheetsError } = await supabase
+      .from('timesheets')
+      .select('id, was_disputed')
+      .eq('shift_id', shiftId);
+
+    if (timesheetsError) {
+      console.error('Error checking timesheets for disputes:', timesheetsError);
+      // Continue with archiving even if we can't check disputes
+    }
+
+    const hasResolvedDisputes = timesheets?.some((ts) => ts.was_disputed === true) ?? false;
+
     // Update status to cancelled (archived)
     const { error } = await supabase
       .from('shifts')
@@ -213,6 +226,28 @@ export async function archiveShift({
 
     if (error) {
       return { error: error.message };
+    }
+
+    // Log to audit_logs if shift contained resolved disputes
+    if (hasResolvedDisputes) {
+      const { error: auditError } = await supabase
+        .from('audit_logs')
+        .insert({
+          user_id: user.id,
+          action: 'archive_shift',
+          table_name: 'shifts',
+          record_id: shiftId,
+          old_values: { status: shift.status || null },
+          new_values: { 
+            status: 'cancelled',
+            note: 'Shift archived. Contains resolved disputes.' 
+          },
+        });
+
+      if (auditError) {
+        console.error('Error creating audit log:', auditError);
+        // Continue even if audit log creation fails
+      }
     }
 
     revalidatePath(`/${lang}/shifts`);

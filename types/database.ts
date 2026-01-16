@@ -271,6 +271,7 @@ export interface Database {
           manager_approved_start: string | null;
           manager_approved_end: string | null;
           is_no_show: boolean;
+          was_disputed: boolean;
           status: 'pending' | 'approved' | 'disputed' | 'paid';
           created_at: string;
           updated_at: string;
@@ -285,6 +286,7 @@ export interface Database {
           manager_approved_start?: string | null;
           manager_approved_end?: string | null;
           is_no_show?: boolean;
+          was_disputed?: boolean;
           status?: 'pending' | 'approved' | 'disputed' | 'paid';
           created_at?: string;
           updated_at?: string;
@@ -299,6 +301,7 @@ export interface Database {
           manager_approved_start?: string | null;
           manager_approved_end?: string | null;
           is_no_show?: boolean;
+          was_disputed?: boolean;
           status?: 'pending' | 'approved' | 'disputed' | 'paid';
           created_at?: string;
           updated_at?: string;
@@ -448,6 +451,56 @@ export interface Database {
           rating?: number;
           comment?: string | null;
           tags?: string[] | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      payments: {
+        Row: {
+          id: string;
+          application_id: string;
+          shift_id: string;
+          worker_id: string;
+          company_id: string;
+          amount: number;
+          hourly_rate: number;
+          hours_worked: number;
+          shift_title_snapshot: string;
+          worker_name_snapshot: string;
+          status: 'pending' | 'paid' | 'cancelled';
+          metadata: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          application_id: string;
+          shift_id: string;
+          worker_id: string;
+          company_id: string;
+          amount: number;
+          hourly_rate: number;
+          hours_worked: number;
+          shift_title_snapshot: string;
+          worker_name_snapshot: string;
+          status?: 'pending' | 'paid' | 'cancelled';
+          metadata?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          application_id?: string;
+          shift_id?: string;
+          worker_id?: string;
+          company_id?: string;
+          amount?: number;
+          hourly_rate?: number;
+          hours_worked?: number;
+          shift_title_snapshot?: string;
+          worker_name_snapshot?: string;
+          status?: 'pending' | 'paid' | 'cancelled';
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

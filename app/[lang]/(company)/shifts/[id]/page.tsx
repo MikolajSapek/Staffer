@@ -29,6 +29,8 @@ export default async function ShiftDetailsPage({
   }
 
   // Fetch shift with approved applications and worker details
+  // Note: This query fetches shifts regardless of status (published, completed, cancelled, etc.)
+  // We fetch timesheets and payments separately to avoid issues with nested relations
   const { data: shift, error: shiftError } = await supabase
     .from('shifts')
     .select(`
@@ -74,11 +76,43 @@ export default async function ShiftDetailsPage({
     `)
     .eq('id', id)
     .eq('company_id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (shiftError || !shift) {
+  // Only call notFound() if shift doesn't exist or user doesn't have access
+  if (shiftError) {
+    console.error('Error fetching shift:', shiftError);
     notFound();
   }
+
+  if (!shift) {
+    notFound();
+  }
+
+  // Fetch timesheets and payments separately to avoid relation issues
+  const { data: timesheets, error: timesheetsError } = await supabase
+    .from('timesheets')
+    .select('id, worker_id, was_disputed, status')
+    .eq('shift_id', id);
+
+  const { data: payments, error: paymentsError } = await supabase
+    .from('payments')
+    .select('id, worker_id, metadata')
+    .eq('shift_id', id);
+
+  // Log errors but don't block rendering - these are optional data
+  if (timesheetsError) {
+    console.warn('Error fetching timesheets:', timesheetsError);
+  }
+  if (paymentsError) {
+    console.warn('Error fetching payments:', paymentsError);
+  }
+
+  // Attach timesheets and payments to shift object for compatibility
+  const shiftWithRelations = {
+    ...shift,
+    timesheets: timesheets || [],
+    payments: payments || [],
+  };
 
   // Filter to only accepted applications (hired team)
   const hiredTeam = (shift.shift_applications as any[])?.filter(
@@ -117,11 +151,40 @@ export default async function ShiftDetailsPage({
     .eq('company_id', user.id)
     .order('name', { ascending: true });
 
+  // Build dispute information map for each worker
+  // Map worker_id to payment metadata (for CorrectionBadge component)
+  const disputesMap: Record<string, { 
+    was_disputed: boolean; 
+    metadata: {
+      hours_original?: number;
+      hours_final?: number;
+      note?: string;
+      resolution_type?: string;
+    } | null;
+  }> = {};
+  
+  if (timesheets && Array.isArray(timesheets)) {
+    timesheets.forEach((timesheet: any) => {
+      if (timesheet.worker_id && timesheet.was_disputed === true) {
+        // Find corresponding payment for this worker to get full metadata
+        const payment = (payments || [])?.find(
+          (p: any) => p.worker_id === timesheet.worker_id
+        );
+        
+        disputesMap[timesheet.worker_id] = {
+          was_disputed: true,
+          metadata: payment?.metadata || null,
+        };
+      }
+    });
+  }
+
   return (
     <ShiftDetailsClient
-      shift={shift}
+      shift={shiftWithRelations}
       hiredTeam={hiredTeam}
       reviewsMap={reviewsMap}
+      disputesMap={disputesMap}
       lang={lang}
       dict={dict}
       locations={locationsData || []}

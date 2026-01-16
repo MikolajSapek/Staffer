@@ -64,7 +64,7 @@ export default async function TimesheetsPage({
 
   const shiftIds = companyShifts?.map(s => s.id) || [];
 
-  // Fetch timesheets with filters: company_id (through shifts), status = 'pending' or 'disputed'
+  // Fetch timesheets with filters: company_id (through shifts), status = 'pending', 'disputed', or 'approved' (if was_disputed)
   // Using explicit foreign key names for reliable relationship resolution
   const { data: timesheets, error } = await supabase
     .from('timesheets')
@@ -89,7 +89,7 @@ export default async function TimesheetsPage({
         status
       )
     `)
-    .in('status', ['pending', 'disputed'])
+    .in('status', ['pending', 'disputed', 'approved'])
     .in('shift_id', shiftIds.length > 0 ? shiftIds : ['00000000-0000-0000-0000-000000000000'])
     .order('manager_approved_end', { ascending: false });
 
@@ -155,6 +155,7 @@ export default async function TimesheetsPage({
       worker_id: timesheet.worker_id,
       manager_approved_start: timesheet.manager_approved_start,
       manager_approved_end: timesheet.manager_approved_end,
+      was_disputed: timesheet.was_disputed || false,
       total_pay: totalPay,
       shifts: {
         id: shift?.id || '',

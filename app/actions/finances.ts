@@ -6,13 +6,23 @@ import { redirect } from 'next/navigation';
 export interface Payment {
   id: string;
   amount: number;
-  status: 'pending' | 'paid' | 'cancelled';
+  payment_status: 'pending' | 'paid' | 'cancelled';
   currency: string;
   shift_title_snapshot: string;
   worker_name_snapshot: string;
   created_at: string;
   hours_worked: number;
   hourly_rate: number;
+  metadata: { resolution_type?: string; [key: string]: any } | null;
+  profiles?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    worker_details?: {
+      avatar_url: string | null;
+    } | null;
+  } | null;
 }
 
 export interface CompanyFinancesResult {
@@ -46,7 +56,7 @@ export async function getCompanyFinances(companyId: string): Promise<CompanyFina
       .from('payments')
       .select('amount')
       .eq('company_id', companyId)
-      .eq('status', 'pending');
+      .eq('payment_status', 'pending');
 
     if (pendingError) {
       console.error('Error fetching pending payments:', pendingError);
@@ -61,7 +71,7 @@ export async function getCompanyFinances(companyId: string): Promise<CompanyFina
     // Get all payments sorted by created_at desc
     const { data: paymentsData, error: paymentsError } = await supabase
       .from('payments')
-      .select('id, amount, status, shift_title_snapshot, worker_name_snapshot, created_at, hours_worked, hourly_rate')
+      .select('id, amount, payment_status, shift_title_snapshot, worker_name_snapshot, created_at, hours_worked, hourly_rate, metadata, worker_id')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false });
 
@@ -70,18 +80,74 @@ export async function getCompanyFinances(companyId: string): Promise<CompanyFina
       return { error: 'Failed to fetch payment history' };
     }
 
+    // Fetch profiles and worker_details separately for avatars
+    // Get unique worker_ids from payments
+    const workerIds = [...new Set((paymentsData || []).map((p: any) => p.worker_id).filter(Boolean))];
+    
+    let profilesMap: Record<string, { 
+      id: string; 
+      first_name: string; 
+      last_name: string; 
+      email: string; 
+      worker_details: { avatar_url: string | null } | null;
+    }> = {};
+
+    if (workerIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          email,
+          worker_details (
+            avatar_url
+          )
+        `)
+        .in('id', workerIds);
+
+      if (profilesError) {
+        console.warn('Error fetching profiles for avatars:', profilesError);
+        // Continue without avatars - not critical
+      } else if (profilesData) {
+        // Build profiles map
+        profilesData.forEach((profile: any) => {
+          const workerDetails = Array.isArray(profile.worker_details) 
+            ? profile.worker_details[0] 
+            : profile.worker_details;
+          
+          profilesMap[profile.id] = {
+            id: profile.id,
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            email: profile.email || '',
+            worker_details: workerDetails ? {
+              avatar_url: workerDetails.avatar_url,
+            } : null,
+          };
+        });
+      }
+    }
+
     // Map payments to Payment interface (default currency is DKK)
-    const transactions: Payment[] = (paymentsData || []).map((payment) => ({
-      id: payment.id,
-      amount: parseFloat(payment.amount.toString()) || 0,
-      status: payment.status as 'pending' | 'paid' | 'cancelled',
-      currency: 'DKK', // Default currency
-      shift_title_snapshot: payment.shift_title_snapshot || '',
-      worker_name_snapshot: payment.worker_name_snapshot || '',
-      created_at: payment.created_at,
-      hours_worked: parseFloat(payment.hours_worked?.toString() || '0') || 0,
-      hourly_rate: parseFloat(payment.hourly_rate?.toString() || '0') || 0,
-    }));
+    const transactions: Payment[] = (paymentsData || []).map((payment: any) => {
+      // Get profile data from map (if available)
+      const profile = payment.worker_id ? profilesMap[payment.worker_id] : null;
+
+      return {
+        id: payment.id,
+        amount: parseFloat(payment.amount.toString()) || 0,
+        payment_status: payment.payment_status as 'pending' | 'paid' | 'cancelled',
+        currency: 'DKK', // Default currency
+        shift_title_snapshot: payment.shift_title_snapshot || '',
+        worker_name_snapshot: payment.worker_name_snapshot || '',
+        created_at: payment.created_at,
+        hours_worked: parseFloat(payment.hours_worked?.toString() || '0') || 0,
+        hourly_rate: parseFloat(payment.hourly_rate?.toString() || '0') || 0,
+        metadata: payment.metadata as { resolution_type?: string; [key: string]: any } | null,
+        profiles: profile || null,
+      };
+    });
 
     return {
       summary: {

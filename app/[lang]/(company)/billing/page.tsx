@@ -12,6 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { CorrectionBadge } from '@/components/ui/correction-badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export default async function BillingPage({
   params,
@@ -77,13 +79,23 @@ export default async function BillingPage({
     }).format(amount);
   };
 
-  // Format date as dd.MM.yyyy
+  // Format date as dd MMM yyyy (e.g., "15 Jan 2024")
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[date.getMonth()];
     const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
+    return `${day} ${month} ${year}`;
+  };
+
+  // Get initials from worker name
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   };
 
   // Format hours with 2 decimal places
@@ -122,56 +134,105 @@ export default async function BillingPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{dict.finances.table.date}</TableHead>
-                  <TableHead>{dict.finances.table.worker}</TableHead>
-                  <TableHead>{dict.finances.table.shift}</TableHead>
-                  <TableHead className="text-right">{dict.finances.table.hours}</TableHead>
-                  <TableHead className="text-right">{dict.finances.table.rate}</TableHead>
-                  <TableHead className="text-right">{dict.finances.table.amount}</TableHead>
-                  <TableHead>{dict.finances.table.status}</TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">
+                    {dict.finances.table.date}
+                  </TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">
+                    {dict.finances.table.worker}
+                  </TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground font-semibold tracking-wider text-right">
+                    {dict.finances.table.hours}
+                  </TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground font-semibold tracking-wider text-right">
+                    {dict.finances.table.rate}
+                  </TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground font-semibold tracking-wider text-right">
+                    {dict.finances.table.amount}
+                  </TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground font-semibold tracking-wider text-right">
+                    {dict.finances.table.status}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>{formatDate(payment.created_at)}</TableCell>
-                    <TableCell>{payment.worker_name_snapshot}</TableCell>
-                    <TableCell>{payment.shift_title_snapshot}</TableCell>
-                    <TableCell className="text-right">
-                      {formatHours(payment.hours_worked)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(payment.hourly_rate, payment.currency)}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatCurrency(payment.amount, payment.currency)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          payment.status === 'paid'
-                            ? 'default'
-                            : payment.status === 'pending'
-                            ? 'secondary'
-                            : 'destructive'
-                        }
-                        className={
-                          payment.status === 'paid'
-                            ? 'bg-green-500 hover:bg-green-600'
-                            : payment.status === 'pending'
-                            ? 'bg-yellow-500 hover:bg-yellow-600'
-                            : ''
-                        }
-                      >
-                        {payment.status === 'pending'
-                          ? dict.finances.status.pending
-                          : payment.status === 'paid'
-                          ? dict.finances.status.paid
-                          : dict.finances.status.cancelled}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {transactions.map((payment) => {
+                  const initials = getInitials(payment.worker_name_snapshot);
+                  
+                  // Helper function to safely extract worker_details (same pattern as ShiftDetailsClient)
+                  const getWorkerDetails = (profile: any) => {
+                    if (!profile?.worker_details) return null;
+                    if (Array.isArray(profile.worker_details)) {
+                      return profile.worker_details[0] || null;
+                    }
+                    return profile.worker_details;
+                  };
+                  
+                  const workerDetails = payment.profiles ? getWorkerDetails(payment.profiles) : null;
+                  const avatarUrl = workerDetails?.avatar_url || null;
+
+                  return (
+                    <TableRow 
+                      key={payment.id} 
+                      className="hover:bg-muted/50 transition-colors"
+                    >
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(payment.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={avatarUrl || undefined} alt={payment.worker_name_snapshot} />
+                            <AvatarFallback className="text-sm">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{payment.worker_name_snapshot}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {payment.shift_title_snapshot}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {formatHours(payment.hours_worked)}h
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
+                        {formatCurrency(payment.hourly_rate, payment.currency)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums font-bold">
+                        {formatCurrency(payment.amount, payment.currency)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge
+                            variant={
+                              payment.payment_status === 'paid'
+                                ? 'default'
+                                : payment.payment_status === 'pending'
+                                ? 'secondary'
+                                : 'destructive'
+                            }
+                            className={
+                              payment.payment_status === 'paid'
+                                ? 'bg-green-500 hover:bg-green-600'
+                                : payment.payment_status === 'pending'
+                                ? 'bg-yellow-500 hover:bg-yellow-600'
+                                : ''
+                            }
+                          >
+                            {payment.payment_status === 'pending'
+                              ? dict.finances.status.pending
+                              : payment.payment_status === 'paid'
+                              ? dict.finances.status.paid
+                              : dict.finances.status.cancelled}
+                          </Badge>
+                          <CorrectionBadge metadata={payment.metadata} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

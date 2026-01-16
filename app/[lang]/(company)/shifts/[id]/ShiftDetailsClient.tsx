@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { CorrectionBadge } from '@/components/ui/correction-badge';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil } from 'lucide-react';
 import Link from 'next/link';
@@ -70,6 +71,15 @@ interface ShiftDetailsClientProps {
   shift: Shift;
   hiredTeam: Application[];
   reviewsMap?: Record<string, { rating: number; comment: string | null; tags: string[] | null }>;
+  disputesMap?: Record<string, { 
+    was_disputed: boolean; 
+    metadata: {
+      hours_original?: number;
+      hours_final?: number;
+      note?: string;
+      resolution_type?: string;
+    } | null;
+  }>;
   lang: string;
   dict: any;
   locations: Array<{ id: string; name: string; address: string }>;
@@ -81,6 +91,7 @@ export default function ShiftDetailsClient({
   shift,
   hiredTeam,
   reviewsMap = {},
+  disputesMap = {},
   lang,
   dict,
   locations,
@@ -391,9 +402,17 @@ export default function ShiftDetailsClient({
                         {/* Worker Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="font-semibold text-base mb-1 truncate">
-                                {fullName}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="font-semibold text-base truncate">
+                                  {fullName}
+                                </div>
+                                {disputesMap[profile.id]?.was_disputed && (
+                                  <CorrectionBadge
+                                    metadata={disputesMap[profile.id].metadata}
+                                    was_disputed={disputesMap[profile.id].was_disputed}
+                                  />
+                                )}
                               </div>
                               <div className="space-y-1 text-sm text-muted-foreground">
                                 {profile.email && (

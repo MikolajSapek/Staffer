@@ -34,6 +34,7 @@ interface Timesheet {
   worker_id: string;
   manager_approved_start: string | null;
   manager_approved_end: string | null;
+  was_disputed?: boolean;
   total_pay: number | null;
   shifts: {
     id: string;
@@ -94,9 +95,11 @@ export default function TimesheetsClient({
   const [correctingTimesheet, setCorrectingTimesheet] = useState<Timesheet | null>(null);
   const [durationMinutes, setDurationMinutes] = useState(0);
 
-  // Filter to show pending and disputed timesheets
+  // Filter to show only pending and disputed timesheets (approved ones are in Payments/Billing)
   const filteredTimesheets = timesheets.filter(
-    (timesheet) => timesheet.status === 'pending' || timesheet.status === 'disputed'
+    (timesheet) => 
+      timesheet.status === 'pending' || 
+      timesheet.status === 'disputed'
   );
 
   const handleApprove = async (timesheetId: string) => {
@@ -345,7 +348,9 @@ export default function TimesheetsClient({
                         {formatTime(timesheet.shifts.start_time)} - {formatTime(timesheet.shifts.end_time)}
                       </span>
                     </TableCell>
-                    <TableCell>{hours} {dict.timesheetsPage.hours}</TableCell>
+                    <TableCell>
+                      {hours} {dict.timesheetsPage.hours}
+                    </TableCell>
                     <TableCell className="font-medium">
                       {totalPay.toFixed(2)} DKK
                     </TableCell>
