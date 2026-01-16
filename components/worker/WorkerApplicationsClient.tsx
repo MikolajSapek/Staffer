@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar, Clock, MapPin, Wallet, Star } from 'lucide-react';
@@ -66,16 +66,13 @@ export default function WorkerApplicationsClient({
   applications,
   dict,
 }: WorkerApplicationsClientProps) {
-  // Filtrowanie aplikacji z useMemo
   const { activeApps, archiveApps } = useMemo(() => {
     const now = new Date();
 
-    // FILTR CLEANUP: Usuń wszystkie aplikacje ze statusem 'rejected', których termin już minął
     const filteredApps = (applications || []).filter((app) => {
       const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
       if (!shift) return false;
 
-      // Usuń rejected aplikacje, których termin już minął
       if (app.status === 'rejected' && new Date(shift.end_time) < now) {
         return false;
       }
@@ -83,14 +80,12 @@ export default function WorkerApplicationsClient({
       return true;
     });
 
-    // activeApps: wszystkie aplikacje, których shift.end_time > now()
     const active = filteredApps.filter((app) => {
       const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
       if (!shift) return false;
-      return new Date(shift.end_time) > now;
+      return new Date(shift.end_time) >= now;
     });
 
-    // archiveApps: tylko aplikacje, gdzie status === 'accepted' AND shift.end_time < now()
     const archive = filteredApps.filter((app) => {
       const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
       if (!shift) return false;
@@ -100,7 +95,7 @@ export default function WorkerApplicationsClient({
     return { activeApps: active, archiveApps: archive };
   }, [applications]);
 
-  const getStatusBadge = (status: string, isArchive: boolean = false) => {
+  const getStatusBadge = useCallback((status: string, isArchive: boolean = false) => {
     if (isArchive) {
       return (
         <Badge className="bg-green-500 hover:bg-green-600 text-white">
@@ -134,29 +129,31 @@ export default function WorkerApplicationsClient({
         {labels[displayStatus] || status}
       </Badge>
     );
-  };
+  }, [dict.workerApplications]);
 
-  const getCompanyName = (shift: Application['shifts']) => {
-    // Użyj first_name z profiles, jeśli dostępne, w przeciwnym razie company_name z company_details
+  const getCompanyName = useCallback((shift: Application['shifts']) => {
     return (
       shift.profiles?.first_name ||
       shift.profiles?.company_details?.company_name ||
       'Unknown Company'
     );
-  };
+  }, []);
 
-  const getCompanyLogo = (shift: Application['shifts']) => {
-    // Użyj avatar_url z profiles, jeśli dostępne, w przeciwnym razie logo_url z company_details
+  const getCompanyLogo = useCallback((shift: Application['shifts']) => {
     return shift.profiles?.avatar_url || shift.profiles?.company_details?.logo_url || null;
-  };
+  }, []);
 
-  const renderApplicationCard = (app: Application, isArchive: boolean = false) => {
+  const renderApplicationCard = useCallback((app: Application, isArchive: boolean = false) => {
     const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
     if (!shift) return null;
 
     const companyName = getCompanyName(shift);
     const companyLogo = getCompanyLogo(shift);
     const companyInitials = companyName.substring(0, 2).toUpperCase();
+    
+    const formattedDate = formatDateShort(shift.start_time);
+    const formattedStartTime = formatTime(shift.start_time);
+    const formattedEndTime = formatTime(shift.end_time);
 
     return (
       <div
@@ -164,7 +161,6 @@ export default function WorkerApplicationsClient({
         className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
       >
         <div className="flex items-start gap-4">
-          {/* Lewa sekcja - Logotyp firmy */}
           <div className="flex-shrink-0">
             <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
               {companyLogo ? (
@@ -181,34 +177,29 @@ export default function WorkerApplicationsClient({
             </div>
           </div>
 
-          {/* Środkowa sekcja - Tytuł i szczegóły */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4 mb-3">
               <h3 className="text-lg font-bold text-gray-900 truncate">
                 {shift.title}
               </h3>
-              {/* Status badge - prawy górny róg */}
               <div className="flex-shrink-0">
                 {getStatusBadge(app.status, isArchive)}
               </div>
             </div>
 
             <div className="space-y-2">
-              {/* Data */}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span>{formatDateShort(shift.start_time)}</span>
+                <span>{formattedDate}</span>
               </div>
 
-              {/* Godziny */}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
                 <span>
-                  {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
+                  {formattedStartTime} - {formattedEndTime}
                 </span>
               </div>
 
-              {/* Lokalizacja */}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
                 <span className="truncate">
@@ -221,14 +212,12 @@ export default function WorkerApplicationsClient({
                 </div>
               )}
 
-              {/* Stawka */}
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Wallet className="h-4 w-4 text-gray-400 flex-shrink-0" />
                 <span>{shift.hourly_rate} DKK/t</span>
               </div>
             </div>
 
-            {/* Opcjonalna wiadomość pracownika */}
             {app.worker_message && (
               <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
@@ -240,12 +229,10 @@ export default function WorkerApplicationsClient({
               </div>
             )}
 
-            {/* Company Feedback Section */}
             {app.review && (
               <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 rounded-lg p-4 space-y-3">
                 <div className="font-medium text-sm text-gray-900">Company Feedback:</div>
 
-                {/* Star Rating */}
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
@@ -263,7 +250,6 @@ export default function WorkerApplicationsClient({
                   </span>
                 </div>
 
-                {/* Comment */}
                 {app.review.comment && (
                   <div>
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">
@@ -272,7 +258,6 @@ export default function WorkerApplicationsClient({
                   </div>
                 )}
 
-                {/* Tags */}
                 {app.review.tags && app.review.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {app.review.tags.map((tag, index) => (
@@ -288,7 +273,7 @@ export default function WorkerApplicationsClient({
         </div>
       </div>
     );
-  };
+  }, [getStatusBadge, getCompanyName, getCompanyLogo, dict.workerApplications]);
 
   const renderEmptyState = () => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">

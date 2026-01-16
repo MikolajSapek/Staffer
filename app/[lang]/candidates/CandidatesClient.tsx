@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Star, Users, X, Clock, Wallet, MapPin } from 'lucide-react';
 import CandidateProfileModal from '@/components/company/CandidateProfileModal';
 import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
-import { formatDateTime, formatDateShort, formatTime } from '@/lib/date-utils';
+import { formatTime } from '@/lib/date-utils';
 import { fillVacancies, rejectAllPending } from '@/app/actions/applications';
 
 interface WorkerDetails {
@@ -26,7 +26,6 @@ interface Profile {
   email: string;
   average_rating: number | null;
   total_reviews: number;
-  // worker_details is returned as an object
   worker_details: WorkerDetails | null;
 }
 
@@ -112,21 +111,12 @@ export default function CandidatesClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [loadingShiftId, setLoadingShiftId] = useState<string | null>(null);
 
-  // Debug: Log data structure to understand Supabase response format
-  if (applications && applications.length > 0) {
-    console.log('Candidates Data Check:', applications[0]);
-    console.log('Worker Details Check:', applications[0]?.profiles?.worker_details);
-    console.log('Worker Details Type:', Array.isArray(applications[0]?.profiles?.worker_details) ? 'Array' : typeof applications[0]?.profiles?.worker_details);
-  }
-
-  // Helper function to extract worker_details (as object)
-  const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
+  const getWorkerDetails = useCallback((profile: Profile | null): WorkerDetails | null => {
     if (!profile?.worker_details) return null;
-    // worker_details is returned as an object, not an array
     return profile.worker_details as WorkerDetails;
-  };
+  }, []);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       accepted: 'default',
       pending: 'secondary',
@@ -144,13 +134,13 @@ export default function CandidatesClient({
         {statusLabels[status] || status}
       </Badge>
     );
-  };
+  }, [dict.candidatesPage.status]);
 
-  const getInitials = (firstName: string, lastName: string) => {
+  const getInitials = useCallback((firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
+  }, []);
 
-  const renderRating = (averageRating: number | null, totalReviews: number, compact: boolean = false) => {
+  const renderRating = useCallback((averageRating: number | null, totalReviews: number, compact: boolean = false) => {
     if (averageRating === null || totalReviews === 0) {
       return (
         <div className="flex items-center gap-0.5">
@@ -187,34 +177,32 @@ export default function CandidatesClient({
         )}
       </div>
     );
-  };
+  }, []);
 
-  const handleRowClick = (application: Application) => {
+  const handleRowClick = useCallback((application: Application) => {
     setSelectedApplication(application);
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleModalSuccess = () => {
+  const handleModalSuccess = useCallback(() => {
     router.refresh();
-  };
+  }, [router]);
 
-  const handleModalClose = (open: boolean) => {
+  const handleModalClose = useCallback((open: boolean) => {
     setModalOpen(open);
-    // Reset selected application when modal is closed
     if (!open) {
       setSelectedApplication(null);
     }
-  };
+  }, []);
 
-  const handleFillVacancies = async (shift: Shift, pendingApplications: Application[]) => {
-    if (!shift) return;
+  const handleFillVacancies = useCallback(async (shift: Shift, pendingApplications: Application[]) => {
+    if (!shift || loadingShiftId) return;
 
     const slotsLeft = shift.vacancies_total - shift.vacancies_taken;
     if (slotsLeft <= 0 || pendingApplications.length === 0) {
       return;
     }
 
-    // Get first N pending applications (sorted by applied_at)
     const sortedPending = [...pendingApplications]
       .filter(app => app.status === 'pending')
       .sort((a, b) => new Date(a.applied_at).getTime() - new Date(b.applied_at).getTime())
@@ -235,10 +223,10 @@ export default function CandidatesClient({
     } finally {
       setLoadingShiftId(null);
     }
-  };
+  }, [loadingShiftId, lang, router]);
 
-  const handleRejectAllPending = async (shiftId: string, pendingCount: number) => {
-    if (pendingCount === 0) return;
+  const handleRejectAllPending = useCallback(async (shiftId: string, pendingCount: number) => {
+    if (pendingCount === 0 || loadingShiftId) return;
 
     const confirmed = window.confirm(
       'Czy na pewno chcesz odrzucić wszystkich pozostałych kandydatów?'
@@ -259,10 +247,10 @@ export default function CandidatesClient({
     } finally {
       setLoadingShiftId(null);
     }
-  };
+  }, [loadingShiftId, lang, router]);
 
-  // Group applications by shift_id
-  const groupedByShift = applications.reduce((acc, app) => {
+  const groupedByShift = useMemo(() => {
+    return applications.reduce((acc, app) => {
     const shiftId = app.shift_id;
     const shift = app.shifts;
     
@@ -279,38 +267,53 @@ export default function CandidatesClient({
     acc[shiftId].applications.push(app);
     return acc;
   }, {} as Record<string, { shiftTitle: string; shiftId: string; applications: Application[] }>);
+  }, [applications]);
 
-  const shiftGroups = Object.values(groupedByShift);
+  const shiftGroups = useMemo(() => {
+    return Object.values(groupedByShift);
+  }, [groupedByShift]);
+
+  const shiftGroupsWithStats = useMemo(() => {
+    return shiftGroups.map((group) => {
+      const firstApp = group.applications[0];
+      const shift = firstApp?.shifts;
+      
+      const pendingCount = group.applications.filter(a => a.status === 'pending').length;
+      const isFull = shift ? shift.vacancies_taken >= shift.vacancies_total : false;
+      const slotsLeft = shift ? shift.vacancies_total - shift.vacancies_taken : 0;
+      const pendingApps = group.applications.filter(a => a.status === 'pending');
+      const canFillVacancies = slotsLeft > 0 && pendingApps.length > 0;
+      const formattedStartTime = shift ? formatTime(shift.start_time) : '';
+      const formattedEndTime = shift ? formatTime(shift.end_time) : '';
+      
+      return {
+        ...group,
+        shift,
+        pendingCount,
+        isFull,
+        slotsLeft,
+        pendingApps,
+        canFillVacancies,
+        formattedStartTime,
+        formattedEndTime,
+      };
+    });
+  }, [shiftGroups]);
 
   return (
     <>
       <div className="space-y-6">
-        {shiftGroups.map((group) => {
-          // Get shift details from first application in group
-          const firstApp = group.applications[0];
-          const shift = firstApp?.shifts;
-          const shiftDate = shift?.start_time ? formatDateShort(shift.start_time) : '';
-          const shiftTime = shift?.start_time && shift?.end_time 
-            ? `${formatTime(shift.start_time)} - ${formatTime(shift.end_time)}`
-            : '';
-          
-          const pendingCount = group.applications.filter(a => a.status === 'pending').length;
-          const isFull = shift ? shift.vacancies_taken >= shift.vacancies_total : false;
-          
-          const slotsLeft = shift ? shift.vacancies_total - shift.vacancies_taken : 0;
-          const pendingApps = group.applications.filter(a => a.status === 'pending');
-          const canFillVacancies = slotsLeft > 0 && pendingApps.length > 0;
+        {shiftGroupsWithStats.map((group) => {
           const isLoading = loadingShiftId === group.shiftId;
 
           return (
           <Card key={group.shiftId} className="overflow-hidden">
             <CardHeader className="relative">
-              {/* Actions in top right */}
               <div className="absolute top-6 right-6 flex items-center gap-2">
-                {canFillVacancies && shift && (
+                {group.canFillVacancies && group.shift && (
                   <Button
                     size="sm"
-                    onClick={() => handleFillVacancies(shift, group.applications)}
+                    onClick={() => handleFillVacancies(group.shift!, group.applications)}
                     disabled={isLoading}
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                   >
@@ -318,11 +321,11 @@ export default function CandidatesClient({
                     Fill Remaining
                   </Button>
                 )}
-                {pendingCount > 0 && shift && (
+                {group.pendingCount > 0 && group.shift && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRejectAllPending(shift.id, pendingCount)}
+                    onClick={() => handleRejectAllPending(group.shift!.id, group.pendingCount)}
                     disabled={isLoading}
                     className="flex items-center gap-2 border-red-300 text-red-600 hover:bg-red-50"
                   >
@@ -333,51 +336,47 @@ export default function CandidatesClient({
               </div>
 
               <div className="space-y-4 pr-48">
-                {/* Title - Dark Navy */}
                 <CardTitle className="text-2xl font-bold text-slate-800">
                   {group.shiftTitle}
                 </CardTitle>
                 
-                {/* Info Badges with Icons */}
-                {shift && (
+                {group.shift && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     <Badge variant="outline" className="text-xs font-normal px-3 py-1.5 bg-slate-50 border-slate-200">
                       <Clock className="h-3 w-3 mr-1.5 text-slate-600" />
-                      {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
+                      {group.formattedStartTime} - {group.formattedEndTime}
                     </Badge>
                     <Badge variant="outline" className="text-xs font-normal px-3 py-1.5 bg-slate-50 border-slate-200">
                       <Wallet className="h-3 w-3 mr-1.5 text-slate-600" />
-                      {shift.hourly_rate} DKK/h
+                      {group.shift.hourly_rate} DKK/h
                     </Badge>
-                    {shift.locations && (
+                    {group.shift.locations && (
                       <Badge variant="outline" className="text-xs font-normal px-3 py-1.5 bg-slate-50 border-slate-200">
                         <MapPin className="h-3 w-3 mr-1.5 text-slate-600" />
-                        {shift.locations.name} ({shift.locations.address})
+                        {group.shift.locations.name} ({group.shift.locations.address})
                       </Badge>
                     )}
                   </div>
                 )}
                 
-                {/* Description - Italic Gray */}
-                {shift?.description && (
+                {group.shift?.description && (
                   <p className="text-sm text-slate-600 italic mt-2">
-                    {shift.description}
+                    {group.shift.description}
                   </p>
                 )}
                 
-                {/* Stats Row */}
                 <div className="flex items-center gap-3 flex-wrap pt-2 border-t border-slate-200">
-                  {shift && (
+                  {group.shift && (
                     <span className="text-sm text-muted-foreground">
-                      Miejsca: {shift.vacancies_taken}/{shift.vacancies_total}
+                      Miejsca: {group.shift.vacancies_taken}/{group.shift.vacancies_total}
                     </span>
                   )}
-                  {pendingCount > 0 && (
+                  {group.pendingCount > 0 && (
                     <Badge variant="secondary" className="text-xs">
-                      {pendingCount} {dict.candidatesPage.status.pending.toLowerCase()}
+                      {group.pendingCount} {dict.candidatesPage.status.pending.toLowerCase()}
                     </Badge>
                   )}
-                  {isFull && (
+                  {group.isFull && (
                     <Badge variant="destructive" className="font-semibold text-xs">
                       FULL
                     </Badge>
@@ -393,7 +392,6 @@ export default function CandidatesClient({
 
                   if (!profile) return null;
 
-                  // Extract name from profiles table, avatar and phone from worker_details
                   const firstName = profile.first_name || '';
                   const lastName = profile.last_name || '';
                   const fullName = `${firstName} ${lastName}`.trim() || profile.email || 'Unknown';
@@ -411,7 +409,6 @@ export default function CandidatesClient({
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4 flex-1">
-                          {/* Larger Avatar */}
                           <Avatar className="h-14 w-14 border-2 border-slate-100">
                             <AvatarImage src={avatarUrl || undefined} alt={fullName} />
                             <AvatarFallback className="bg-slate-100 text-slate-700 text-lg">
@@ -419,7 +416,6 @@ export default function CandidatesClient({
                             </AvatarFallback>
                           </Avatar>
                           
-                          {/* Name and Rating */}
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-semibold text-slate-900 text-base">
@@ -443,7 +439,6 @@ export default function CandidatesClient({
                           </div>
                         </div>
                         
-                        {/* Status and Action */}
                         <div className="flex items-center gap-3">
                           {getStatusBadge(app.status)}
                           <Button

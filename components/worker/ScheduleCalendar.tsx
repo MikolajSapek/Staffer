@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,52 +41,58 @@ export default function ScheduleCalendar({
 }: ScheduleCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const calendarData = useMemo(() => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const firstDayOfWeek = getDay(monthStart);
+    const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+    const emptyCells = Array.from({ length: adjustedFirstDay }, (_, i) => i);
+    
+    return { monthStart, monthEnd, daysInMonth, emptyCells };
+  }, [currentDate]);
 
-  // Get first day of week (0 = Sunday, 1 = Monday, etc.)
-  const firstDayOfWeek = getDay(monthStart);
-  // Adjust for Monday as first day (0 = Monday)
-  const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
-
-  // Create array with empty cells for days before month starts
-  const emptyCells = Array.from({ length: adjustedFirstDay }, (_, i) => i);
-
-  const hasShiftOnDate = (date: Date) => {
-    return shifts.some((shift) => {
+  const shiftsByDate = useMemo(() => {
+    const map = new Map<string, Shift[]>();
+    shifts.forEach((shift) => {
       const shiftDate = new Date(shift.start_time);
-      return isSameDay(shiftDate, date);
+      const dateKey = format(shiftDate, 'yyyy-MM-dd');
+      if (!map.has(dateKey)) {
+        map.set(dateKey, []);
+      }
+      map.get(dateKey)!.push(shift);
     });
-  };
+    return map;
+  }, [shifts]);
 
-  const getShiftsForDate = (date: Date) => {
-    return shifts.filter((shift) => {
-      const shiftDate = new Date(shift.start_time);
-      return isSameDay(shiftDate, date);
-    });
-  };
+  const now = useMemo(() => new Date(), []);
 
-  const getShiftStatusForDate = (date: Date): 'past' | 'future' | null => {
-    const shiftsOnDate = getShiftsForDate(date);
-    if (shiftsOnDate.length === 0) return null;
+  const hasShiftOnDate = useMemo(() => {
+    return (date: Date) => {
+      const dateKey = format(date, 'yyyy-MM-dd');
+      return shiftsByDate.has(dateKey);
+    };
+  }, [shiftsByDate]);
 
-    const now = new Date();
-    // Check if any shift is past (end_time < now)
-    const hasPastShift = shiftsOnDate.some((shift) => {
-      const endTime = new Date(shift.end_time);
-      return endTime < now;
-    });
+  const getShiftStatusForDate = useMemo(() => {
+    return (date: Date): 'past' | 'future' | null => {
+      const dateKey = format(date, 'yyyy-MM-dd');
+      const shiftsOnDate = shiftsByDate.get(dateKey) || [];
+      if (shiftsOnDate.length === 0) return null;
 
-    // Check if any shift is future (start_time >= now)
-    const hasFutureShift = shiftsOnDate.some((shift) => {
-      const startTime = new Date(shift.start_time);
-      return startTime >= now;
-    });
+      const hasPastShift = shiftsOnDate.some((shift) => {
+        const endTime = new Date(shift.end_time);
+        return endTime < now;
+      });
 
-    // Prioritize past if there's any past shift, otherwise future
-    return hasPastShift ? 'past' : hasFutureShift ? 'future' : null;
-  };
+      const hasFutureShift = shiftsOnDate.some((shift) => {
+        const startTime = new Date(shift.start_time);
+        return startTime >= now;
+      });
+
+      return hasPastShift ? 'past' : hasFutureShift ? 'future' : null;
+    };
+  }, [shiftsByDate, now]);
 
   const handlePreviousMonth = () => {
     setCurrentDate(subMonths(currentDate, 1));
@@ -100,7 +106,6 @@ export default function ScheduleCalendar({
 
   return (
     <div className="w-full">
-      {/* Header with month navigation */}
       <div className="flex items-center justify-between mb-4">
         <Button
           variant="outline"
@@ -111,7 +116,7 @@ export default function ScheduleCalendar({
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-xl font-semibold">
-          {format(currentDate, 'MMMM yyyy')}
+          {format(calendarData.monthStart, 'MMMM yyyy')}
         </h2>
         <Button
           variant="outline"
@@ -123,9 +128,7 @@ export default function ScheduleCalendar({
         </Button>
       </div>
 
-      {/* Calendar Grid */}
       <div className="border rounded-lg overflow-hidden">
-        {/* Week day headers */}
         <div className="grid grid-cols-7 bg-muted/50">
           {weekDays.map((day) => (
             <div
@@ -137,20 +140,17 @@ export default function ScheduleCalendar({
           ))}
         </div>
 
-        {/* Calendar days */}
         <div className="grid grid-cols-7 p-1">
-          {/* Empty cells for days before month starts */}
-          {emptyCells.map((_, index) => (
+          {calendarData.emptyCells.map((_, index) => (
             <div key={`empty-${index}`} className="aspect-square" />
           ))}
 
-          {/* Days of the month */}
-          {daysInMonth.map((day) => {
+          {calendarData.daysInMonth.map((day) => {
             const hasShift = hasShiftOnDate(day);
             const shiftStatus = getShiftStatusForDate(day);
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const isToday = isSameDay(day, new Date());
-
+            const dayNumber = format(day, 'd');
             const shiftBgColor = shiftStatus === 'past' ? 'bg-emerald-500' : shiftStatus === 'future' ? 'bg-blue-500' : '';
 
             return (
@@ -159,7 +159,7 @@ export default function ScheduleCalendar({
                 onClick={() => onDateSelect(day)}
                 className={cn(
                   'aspect-square text-sm transition-colors relative flex items-center justify-center border border-border',
-                  !isSameMonth(day, currentDate) && 'text-muted-foreground/50',
+                  !isSameMonth(day, calendarData.monthStart) && 'text-muted-foreground/50',
                   !hasShift && 'hover:bg-muted/30',
                   isSelected && 'border-2 border-primary',
                   isToday && !isSelected && !hasShift && 'ring-1 ring-inset ring-gray-200'
@@ -170,7 +170,7 @@ export default function ScheduleCalendar({
                     'w-10 h-10 rounded-full flex items-center justify-center font-bold text-white',
                     shiftBgColor
                   )}>
-                    {format(day, 'd')}
+                    {dayNumber}
                   </div>
                 ) : (
                   <span
@@ -180,7 +180,7 @@ export default function ScheduleCalendar({
                       isToday && !isSelected && 'font-semibold'
                     )}
                   >
-                    {format(day, 'd')}
+                    {dayNumber}
                   </span>
                 )}
               </button>
@@ -197,5 +197,3 @@ export default function ScheduleCalendar({
     </div>
   );
 }
-
-
