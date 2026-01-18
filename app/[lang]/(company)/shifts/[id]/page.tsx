@@ -50,6 +50,7 @@ export default async function ShiftDetailsPage({
       is_urgent,
       possible_overtime,
       company_id,
+      must_bring,
       locations (
         id,
         name,
@@ -101,6 +102,29 @@ export default async function ShiftDetailsPage({
     .select('id, worker_id, metadata')
     .eq('shift_id', id);
 
+  // Fetch shift requirements (languages and licenses)
+  const { data: shiftRequirements } = await supabase
+    .from('shift_requirements')
+    .select(`
+      skill_id,
+      skills!inner (
+        id,
+        name,
+        category
+      )
+    `)
+    .eq('shift_id', id);
+
+  // Group requirements by category
+  const requirements = {
+    languages: shiftRequirements
+      ?.filter((req: any) => req.skills?.category === 'language')
+      .map((req: any) => ({ id: req.skills.id, name: req.skills.name })) || [],
+    licenses: shiftRequirements
+      ?.filter((req: any) => req.skills?.category === 'license')
+      .map((req: any) => ({ id: req.skills.id, name: req.skills.name })) || [],
+  };
+
   // Log errors but don't block rendering - these are optional data
   if (timesheetsError) {
     console.warn('Error fetching timesheets:', timesheetsError);
@@ -114,6 +138,7 @@ export default async function ShiftDetailsPage({
     ...shift,
     timesheets: timesheets || [],
     payments: payments || [],
+    requirements, // Add requirements to shift object
   };
 
   // Filter to only accepted applications (hired team)

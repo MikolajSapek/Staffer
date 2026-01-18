@@ -189,6 +189,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
   
   // Skills state
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]); // Track selected skill IDs
 
   const [formData, setFormData] = useState({
     title: '',
@@ -204,8 +205,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     is_urgent: false,
     possible_overtime: false,
     must_bring: '',
-    required_languages_text: [] as string[],  // Tablice tekstowe z nazwami
-    required_licences_text: [] as string[],   // Tablice tekstowe z nazwami
   });
   // Fetch templates on mount
   useEffect(() => {
@@ -419,19 +418,46 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         is_urgent: formData.is_urgent,
         possible_overtime: formData.possible_overtime,
         must_bring: formData.must_bring.trim() || null,
-        // Tablice tekstowe - czytelne w bazie danych
-        required_languages_text: formData.required_languages_text,
-        required_licences_text: formData.required_licences_text,
-        // Pozostaw puste tablice UUID dla kompatybilności
-        required_language_ids: [],
-        required_licence_ids: [],
       };
 
-      // Insert the shift
-      const { error } = await supabase.from('shifts').insert(payload as any);
+      // Insert the shift and get the new shift ID
+      const { data: newShift, error: shiftError } = await supabase
+        .from('shifts')
+        .insert(payload as any)
+        .select('id')
+        .single();
 
-      if (error) {
-        throw error;
+      if (shiftError || !newShift) {
+        console.error('Failed to create shift:', JSON.stringify(shiftError, null, 2));
+        throw shiftError || new Error('Failed to create shift');
+      }
+
+      const newShiftId = (newShift as any).id;
+
+      // CRITICAL: Save shift requirements using newShiftId
+      // Requirements MUST be saved for data integrity
+      if (selectedSkillIds.length > 0) {
+        const requirementsToInsert = selectedSkillIds.map((skillId) => ({
+          shift_id: newShiftId,
+          skill_id: skillId,
+        }));
+
+        const { error: requirementsError } = await (supabase
+          .from('shift_requirements') as any)
+          .insert(requirementsToInsert)
+          .select();
+
+        if (requirementsError) {
+          const errorMessage = requirementsError.message 
+            ? `Database error: ${requirementsError.message}` 
+            : 'Unknown database error. The shift_requirements table may not exist.';
+
+          alert(`⚠️ CRITICAL ERROR\n\nShift created successfully, but failed to save requirements.\n\n${errorMessage}\n\nPlease edit the shift to add requirements, or contact support.`);
+
+          setError(`Shift created, but failed to save requirements. ${errorMessage} Please edit the shift to add requirements.`);
+          setLoading(false);
+          return;
+        }
       }
 
       // Save as template if checkbox is checked
@@ -459,10 +485,10 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
       // Show success message
       setSuccess(true);
 
-      // Redirect to dashboard after 1.5 seconds
+      // Refresh to sync server state and redirect after 1.5 seconds
+      router.refresh();
       setTimeout(() => {
         router.push(`/${lang}/dashboard`);
-        router.refresh();
       }, 1500);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : dict.validation.titleRequired;
@@ -856,15 +882,14 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                     >
                       <input
                         type="checkbox"
-                        checked={formData.required_languages_text.includes(skill.name)}
+                        checked={selectedSkillIds.includes(skill.id)}
                         onChange={(e) => {
                           const checked = e.target.checked;
-                          setFormData(prev => ({
-                            ...prev,
-                            required_languages_text: checked
-                              ? [...prev.required_languages_text, skill.name]
-                              : prev.required_languages_text.filter(name => name !== skill.name)
-                          }));
+                          setSelectedSkillIds(prev =>
+                            checked
+                              ? [...prev, skill.id]
+                              : prev.filter(id => id !== skill.id)
+                          );
                         }}
                         disabled={loading}
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
@@ -891,15 +916,14 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                     >
                       <input
                         type="checkbox"
-                        checked={formData.required_licences_text.includes(skill.name)}
+                        checked={selectedSkillIds.includes(skill.id)}
                         onChange={(e) => {
                           const checked = e.target.checked;
-                          setFormData(prev => ({
-                            ...prev,
-                            required_licences_text: checked
-                              ? [...prev.required_licences_text, skill.name]
-                              : prev.required_licences_text.filter(name => name !== skill.name)
-                          }));
+                          setSelectedSkillIds(prev =>
+                            checked
+                              ? [...prev, skill.id]
+                              : prev.filter(id => id !== skill.id)
+                          );
                         }}
                         disabled={loading}
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"

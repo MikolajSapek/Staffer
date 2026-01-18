@@ -100,45 +100,46 @@ export default function CandidateProfileModal({
   const profile = application.profiles;
   const shift = application.shifts;
 
-  // Fetch worker skills when modal opens
+  // Fetch worker skills from worker_skills_display view when modal opens
   useEffect(() => {
-    if (open && application.worker_id) {
-      setSkillsLoading(true);
-      const supabase = createClient();
-      
-      supabase
-        .from('worker_skills')
-        .select(`
-          skill_id,
-          skills (
-            id,
-            name,
-            category
-          )
-        `)
-        .eq('worker_id', application.worker_id)
-        .then(({ data, error }) => {
-          if (!error && data) {
-            const languages: string[] = [];
-            const licenses: string[] = [];
-            
-            data.forEach((ws: any) => {
-              if (ws.skills) {
-                if (ws.skills.category === 'language') {
-                  languages.push(ws.skills.name);
-                } else if (ws.skills.category === 'license') {
-                  licenses.push(ws.skills.name);
-                }
-              }
-            });
-            
-            setWorkerSkills({ languages, licenses });
-          }
-        })
-        .finally(() => {
-          setSkillsLoading(false);
-        });
+    if (!open || !application.worker_id) {
+      return;
     }
+
+    setSkillsLoading(true);
+    const supabase = createClient();
+    
+    supabase
+      .from('worker_skills_display')
+      .select('*')
+      .eq('worker_id', application.worker_id)
+      .then(({ data, error }) => {
+        if (error) {
+          setWorkerSkills({ languages: [], licenses: [] });
+          return;
+        }
+        
+        if (!data) {
+          setWorkerSkills({ languages: [], licenses: [] });
+          return;
+        }
+        
+        const languages: string[] = [];
+        const licenses: string[] = [];
+        
+        data.forEach((skill: any) => {
+          if (skill.skill_category === 'language' && skill.skill_name) {
+            languages.push(skill.skill_name);
+          } else if (skill.skill_category === 'license' && skill.skill_name) {
+            licenses.push(skill.skill_name);
+          }
+        });
+        
+        setWorkerSkills({ languages, licenses });
+      })
+      .finally(() => {
+        setSkillsLoading(false);
+      });
   }, [open, application.worker_id]);
 
   if (!profile || !shift) {

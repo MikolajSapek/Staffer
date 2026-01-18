@@ -38,8 +38,6 @@ interface Shift {
   is_urgent: boolean;
   requirements: any; // JSONB field
   must_bring: string | null;
-  required_language_ids: string[];
-  required_licence_ids: string[];
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
@@ -102,56 +100,59 @@ export function JobDetailsDialog({
   const [open, setOpen] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   
-  // State for skill names (fetched from IDs)
-  const [requiredLanguages, setRequiredLanguages] = useState<string[]>([]);
-  const [requiredLicences, setRequiredLicences] = useState<string[]>([]);
-  const [skillsLoading, setSkillsLoading] = useState(true);
+  // State for shift requirements (fetched from shift_requirements table)
+  const [requiredLanguages, setRequiredLanguages] = useState<Array<{ id: string; name: string }>>([]);
+  const [requiredLicenses, setRequiredLicenses] = useState<Array<{ id: string; name: string }>>([]);
+  const [requirementsLoading, setRequirementsLoading] = useState(true);
 
-  // Fetch skill names from IDs when dialog opens
+  // Fetch shift requirements when dialog opens
   useEffect(() => {
     if (!open) return;
 
-    async function fetchSkillNames() {
-      setSkillsLoading(true);
+    async function fetchShiftRequirements() {
+      setRequirementsLoading(true);
       try {
         const supabase = createClient();
         
-        // Fetch language names
-        if (shift.required_language_ids && shift.required_language_ids.length > 0) {
-          const { data: languageData } = await supabase
-            .from('skills')
-            .select('name')
-            .in('id', shift.required_language_ids);
+        const { data: requirements, error } = await supabase
+          .from('shift_requirements')
+          .select(`
+            skill_id,
+            skills!inner (
+              id,
+              name,
+              category
+            )
+          `)
+          .eq('shift_id', shift.id);
+        
+        if (!error && requirements) {
+          const languages: Array<{ id: string; name: string }> = [];
+          const licenses: Array<{ id: string; name: string }> = [];
           
-          if (languageData) {
-            setRequiredLanguages(languageData.map(s => s.name));
-          }
-        } else {
-          setRequiredLanguages([]);
-        }
-
-        // Fetch licence names
-        if (shift.required_licence_ids && shift.required_licence_ids.length > 0) {
-          const { data: licenceData } = await supabase
-            .from('skills')
-            .select('name')
-            .in('id', shift.required_licence_ids);
+          requirements.forEach((req: any) => {
+            if (req.skills) {
+              const skill = { id: req.skills.id, name: req.skills.name };
+              if (req.skills.category === 'language') {
+                languages.push(skill);
+              } else if (req.skills.category === 'license') {
+                licenses.push(skill);
+              }
+            }
+          });
           
-          if (licenceData) {
-            setRequiredLicences(licenceData.map(s => s.name));
-          }
-        } else {
-          setRequiredLicences([]);
+          setRequiredLanguages(languages);
+          setRequiredLicenses(licenses);
         }
       } catch (error) {
-        console.error('Error fetching skill names:', error);
+        console.error('Error fetching shift requirements:', error);
       } finally {
-        setSkillsLoading(false);
+        setRequirementsLoading(false);
       }
     }
 
-    fetchSkillNames();
-  }, [open, shift.required_language_ids, shift.required_licence_ids]);
+    fetchShiftRequirements();
+  }, [open, shift.id]);
 
   const timeZone = 'Europe/Copenhagen';
   const start = new Date(shift.start_time);
@@ -388,8 +389,8 @@ export function JobDetailsDialog({
 
             {/* Languages & Licences Requirements */}
             {((requiredLanguages && requiredLanguages.length > 0) || 
-              (requiredLicences && requiredLicences.length > 0) ||
-              (!skillsLoading && requiredLanguages.length === 0 && requiredLicences.length === 0)) && (
+              (requiredLicenses && requiredLicenses.length > 0) ||
+              (!requirementsLoading && requiredLanguages.length === 0 && requiredLicenses.length === 0)) && (
               <div className="space-y-3 pt-2 border-t border-gray-100">
                 <h4 className="font-semibold text-sm text-gray-900">Requirements</h4>
                 
@@ -398,14 +399,14 @@ export function JobDetailsDialog({
                   <div>
                     <p className="text-xs text-gray-600 mb-2">Languages:</p>
                     <div className="flex flex-wrap gap-2">
-                      {requiredLanguages.map((lang, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {lang}
+                      {requiredLanguages.map((lang) => (
+                        <Badge key={lang.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                          {lang.name}
                         </Badge>
                       ))}
                     </div>
                   </div>
-                ) : !skillsLoading ? (
+                ) : !requirementsLoading ? (
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Languages:</p>
                     <p className="text-xs text-muted-foreground">No language requirement</p>
@@ -413,18 +414,18 @@ export function JobDetailsDialog({
                 ) : null}
 
                 {/* Licences */}
-                {requiredLicences && requiredLicences.length > 0 ? (
+                {requiredLicenses && requiredLicenses.length > 0 ? (
                   <div>
                     <p className="text-xs text-gray-600 mb-2">Licences:</p>
                     <div className="flex flex-wrap gap-2">
-                      {requiredLicences.map((licence, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {licence}
+                      {requiredLicenses.map((license) => (
+                        <Badge key={license.id} variant="outline" className="bg-sky-50 text-sky-700 border-sky-200 text-xs">
+                          {license.name}
                         </Badge>
                       ))}
                     </div>
                   </div>
-                ) : !skillsLoading ? (
+                ) : !requirementsLoading ? (
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Licences:</p>
                     <p className="text-xs text-muted-foreground">No licences required</p>

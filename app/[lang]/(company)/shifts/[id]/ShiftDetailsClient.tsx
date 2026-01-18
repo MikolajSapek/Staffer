@@ -78,8 +78,13 @@ interface Shift {
   location_id: string;
   is_urgent: boolean;
   company_id: string;
+  must_bring?: string | null;
   locations: Location | null;
   shift_applications?: Application[];
+  requirements?: {
+    languages: Array<{ id: string; name: string }>;
+    licenses: Array<{ id: string; name: string }>;
+  };
 }
 
 interface ShiftDetailsClientProps {
@@ -415,6 +420,54 @@ export default function ShiftDetailsClient({
                 Address
               </div>
               <p className="text-sm">{shift.locations.address}</p>
+            </div>
+          )}
+
+          {/* Must Bring Section */}
+          {shift.must_bring && (
+            <div className="mt-4">
+              <div className="text-sm font-medium text-muted-foreground mb-1">
+                Must Bring
+              </div>
+              <p className="text-sm">{shift.must_bring}</p>
+            </div>
+          )}
+
+          {/* Requirements Section */}
+          {shift.requirements && (shift.requirements.languages.length > 0 || shift.requirements.licenses.length > 0) && (
+            <div className="mt-6 pt-6 border-t">
+              <div className="text-sm font-medium text-muted-foreground mb-3">
+                Requirements
+              </div>
+              <div className="space-y-3">
+                {/* Languages */}
+                {shift.requirements.languages.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Languages:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {shift.requirements.languages.map((lang) => (
+                        <Badge key={lang.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          {lang.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Licenses */}
+                {shift.requirements.licenses.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Licenses:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {shift.requirements.licenses.map((license) => (
+                        <Badge key={license.id} variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+                          {license.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </CardContent>

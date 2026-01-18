@@ -184,10 +184,6 @@ export interface Database {
           vacancies_taken: number;
           requirements: Json;
           must_bring: string | null;
-          required_language_ids: string[];
-          required_licence_ids: string[];
-          required_languages_text: string[];  // Tablice tekstowe (czytelne)
-          required_licences_text: string[];   // Tablice tekstowe (czytelne)
           status: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent: boolean;
           possible_overtime: boolean;
@@ -210,10 +206,6 @@ export interface Database {
           vacancies_taken?: number;
           requirements?: Json;
           must_bring?: string | null;
-          required_language_ids?: string[];
-          required_licence_ids?: string[];
-          required_languages_text?: string[];
-          required_licences_text?: string[];
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
@@ -235,10 +227,6 @@ export interface Database {
           vacancies_taken?: number;
           requirements?: Json;
           must_bring?: string | null;
-          required_language_ids?: string[];
-          required_licence_ids?: string[];
-          required_languages_text?: string[];
-          required_licences_text?: string[];
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
@@ -576,6 +564,45 @@ export interface Database {
           verified?: boolean;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      shift_requirements: {
+        Row: {
+          id: string;
+          shift_id: string;
+          skill_id: string;
+          skill_name_debug: string | null;  // Auto-sync from skills.name via trigger
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          shift_id: string;
+          skill_id: string;
+          skill_name_debug?: string | null;  // Trigger will populate automatically
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          shift_id?: string;
+          skill_id?: string;
+          skill_name_debug?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    };
+    Views: {
+      worker_skills_display: {
+        Row: {
+          id: string;
+          worker_id: string;
+          skill_id: string;
+          skill_name: string;
+          skill_category: 'language' | 'license';
+          verified: boolean;
+          created_at: string;
         };
       };
     };
