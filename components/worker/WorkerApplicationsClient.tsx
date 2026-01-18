@@ -6,6 +6,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Calendar, Clock, MapPin, Wallet, Star } from 'lucide-react';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
+import { differenceInMinutes } from 'date-fns';
+import { JobDetailsDialog } from '@/components/JobDetailsDialog';
+import { useParams } from 'next/navigation';
 
 interface Application {
   id: string;
@@ -19,6 +22,17 @@ interface Application {
     start_time: string;
     end_time: string;
     hourly_rate: number;
+    company_id?: string;
+    category?: string;
+    description?: string | null;
+    status?: string;
+    is_urgent?: boolean;
+    possible_overtime?: boolean;
+    break_minutes?: number;
+    is_break_paid?: boolean;
+    vacancies_total?: number;
+    vacancies_taken?: number;
+    must_bring?: string | null;
     locations: {
       name: string;
       address: string;
@@ -61,14 +75,38 @@ interface WorkerApplicationsClientProps {
       activeTab?: string;
       archiveTab?: string;
     };
+    jobBoard: {
+      apply: string;
+      loginToApply: string;
+      possibleOvertime?: string;
+      locationNotSpecified: string;
+      breakPaidDisplay?: string;
+      breakUnpaidDisplay?: string;
+      fullyBooked?: string;
+    };
+    createShift?: {
+      categories: Record<string, string>;
+      breakPaid: string;
+      breakUnpaid: string;
+      noBreak: string;
+      description?: string;
+    };
   };
+  user: any;
+  userRole: string;
+  verificationStatus?: string | null;
 }
 
 export default function WorkerApplicationsClient({
   applications,
   dict,
+  user,
+  userRole,
+  verificationStatus,
 }: WorkerApplicationsClientProps) {
   const [now, setNow] = useState<Date | null>(null);
+  const params = useParams();
+  const lang = params?.lang || 'en';
 
   useEffect(() => {
     setNow(new Date());
@@ -163,11 +201,41 @@ export default function WorkerApplicationsClient({
     const formattedStartTime = formatTime(shift.start_time);
     const formattedEndTime = formatTime(shift.end_time);
 
+    // Calculate total estimated earnings
+    const start = new Date(shift.start_time);
+    const end = new Date(shift.end_time);
+    const durationMinutes = differenceInMinutes(end, start);
+    const totalEarnings = Math.round((durationMinutes / 60) * shift.hourly_rate);
+
+    // Convert shift to the format expected by JobDetailsDialog
+    const shiftForDialog = {
+      ...shift,
+      must_bring: shift.must_bring || null,
+      description: shift.description || null,
+      status: shift.status || 'published',
+      is_urgent: shift.is_urgent || false,
+      possible_overtime: shift.possible_overtime || false,
+      category: shift.category || 'general',
+      break_minutes: shift.break_minutes || 0,
+      is_break_paid: shift.is_break_paid || false,
+      vacancies_total: shift.vacancies_total || 1,
+      vacancies_taken: shift.vacancies_taken || 0,
+      requirements: null,
+    };
+
     return (
-      <div
+      <JobDetailsDialog
         key={app.id}
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+        shift={shiftForDialog}
+        isApplied={true}
+        userRole={userRole}
+        user={user}
+        dict={dict}
+        lang={lang as string}
+        applicationStatus={app.status}
+        verificationStatus={verificationStatus}
       >
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow cursor-pointer">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
             <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
@@ -222,7 +290,10 @@ export default function WorkerApplicationsClient({
 
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Wallet className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span>{shift.hourly_rate} DKK/t</span>
+                <div className="flex flex-col">
+                  <span>{shift.hourly_rate} DKK/t</span>
+                  <span className="text-xs font-semibold text-gray-900">Total: ~{totalEarnings} DKK</span>
+                </div>
               </div>
             </div>
 
@@ -279,9 +350,10 @@ export default function WorkerApplicationsClient({
             )}
           </div>
         </div>
-      </div>
+        </div>
+      </JobDetailsDialog>
     );
-  }, [getStatusBadge, getCompanyName, getCompanyLogo, dict.workerApplications]);
+  }, [getStatusBadge, getCompanyName, getCompanyLogo, dict, lang, user, userRole, verificationStatus]);
 
   const renderEmptyState = () => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">

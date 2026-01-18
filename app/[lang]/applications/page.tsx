@@ -20,7 +20,7 @@ export default async function ApplicationsPage({
   // Get user profile to check role
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, verification_status')
     .eq('id', user.id)
     .single();
 
@@ -43,6 +43,17 @@ export default async function ApplicationsPage({
         start_time,
         end_time,
         hourly_rate,
+        company_id,
+        category,
+        description,
+        status,
+        is_urgent,
+        possible_overtime,
+        break_minutes,
+        is_break_paid,
+        vacancies_total,
+        vacancies_taken,
+        must_bring,
         locations!location_id (
           name,
           address
@@ -94,7 +105,13 @@ export default async function ApplicationsPage({
         </p>
       </div>
 
-      <WorkerApplicationsClient applications={applications || []} dict={dict} />
+      <WorkerApplicationsClient 
+        applications={applications || []} 
+        dict={dict}
+        user={user}
+        userRole="worker"
+        verificationStatus={profile?.verification_status ?? null}
+      />
     </div>
   );
 }

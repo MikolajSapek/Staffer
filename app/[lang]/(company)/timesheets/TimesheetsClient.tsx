@@ -95,7 +95,7 @@ export default function TimesheetsClient({
   const [disputeReason, setDisputeReason] = useState('');
   const [correctDialogOpen, setCorrectDialogOpen] = useState(false);
   const [correctingTimesheet, setCorrectingTimesheet] = useState<Timesheet | null>(null);
-  const [durationMinutes, setDurationMinutes] = useState(0);
+  const [extraMinutes, setExtraMinutes] = useState(0); // Extra time to add (starts at 0)
 
   // Filter to show only pending and disputed timesheets (approved ones are in Payments/Billing)
   const filteredTimesheets = timesheets.filter(
@@ -204,19 +204,18 @@ export default function TimesheetsClient({
       return;
     }
 
-    const currentDurationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
-    const currentMinutes = Math.max(0, Math.round(currentDurationMs / (1000 * 60)));
-
+    // CRITICAL: Always reset to 0 when opening dialog
+    // Inputs represent EXTRA time to add, not total time
+    setExtraMinutes(0);
     setCorrectingTimesheet(timesheet);
-    setDurationMinutes(currentMinutes);
     setCorrectDialogOpen(true);
   };
 
   const handleDurationHoursChange = (value: string) => {
     const parsedHours = parseInt(value || '0', 10);
-    const safeHours = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 0;
-    const minutesPart = durationMinutes % 60;
-    setDurationMinutes(safeHours * 60 + minutesPart);
+    const safeHours = Number.isFinite(parsedHours) && parsedHours >= 0 ? parsedHours : 0;
+    const minutesPart = extraMinutes % 60;
+    setExtraMinutes(safeHours * 60 + minutesPart);
   };
 
   const handleDurationMinutesChange = (value: string) => {
@@ -227,18 +226,31 @@ export default function TimesheetsClient({
     if (parsedMinutes > 59) {
       parsedMinutes = 59;
     }
-    const hoursPart = Math.floor(durationMinutes / 60);
-    setDurationMinutes(hoursPart * 60 + parsedMinutes);
+    const hoursPart = Math.floor(extraMinutes / 60);
+    setExtraMinutes(hoursPart * 60 + parsedMinutes);
   };
 
   const adjustDuration = (deltaMinutes: number) => {
-    setDurationMinutes((prev) => Math.max(0, prev + deltaMinutes));
+    setExtraMinutes((prev) => Math.max(0, prev + deltaMinutes));
   };
 
   const handleSaveCorrection = async () => {
     if (!correctingTimesheet) return;
 
-    const decimalHours = durationMinutes / 60;
+    // Calculate the new total duration: original duration + extra minutes
+    const startTime = correctingTimesheet.manager_approved_start || correctingTimesheet.shifts.start_time;
+    const endTime = correctingTimesheet.manager_approved_end || correctingTimesheet.shifts.end_time;
+
+    if (!startTime || !endTime) {
+      setError('Cannot calculate duration: missing start or end time.');
+      return;
+    }
+
+    const originalDurationMs = new Date(endTime).getTime() - new Date(startTime).getTime();
+    const originalMinutes = Math.max(0, Math.round(originalDurationMs / (1000 * 60)));
+    const totalMinutes = originalMinutes + extraMinutes;
+    const decimalHours = totalMinutes / 60;
+
     if (!Number.isFinite(decimalHours) || decimalHours <= 0) {
       setError('Please enter a valid positive duration.');
       return;
@@ -285,12 +297,23 @@ export default function TimesheetsClient({
     });
   };
 
+  // Calculate display values for the correction dialog
   const correctingStartTime =
     correctingTimesheet?.manager_approved_start || correctingTimesheet?.shifts.start_time || null;
   const correctingEndTime =
     correctingTimesheet?.manager_approved_end || correctingTimesheet?.shifts.end_time || null;
-  const correctingHours = Math.floor(durationMinutes / 60);
-  const correctingMinutes = durationMinutes % 60;
+  
+  // Calculate original duration in minutes (needed for save validation)
+  const originalDurationMinutes = correctingStartTime && correctingEndTime
+    ? Math.max(0, Math.round((new Date(correctingEndTime).getTime() - new Date(correctingStartTime).getTime()) / (1000 * 60)))
+    : 0;
+  
+  // Total duration = original + extra (for validation)
+  const totalDurationMinutes = originalDurationMinutes + extraMinutes;
+  
+  // Extra time for display (shown in big text and inputs)
+  const extraHours = Math.floor(extraMinutes / 60);
+  const extraMinutesOnly = extraMinutes % 60;
 
   if (filteredTimesheets.length === 0) {
     return (
@@ -487,11 +510,13 @@ export default function TimesheetsClient({
 
       {/* Correct Hours Dialog */}
       <Dialog
+        key={correctingTimesheet?.id || 'closed'} // Force re-mount on each open
         open={correctDialogOpen}
         onOpenChange={(open) => {
           setCorrectDialogOpen(open);
           if (!open) {
             setCorrectingTimesheet(null);
+            setExtraMinutes(0); // Reset to 0 when closing
           }
         }}
       >
@@ -510,36 +535,41 @@ export default function TimesheetsClient({
               </div>
             )}
 
-            {/* B. Hero duration display */}
+            {/* B. Hero duration display - shows EXTRA TIME ONLY */}
             <div className="text-5xl font-bold text-center py-4">
-              {`${Number.isFinite(correctingHours) ? correctingHours : 0}h ${Number.isFinite(
-                correctingMinutes
-              ) ? correctingMinutes : 0}m`}
+              {`${Number.isFinite(extraHours) ? extraHours : 0}h ${Number.isFinite(
+                extraMinutesOnly
+              ) ? extraMinutesOnly : 0}m`}
             </div>
 
-            {/* C. Controls */}
+            {/* C. Controls - inputs represent EXTRA time to add */}
             <div className="space-y-4">
-              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={Number.isFinite(correctingHours) ? correctingHours : 0}
-                    onChange={(e) => handleDurationHoursChange(e.target.value)}
-                    className="w-20 text-center"
-                  />
-                  <span>hours</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={Number.isFinite(correctingMinutes) ? correctingMinutes : 0}
-                    onChange={(e) => handleDurationMinutesChange(e.target.value)}
-                    className="w-20 text-center"
-                  />
-                  <span>minutes</span>
+              <div className="flex flex-col items-center gap-3">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Extra Time to Add</span>
+                <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      key={`hours-${correctingTimesheet?.id || 'none'}`}
+                      type="number"
+                      min={0}
+                      value={Number.isFinite(extraHours) ? extraHours : 0}
+                      onChange={(e) => handleDurationHoursChange(e.target.value)}
+                      className="w-20 text-center"
+                    />
+                    <span>hours</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      key={`minutes-${correctingTimesheet?.id || 'none'}`}
+                      type="number"
+                      min={0}
+                      max={59}
+                      value={Number.isFinite(extraMinutesOnly) ? extraMinutesOnly : 0}
+                      onChange={(e) => handleDurationMinutesChange(e.target.value)}
+                      className="w-20 text-center"
+                    />
+                    <span>minutes</span>
+                  </div>
                 </div>
               </div>
 
@@ -564,26 +594,6 @@ export default function TimesheetsClient({
                 >
                   +30m
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => adjustDuration(-15)}
-                  disabled={!correctDialogOpen}
-                  className="rounded-full px-4"
-                >
-                  -15m
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => adjustDuration(-30)}
-                  disabled={!correctDialogOpen}
-                  className="rounded-full px-4"
-                >
-                  -30m
-                </Button>
               </div>
             </div>
           </div>
@@ -593,6 +603,7 @@ export default function TimesheetsClient({
               onClick={() => {
                 setCorrectDialogOpen(false);
                 setCorrectingTimesheet(null);
+                setExtraMinutes(0); // Reset to 0 when canceling
               }}
               disabled={isPending}
             >
@@ -600,7 +611,7 @@ export default function TimesheetsClient({
             </Button>
             <Button
               onClick={handleSaveCorrection}
-              disabled={isPending || durationMinutes <= 0 || !correctingTimesheet}
+              disabled={isPending || totalDurationMinutes <= 0 || !correctingTimesheet}
             >
               {isPending ? (
                 <>
