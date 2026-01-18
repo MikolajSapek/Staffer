@@ -319,7 +319,7 @@ export default function CandidatesClient({
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Users className="h-4 w-4" />
-                    Fill Remaining
+                    Accept All
                   </Button>
                 )}
                 {group.pendingCount > 0 && group.shift && (
@@ -331,7 +331,7 @@ export default function CandidatesClient({
                     className="flex items-center gap-2 border-red-300 text-red-600 hover:bg-red-50"
                   >
                     <X className="h-4 w-4" />
-                    Reject Others
+                    Reject All
                   </Button>
                 )}
               </div>
