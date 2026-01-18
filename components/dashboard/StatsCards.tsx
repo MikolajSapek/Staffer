@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, MapPin, Briefcase } from 'lucide-react';
+import { Calendar, MapPin, Briefcase, FileText, Users } from 'lucide-react';
 import Link from 'next/link';
 
 interface StatsCardsProps {
@@ -9,6 +9,8 @@ interface StatsCardsProps {
     shifts: number;
     locations: number;
     hires: number;
+    templates: number;
+    managers: number;
   };
   dict: {
     activeShifts: string;
@@ -22,7 +24,7 @@ interface StatsCardsProps {
 
 export default function StatsCards({ stats, dict, lang }: StatsCardsProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {/* Card 1: Active Shifts - Clickable to go to Shifts page */}
       <Link href={`/${lang}/shifts`} className="block">
         <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
@@ -70,6 +72,36 @@ export default function StatsCards({ stats, dict, lang }: StatsCardsProps) {
           </CardContent>
         </Card>
       </Link>
+
+      {/* Card 4: Templates - Clickable to go to Templates page */}
+      <Link href={`/${lang}/templates`} className="block">
+        <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Templates
+            </CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.templates}</div>
+            <p className="text-xs text-muted-foreground mt-1">{dict.clickToManage}</p>
+          </CardContent>
+        </Card>
+      </Link>
+
+      {/* Card 5: Managers - Non-clickable (coming soon) */}
+      <Card className="transition-all opacity-75">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Managers
+          </CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.managers}</div>
+          <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

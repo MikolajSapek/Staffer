@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import CreateShiftForm from './CreateShiftForm';
 import { getDictionary } from '@/app/[lang]/dictionaries';
+import { getTemplates } from '@/app/actions/templates';
 
 export default async function CreateShiftPage({
   params,
@@ -48,6 +49,9 @@ export default async function CreateShiftPage({
     .eq('is_archived', false)
     .order('name', { ascending: true });
 
+  // Fetch templates for this company
+  const templates = await getTemplates(user.id);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -61,6 +65,7 @@ export default async function CreateShiftPage({
         <CreateShiftForm 
           companyId={user.id} 
           locations={locations || []} 
+          initialTemplates={templates}
           dict={dict.createShift}
           locationFormDict={dict.companyLocations.form}
           shiftOptions={dict.shiftOptions}

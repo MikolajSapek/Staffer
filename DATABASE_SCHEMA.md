@@ -97,14 +97,32 @@ Templates for recurring shifts.
 - `start_time` (TIME), `end_time` (TIME)
 - `hourly_rate`
 - `vacancies_total`
-- `requirements` (JSONB)
+- `requirements` (JSONB) - **DEPRECATED**: Use `shift_template_requirements` table instead
+- `must_bring` (TEXT) - Items/equipment worker must bring
+- `break_minutes` (INTEGER) - Break duration in minutes (0 = no break)
+- `is_break_paid` (BOOLEAN) - Whether break is paid (true) or unpaid (false)
 - `recurrence_pattern`
 - `is_active` (BOOLEAN)
-- `created_at`, `updated_at`
+- `created_at` (TIMESTAMPTZ)
+- `updated_at` (TIMESTAMPTZ)
 
 **Foreign Keys:**
 - `company_id` → `profiles(id)`
 - `location_id` → `locations(id)`
+
+### shift_template_requirements
+Junction table linking templates to required skills (many-to-many).
+
+**Columns:**
+- `id` (UUID, PK)
+- `template_id` (UUID) - References `shift_templates(id)`
+- `skill_id` (UUID) - References `skills(id)`
+- `created_at` (TIMESTAMPTZ)
+- UNIQUE(`template_id`, `skill_id`)
+
+**Foreign Keys:**
+- `template_id` → `shift_templates(id)` ON DELETE CASCADE
+- `skill_id` → `skills(id)` ON DELETE CASCADE
 
 ---
 
@@ -412,6 +430,8 @@ GDPR consent tracking.
 | applications | worker_id | profiles | id |
 | shift_templates | company_id | profiles | id |
 | shift_templates | location_id | locations | id |
+| shift_template_requirements | template_id | shift_templates | id |
+| shift_template_requirements | skill_id | skills | id |
 | payments | application_id | shift_applications | id |
 | payments | company_id | profiles | id |
 | payments | shift_id | shifts | id |

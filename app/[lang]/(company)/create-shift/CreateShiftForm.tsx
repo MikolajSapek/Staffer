@@ -14,14 +14,16 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
-import { Loader2, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
 import CreateLocationModal from '@/components/CreateLocationModal';
 import { fromZonedTime } from 'date-fns-tz';
 import { z } from 'zod';
+import { createTemplate, deleteTemplate } from '@/app/actions/templates';
 
 interface CreateShiftFormProps {
   companyId: string;
   locations: Array<{ id: string; name: string; address: string }>;
+  initialTemplates?: ShiftTemplate[];
   locationFormDict: {
     addTitle: string;
     addDescription: string;
@@ -159,7 +161,19 @@ interface ShiftTemplate {
   category: string;
   hourly_rate: number;
   vacancies_total: number;
-  location_id: string;
+  location_id: string | null;
+  must_bring: string | null;
+  break_minutes: number;
+  is_break_paid: boolean;
+  shift_template_requirements?: Array<{
+    id: string;
+    skill_id: string;
+    skills?: {
+      id: string;
+      name: string;
+      category: string;
+    };
+  }>;
 }
 
 // Ensure start time is in the future
@@ -175,12 +189,12 @@ const formSchema = z.object({
   path: ['start_time'],
 });
 
-export default function CreateShiftForm({ companyId, locations: initialLocations, locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
+export default function CreateShiftForm({ companyId, locations: initialLocations, initialTemplates = [], locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
+  const [templates, setTemplates] = useState<ShiftTemplate[]>(initialTemplates);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -206,9 +220,9 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     possible_overtime: false,
     must_bring: '',
   });
-  // Fetch templates on mount
+  // Fetch skills on mount
   useEffect(() => {
-    async function fetchTemplates() {
+    async function fetchSkills() {
       try {
         const supabase = createClient();
         
@@ -221,25 +235,14 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         if (!skillsError && skillsData) {
           setAvailableSkills(skillsData);
         }
-        
-        const { data, error } = await supabase
-          .from('shift_templates' as any)
-          .select('*')
-          .eq('company_id', companyId)
-          .order('template_name', { ascending: true }) as any;
-
-        if (error) {
-          return;
-        }
-
-        setTemplates(data || []);
       } catch (err) {
-        // Error fetching templates - continue without them
+        // Error fetching skills - continue without them
+        console.error('Error fetching skills:', err);
       }
     }
 
-    fetchTemplates();
-  }, [companyId]);
+    fetchSkills();
+  }, []);
 
   // Load template when selected
   const handleTemplateSelect = (templateId: string) => {
@@ -248,6 +251,9 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
 
     const template = templates.find(t => t.id === templateId);
     if (template) {
+      // Extract skill IDs from template requirements
+      const templateSkillIds = template.shift_template_requirements?.map(req => req.skill_id) || [];
+      
       setFormData({
         ...formData,
         title: template.title || '',
@@ -256,8 +262,14 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         location_id: template.location_id || (locations.length > 0 ? locations[0].id : ''),
         hourly_rate: template.hourly_rate?.toString() || '',
         vacancies_total: template.vacancies_total?.toString() || '1',
+        must_bring: template.must_bring || '',
+        break_minutes: template.break_minutes?.toString() || '0',
+        is_break_paid: template.is_break_paid || false,
         // Don't overwrite start_time and end_time
       });
+      
+      // Set selected skill IDs from template
+      setSelectedSkillIds(templateSkillIds);
     }
   };
 
@@ -267,6 +279,41 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     setLocations((prev) => [newLocation, ...prev]);
     // Auto-select the new location
     setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
+  };
+
+  // Handle template deletion
+  const handleDeleteTemplate = async (templateId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+    
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the template "${template.template_name}"? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const result = await deleteTemplate(templateId);
+      
+      if (result.success) {
+        // Remove from local state
+        setTemplates(prev => prev.filter(t => t.id !== templateId));
+        
+        // Clear selection if this template was selected
+        if (selectedTemplateId === templateId) {
+          setSelectedTemplateId('');
+        }
+        
+        alert('Template deleted successfully');
+      } else {
+        alert(`Failed to delete template: ${result.error || result.message}`);
+      }
+    } catch (err) {
+      console.error('Error deleting template:', err);
+      alert('An unexpected error occurred while deleting the template');
+    }
   };
 
   const validateForm = (): string | null => {
@@ -462,23 +509,23 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
 
       // Save as template if checkbox is checked
       if (saveAsTemplate && templateName.trim()) {
-        const templatePayload = {
-          company_id: user.id,
+        const templateResult = await createTemplate({
           template_name: templateName.trim(),
           title: formData.title.trim(),
           description: formData.description.trim() || null,
           category: formData.category,
+          location_id: formData.location_id || null,
           hourly_rate: parseFloat(formData.hourly_rate),
           vacancies_total: parseInt(formData.vacancies_total),
-          location_id: formData.location_id || null,
-        };
+          must_bring: formData.must_bring.trim() || null,
+          break_minutes: parseInt(formData.break_minutes) || 0,
+          is_break_paid: parseInt(formData.break_minutes) > 0 ? formData.is_break_paid : false,
+          skill_ids: selectedSkillIds, // Pass selected skill IDs
+        });
 
-        const { error: templateError } = await supabase
-          .from('shift_templates')
-          .insert(templatePayload as any);
-
-        if (templateError) {
+        if (!templateResult.success) {
           // Don't throw - shift was created successfully, template save is secondary
+          console.error('Failed to save template:', templateResult.error);
         }
       }
 
@@ -536,22 +583,39 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
             {templates.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="template-select">{dict.templates.loadTemplate}</Label>
-                <Select
-                  value={selectedTemplateId || undefined}
-                  onValueChange={handleTemplateSelect}
-                  disabled={loading}
-                >
-                  <SelectTrigger id="template-select" className="w-full">
-                    <SelectValue placeholder={dict.templates.selectTemplatePlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.template_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedTemplateId || undefined}
+                    onValueChange={handleTemplateSelect}
+                    disabled={loading}
+                  >
+                    <SelectTrigger id="template-select" className="w-full">
+                      <SelectValue placeholder={dict.templates.selectTemplatePlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{template.template_name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedTemplateId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={(e) => handleDeleteTemplate(selectedTemplateId, e)}
+                      disabled={loading}
+                      className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      title="Delete template"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
