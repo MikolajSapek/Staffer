@@ -58,6 +58,7 @@ export interface JobDetailsDialogProps {
       locationNotSpecified: string;
       breakPaidDisplay?: string;
       breakUnpaidDisplay?: string;
+      fullyBooked?: string;
     };
     workerApplications?: {
       statusPending: string;
@@ -69,6 +70,7 @@ export interface JobDetailsDialogProps {
       categories: Record<string, string>;
       breakPaid: string;
       breakUnpaid: string;
+      noBreak: string;
       description?: string;
     };
   };
@@ -257,14 +259,15 @@ export function JobDetailsDialog({
                   {dict.jobBoard.possibleOvertime || 'Possible Overtime'}
                 </Badge>
               )}
-              {shift.break_minutes > 0 && (
-                <Badge variant="outline" className="text-sm">
-                  {shift.is_break_paid 
-                    ? `${shift.break_minutes}m Break (${dict.createShift?.breakPaid || 'Paid'})`
-                    : `${shift.break_minutes}m Break (${dict.createShift?.breakUnpaid || 'Unpaid'})`
-                  }
-                </Badge>
-              )}
+              <Badge variant="outline" className={`text-sm ${shift.break_minutes === 0 ? 'text-muted-foreground border-dashed' : ''}`}>
+                {shift.break_minutes === 0 ? (
+                  dict.createShift?.noBreak || 'No break'
+                ) : (
+                  `${shift.break_minutes}m Break (${shift.is_break_paid 
+                    ? (dict.createShift?.breakPaid || 'Paid') 
+                    : (dict.createShift?.breakUnpaid || 'Unpaid')})`
+                )}
+              </Badge>
             </div>
 
             {/* Time & Location Section */}

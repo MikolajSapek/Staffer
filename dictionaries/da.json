@@ -168,6 +168,7 @@
     "breakPaymentStatus": "Pausebetalingstatus",
     "breakPaid": "Betalt",
     "breakUnpaid": "Ubetalt",
+    "noBreak": "Ingen pause",
     "breakPaidHint": "Betalt pausetid vil blive inkluderet i den samlede lønberegning",
     "breakUnpaidHint": "Ubetalt pausetid fratrækkes fra den samlede lønberegning",
     "possibleOvertime": "Mulig overarbejde",

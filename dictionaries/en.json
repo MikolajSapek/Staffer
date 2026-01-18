@@ -168,6 +168,7 @@
     "breakPaymentStatus": "Break Payment Status",
     "breakPaid": "Paid",
     "breakUnpaid": "Unpaid",
+    "noBreak": "No break",
     "breakPaidHint": "Paid break time will be included in total pay calculation",
     "breakUnpaidHint": "Unpaid break time will be subtracted from total pay calculation",
     "possibleOvertime": "Possible Overtime",
