@@ -9,6 +9,7 @@ type CancelWorkerResult = {
   message: string;
   error?: string;
   lateCancellation?: boolean;
+  penaltyAmount?: number;
 };
 
 type UpdateShiftResult = {
@@ -55,6 +56,16 @@ export async function cancelWorkerAction(
     });
 
     if (error) {
+      // Handle specific error messages from the RPC
+      if (error.message.includes('Application not found') || 
+          error.message.includes('not authorized')) {
+        return {
+          success: false,
+          message: error.message,
+          error: error.message,
+        };
+      }
+      
       return {
         success: false,
         message: 'Failed to cancel worker',
@@ -62,11 +73,19 @@ export async function cancelWorkerAction(
       };
     }
 
-    // The RPC may optionally return additional metadata, e.g. whether this
-    // was considered a "late" cancellation. We read it defensively.
-    const rpcData = data as any | null;
-    const lateCancellation =
-      rpcData?.late_cancellation ?? rpcData?.lateCancellation ?? undefined;
+    // The RPC returns JSONB with late_cancellation and penalty_amount
+    const rpcData = data as { late_cancellation: boolean; penalty_amount: number } | null;
+    
+    if (!rpcData) {
+      return {
+        success: false,
+        message: 'Invalid response from server',
+        error: 'No data returned from cancellation',
+      };
+    }
+
+    const lateCancellation = rpcData.late_cancellation;
+    const penaltyAmount = rpcData.penalty_amount;
 
     // Ensure the latest data is shown wherever this list/details live.
     revalidatePath(path);
@@ -74,13 +93,25 @@ export async function cancelWorkerAction(
     return {
       success: true,
       message: 'Worker has been cancelled successfully',
-      lateCancellation: typeof lateCancellation === 'boolean' ? lateCancellation : undefined,
+      lateCancellation,
+      penaltyAmount,
     };
   } catch (err: any) {
+    // Handle specific error messages from exceptions
+    const errorMessage = err?.message ?? String(err);
+    if (errorMessage.includes('Application not found') || 
+        errorMessage.includes('not authorized')) {
+      return {
+        success: false,
+        message: errorMessage,
+        error: errorMessage,
+      };
+    }
+    
     return {
       success: false,
       message: 'Unexpected error while cancelling worker',
-      error: err?.message ?? String(err),
+      error: errorMessage,
     };
   }
 }

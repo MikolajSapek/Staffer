@@ -21,7 +21,8 @@ import {
   MapPin,
   Clock,
   Globe,
-  Wallet
+  Wallet,
+  Settings
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -409,6 +410,16 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                       <UserCircle className="mr-2 h-4 w-4" />
                       {dict.nav?.profile || dict.navigation.profile}
                     </Link>
+                    {role === 'worker' && (
+                      <Link
+                        href={`/${lang}/worker/settings`}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        {dict.nav?.settings || 'Settings'}
+                      </Link>
+                    )}
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"

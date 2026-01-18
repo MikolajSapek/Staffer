@@ -57,6 +57,12 @@ export interface Database {
           shoe_size: string | null;
           strike_count: number;
           is_banned: boolean;
+          notify_on_hired: boolean;
+          notify_additional_mail: boolean;
+          notify_job_matches: boolean;
+          notify_urgent_jobs: boolean;
+          notify_all_jobs: boolean;
+          newsletter_subscription: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -75,6 +81,12 @@ export interface Database {
           shoe_size?: string | null;
           strike_count?: number;
           is_banned?: boolean;
+          notify_on_hired?: boolean;
+          notify_additional_mail?: boolean;
+          notify_job_matches?: boolean;
+          notify_urgent_jobs?: boolean;
+          notify_all_jobs?: boolean;
+          newsletter_subscription?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -93,6 +105,12 @@ export interface Database {
           shoe_size?: string | null;
           strike_count?: number;
           is_banned?: boolean;
+          notify_on_hired?: boolean;
+          notify_additional_mail?: boolean;
+          notify_job_matches?: boolean;
+          notify_urgent_jobs?: boolean;
+          notify_all_jobs?: boolean;
+          newsletter_subscription?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -172,12 +190,12 @@ export interface Database {
           id: string;
           company_id: string;
           location_id: string;
-          title: string;
-          description: string | null;
+          title: string | null;
+          description: string;
           category: string;
-          start_time: string;
-          end_time: string;
-          hourly_rate: number;
+          start_time: string | null;
+          end_time: string | null;
+          hourly_rate: number | null;
           break_minutes: number;
           is_break_paid: boolean;
           vacancies_total: number;
@@ -187,6 +205,10 @@ export interface Database {
           status: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent: boolean;
           possible_overtime: boolean;
+          /** @deprecated Legacy field - use shift_requirements table instead */
+          required_languages: string[] | null;
+          /** @deprecated Legacy field - use shift_requirements table instead */
+          required_licences: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -194,12 +216,12 @@ export interface Database {
           id?: string;
           company_id: string;
           location_id: string;
-          title: string;
-          description?: string | null;
+          title?: string | null;
+          description: string;
           category: string;
-          start_time: string;
-          end_time: string;
-          hourly_rate: number;
+          start_time?: string | null;
+          end_time?: string | null;
+          hourly_rate?: number | null;
           break_minutes?: number;
           is_break_paid?: boolean;
           vacancies_total: number;
@@ -209,6 +231,10 @@ export interface Database {
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
+          /** @deprecated Legacy field - use shift_requirements table instead */
+          required_languages?: string[] | null;
+          /** @deprecated Legacy field - use shift_requirements table instead */
+          required_licences?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -216,13 +242,14 @@ export interface Database {
           id?: string;
           company_id?: string;
           location_id?: string;
-          title?: string;
-          description?: string | null;
+          title?: string | null;
+          description?: string;
           category?: string;
-          start_time?: string;
-          end_time?: string;
-          hourly_rate?: number;
+          start_time?: string | null;
+          end_time?: string | null;
+          hourly_rate?: number | null;
           break_minutes?: number;
+          is_break_paid?: boolean;
           vacancies_total?: number;
           vacancies_taken?: number;
           requirements?: Json;
@@ -230,6 +257,10 @@ export interface Database {
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
+          /** @deprecated Legacy field - use shift_requirements table instead */
+          required_languages?: string[] | null;
+          /** @deprecated Legacy field - use shift_requirements table instead */
+          required_licences?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -240,74 +271,80 @@ export interface Database {
           shift_id: string;
           worker_id: string;
           company_id: string;
-          status: 'pending' | 'accepted' | 'rejected' | 'waitlist';
-          applied_at: string;
+          status: string; // text in DB, can be 'pending' | 'accepted' | 'rejected' | 'waitlist'
+          locked_hourly_rate: number | null;
           worker_message: string | null;
+          applied_at: string;
+          updated_at: string | null;
+          rejection_reason: string | null;
         };
         Insert: {
           id?: string;
           shift_id: string;
           worker_id: string;
           company_id: string;
-          status?: 'pending' | 'accepted' | 'rejected' | 'waitlist';
-          applied_at?: string;
+          status?: string;
+          locked_hourly_rate?: number | null;
           worker_message?: string | null;
+          applied_at?: string;
+          updated_at?: string | null;
+          rejection_reason?: string | null;
         };
         Update: {
           id?: string;
           shift_id?: string;
           worker_id?: string;
           company_id?: string;
-          status?: 'pending' | 'accepted' | 'rejected' | 'waitlist';
-          applied_at?: string;
+          status?: string;
+          locked_hourly_rate?: number | null;
           worker_message?: string | null;
+          applied_at?: string;
+          updated_at?: string | null;
+          rejection_reason?: string | null;
         };
       };
       timesheets: {
         Row: {
           id: string;
-          shift_id: string;
-          worker_id: string;
-          clock_in_time: string | null;
-          clock_in_location: string | null;
-          clock_out_time: string | null;
-          manager_approved_start: string | null;
-          manager_approved_end: string | null;
+          shift_id: string | null;
+          worker_id: string | null;
+          company_id: string | null;
+          status: string; // text in DB, can be 'pending' | 'approved' | 'disputed' | 'paid'
+          total_pay: number;
+          hourly_rate: number | null;
+          manager_approved_start: string;
+          manager_approved_end: string;
           is_no_show: boolean;
-          was_disputed: boolean;
-          status: 'pending' | 'approved' | 'disputed' | 'paid';
+          was_disputed: boolean | null;
           created_at: string;
-          updated_at: string;
         };
         Insert: {
           id?: string;
-          shift_id: string;
-          worker_id: string;
-          clock_in_time?: string | null;
-          clock_in_location?: string | null;
-          clock_out_time?: string | null;
-          manager_approved_start?: string | null;
-          manager_approved_end?: string | null;
+          shift_id?: string | null;
+          worker_id?: string | null;
+          company_id?: string | null;
+          status?: string;
+          total_pay: number;
+          hourly_rate?: number | null;
+          manager_approved_start: string;
+          manager_approved_end: string;
           is_no_show?: boolean;
-          was_disputed?: boolean;
-          status?: 'pending' | 'approved' | 'disputed' | 'paid';
+          was_disputed?: boolean | null;
           created_at?: string;
-          updated_at?: string;
         };
         Update: {
           id?: string;
-          shift_id?: string;
-          worker_id?: string;
-          clock_in_time?: string | null;
-          clock_in_location?: string | null;
-          clock_out_time?: string | null;
-          manager_approved_start?: string | null;
-          manager_approved_end?: string | null;
+          shift_id?: string | null;
+          worker_id?: string | null;
+          company_id?: string | null;
+          status?: string;
+          total_pay?: number;
+          hourly_rate?: number | null;
+          manager_approved_start?: string;
+          manager_approved_end?: string;
           is_no_show?: boolean;
-          was_disputed?: boolean;
-          status?: 'pending' | 'approved' | 'disputed' | 'paid';
+          was_disputed?: boolean | null;
           created_at?: string;
-          updated_at?: string;
         };
       };
       documents: {
@@ -539,57 +576,36 @@ export interface Database {
           id: string;
           worker_id: string;
           skill_id: string;
-          skill_name_debug: string | null;  // Auto-sync z skills.name via trigger
-          proof_document_id: string | null;
-          verified: boolean;
-          created_at: string;
-          updated_at: string;
+          verified: boolean | null;
         };
         Insert: {
           id?: string;
           worker_id: string;
           skill_id: string;
-          skill_name_debug?: string | null;  // Trigger wypełni automatycznie
-          proof_document_id?: string | null;
-          verified?: boolean;
-          created_at?: string;
-          updated_at?: string;
+          verified?: boolean | null;
         };
         Update: {
           id?: string;
           worker_id?: string;
           skill_id?: string;
-          skill_name_debug?: string | null;
-          proof_document_id?: string | null;
-          verified?: boolean;
-          created_at?: string;
-          updated_at?: string;
+          verified?: boolean | null;
         };
       };
       shift_requirements: {
         Row: {
           id: string;
-          shift_id: string;
-          skill_id: string;
-          skill_name_debug: string | null;  // Auto-sync from skills.name via trigger
-          created_at: string;
-          updated_at: string;
+          shift_id: string | null;
+          skill_id: string | null;
         };
         Insert: {
           id?: string;
-          shift_id: string;
-          skill_id: string;
-          skill_name_debug?: string | null;  // Trigger will populate automatically
-          created_at?: string;
-          updated_at?: string;
+          shift_id?: string | null;
+          skill_id?: string | null;
         };
         Update: {
           id?: string;
-          shift_id?: string;
-          skill_id?: string;
-          skill_name_debug?: string | null;
-          created_at?: string;
-          updated_at?: string;
+          shift_id?: string | null;
+          skill_id?: string | null;
         };
       };
     };

@@ -15,8 +15,6 @@ import { cn } from '@/lib/utils';
 import { ImageCropperModal } from '@/components/ImageCropperModal';
 import VerificationWizard from '@/components/verification/VerificationWizard';
 
-type TaxCardType = 'Hovedkort' | 'Bikort' | 'Frikort';
-
 interface WorkerProfileFormProps {
   dict: {
     profile: {
@@ -76,9 +74,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
     first_name: '',
     last_name: '',
     phone_number: '',
-    tax_card_type: 'Hovedkort' as TaxCardType,
-    bank_reg_number: '',
-    bank_account_number: '',
     shirt_size: '',
     shoe_size: '',
     description: '',
@@ -195,9 +190,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
               first_name: data.first_name || '',
               last_name: data.last_name || '',
               phone_number: data.phone_number || '',
-              tax_card_type: (data.tax_card_type || 'Hovedkort') as TaxCardType,
-              bank_reg_number: data.bank_reg_number || '',
-              bank_account_number: data.bank_account_number || '',
               shirt_size: (shirtSize as string) || '',
               shoe_size: (shoeSize as string) || '',
               description: data.description || '',
@@ -434,19 +426,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         return;
       }
 
-      if (!formData.bank_reg_number.trim() || !formData.bank_account_number.trim()) {
-        setSubmitError(dict.profile.validation.bankRequired);
-        setSubmitLoading(false);
-        return;
-      }
-
-      // Validate account number length (max 10 digits)
-      if (formData.bank_account_number.trim().length > 10) {
-        setSubmitError('Account number cannot exceed 10 digits');
-        setSubmitLoading(false);
-        return;
-      }
-
       // Handle CPR - validate format if provided
       // Send plain text to RPC, database will handle encryption
       let cprNumber = '';
@@ -501,35 +480,22 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         }
       }
 
-      // Prepare RPC parameters - must match SQL function signature exactly
-      const rpcParams: {
-        p_first_name: string;
-        p_last_name: string;
-        p_phone_number: string;
-        p_cpr_number: string | null;
-        p_tax_card_type: TaxCardType;
-        p_bank_reg_number: string;
-        p_bank_account_number: string;
-        p_description: string | null;
-        p_experience: string | null;
-        p_avatar_url: string | null;
-        p_id_card_url: string | null;
-      } = {
-        p_first_name: formData.first_name.trim(),
-        p_last_name: formData.last_name.trim(),
-        p_phone_number: formData.phone_number.trim(),
-        p_cpr_number: cprNumber || null, // Send plain text, DB handles encryption
-        p_tax_card_type: formData.tax_card_type,
-        p_bank_reg_number: formData.bank_reg_number.trim(),
-        p_bank_account_number: formData.bank_account_number.trim(),
-        p_description: formData.description.trim() || null,
-        p_experience: formData.experience.trim() || null,
-        p_avatar_url: avatarUrl || null,
-        p_id_card_url: idCardUrl || null,
-      };
+      // Update worker_details directly (without RPC for now, as we're removing bank/tax from profile)
+      const { error: updateError } = await supabase
+        .from('worker_details')
+        .upsert({
+          profile_id: user.id,
+          first_name: formData.first_name.trim(),
+          last_name: formData.last_name.trim(),
+          phone_number: formData.phone_number.trim(),
+          description: formData.description.trim() || null,
+          experience: formData.experience.trim() || null,
+          avatar_url: avatarUrl || null,
+        }, {
+          onConflict: 'profile_id'
+        });
 
-      // Call secure RPC function
-      const { error: rpcError } = await supabase.rpc('upsert_worker_secure', rpcParams);
+      const rpcError = updateError;
 
       if (rpcError) {
         setSubmitError(rpcError.message || 'Kunne ikke gemme oplysninger');
@@ -637,9 +603,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
             first_name: (data.first_name as string) || '',
             last_name: (data.last_name as string) || '',
             phone_number: (data.phone_number as string) || '',
-            tax_card_type: ((data.tax_card_type as TaxCardType) || 'Hovedkort'),
-            bank_reg_number: (data.bank_reg_number as string) || '',
-            bank_account_number: (data.bank_account_number as string) || '',
             shirt_size: (shirtSize as string) || (data.shirt_size as string) || '',
             shoe_size: (shoeSize as string) || (data.shoe_size as string) || '',
             description: (data.description as string) || '',
@@ -1100,57 +1063,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                     ? dict.profile.cprNumberHint
                     : dict.profile.cprNumberRequired}
                 </p>
-              </div>
-            </div>
-
-                {/* Tax and Bank Information Section */}
-                <div className="space-y-4">
-                  <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">{dict.profile.taxAndBank}</h3>
-                    <p className="text-sm text-muted-foreground">{dict.profile.taxAndBankDescription}</p>
-                  </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="tax_card_type">{dict.profile.taxCardType} *</Label>
-                <select
-                  id="tax_card_type"
-                  value={formData.tax_card_type || 'Hovedkort'}
-                  onChange={(e) => setFormData({ ...formData, tax_card_type: e.target.value as TaxCardType })}
-                  required
-                  disabled={submitLoading}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="Hovedkort">{dict.profile.taxCardMain}</option>
-                  <option value="Bikort">{dict.profile.taxCardSecondary}</option>
-                  <option value="Frikort">{dict.profile.taxCardFree}</option>
-                </select>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="bank_reg_number">{dict.profile.bankRegNumber} *</Label>
-                  <Input
-                    id="bank_reg_number"
-                    value={formData.bank_reg_number || ''}
-                    onChange={(e) => setFormData({ ...formData, bank_reg_number: e.target.value })}
-                    required
-                    placeholder={dict.profile.bankRegNumberPlaceholder}
-                    maxLength={4}
-                    disabled={submitLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bank_account_number">{dict.profile.bankAccountNumber} *</Label>
-                  <Input
-                    id="bank_account_number"
-                    value={formData.bank_account_number || ''}
-                    onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
-                    required
-                    placeholder={dict.profile.bankAccountNumberPlaceholder}
-                    maxLength={10}
-                    disabled={submitLoading}
-                  />
-                </div>
               </div>
             </div>
 
