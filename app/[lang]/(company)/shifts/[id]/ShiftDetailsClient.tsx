@@ -14,18 +14,21 @@ import { archiveShift, cancelWorkerAction } from '@/app/actions/shifts';
 import RateWorkerDialog from '@/components/RateWorkerDialog';
 import CancelWorkerDialog from '@/components/shifts/CancelWorkerDialog';
 import EditShiftDialog from '@/components/shifts/EditShiftDialog';
+import CandidateProfileModal from '@/components/company/CandidateProfileModal';
 import { useToast } from '@/components/ui/use-toast';
 
 interface WorkerDetails {
   avatar_url: string | null;
-  phone_number: string | null;
+  phone_number: string;
+  experience: string | null;
+  description: string | null;
 }
 
 
 interface Profile {
   id: string;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   average_rating: number | null;
   total_reviews: number;
@@ -37,7 +40,13 @@ interface Application {
   status: string;
   applied_at: string;
   worker_message: string | null;
+  shift_id?: string;
+  worker_id?: string;
   profiles: Profile | null;
+  shifts?: {
+    id: string;
+    title: string;
+  } | null;
 }
 
 interface Location {
@@ -115,6 +124,8 @@ export default function ShiftDetailsClient({
     workerName: string;
   } | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
 
   // Helper to safely extract worker_details
   const getWorkerDetails = (profile: Profile | null): WorkerDetails | null => {
@@ -214,6 +225,51 @@ export default function ShiftDetailsClient({
     });
   };
 
+  const handleWorkerProfileClick = (application: Application) => {
+    console.log('Opening worker profile:', application);
+    
+    // Extract worker_details properly (could be array or object)
+    const profile = application.profiles;
+    const workerDetails = profile ? getWorkerDetails(profile) : null;
+    
+    // Enrich application with required fields for CandidateProfileModal
+    const enrichedApplication: Application = {
+      ...application,
+      shift_id: shift.id,
+      worker_id: profile?.id || '',
+      profiles: profile ? {
+        ...profile,
+        worker_details: {
+          avatar_url: workerDetails?.avatar_url || null,
+          phone_number: workerDetails?.phone_number || '',
+          description: workerDetails?.description || null,
+          experience: workerDetails?.experience || null,
+        }
+      } : null,
+      shifts: {
+        id: shift.id,
+        title: shift.title,
+      }
+    };
+    
+    console.log('Enriched application with worker_details:', enrichedApplication);
+    console.log('Worker details description:', enrichedApplication.profiles?.worker_details);
+    setSelectedApplication(enrichedApplication);
+    setProfileModalOpen(true);
+    console.log('Modal should open now. profileModalOpen will be:', true);
+  };
+
+  const handleProfileModalClose = (open: boolean) => {
+    setProfileModalOpen(open);
+    if (!open) {
+      setSelectedApplication(null);
+    }
+  };
+
+  const handleProfileModalSuccess = () => {
+    router.refresh();
+  };
+
   // Helper to get status badge
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -240,9 +296,9 @@ export default function ShiftDetailsClient({
       {/* Back Button */}
       <div className="mb-6">
         <Button variant="ghost" asChild>
-          <Link href={`/${lang}/shifts`}>
+          <Link href={`/${lang}/dashboard`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {dict.companyShifts?.viewDetails || 'Back to Shifts'}
+            Go Back
           </Link>
         </Button>
       </div>
@@ -390,7 +446,11 @@ export default function ShiftDetailsClient({
                 const phoneNumber = workerDetails?.phone_number || null;
 
                 return (
-                  <Card key={application.id} className="border">
+                  <Card 
+                    key={application.id} 
+                    className="border cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleWorkerProfileClick(application)}
+                  >
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-4">
                         {/* Avatar */}
@@ -434,7 +494,10 @@ export default function ShiftDetailsClient({
                               variant="destructive"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => handleCancelClick(application.id, fullName)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelClick(application.id, fullName);
+                              }}
                               disabled={isCancelPending || isArchived}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -458,7 +521,10 @@ export default function ShiftDetailsClient({
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleRateClick(profile.id, fullName)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRateClick(profile.id, fullName);
+                                  }}
                                   className="gap-2"
                                 >
                                   <Star className="h-4 w-4" />
@@ -531,6 +597,34 @@ export default function ShiftDetailsClient({
         createShiftDict={createShiftDict}
         shiftOptions={shiftOptions}
       />
+
+      {/* Worker Profile Modal */}
+      {selectedApplication && (
+        <CandidateProfileModal
+          open={profileModalOpen}
+          onOpenChange={handleProfileModalClose}
+          application={selectedApplication}
+          dict={{
+            title: 'Worker Profile',
+            about: 'About',
+            contact: 'Contact',
+            applicationMessage: 'Application Message',
+            appliedFor: 'Applied For',
+            appliedAt: 'Applied At',
+            status: 'Status',
+            accept: 'Accept',
+            reject: 'Reject',
+            accepting: 'Accepting...',
+            rejecting: 'Rejecting...',
+            acceptSuccess: 'Application accepted',
+            rejectSuccess: 'Application rejected',
+            error: 'An error occurred',
+            close: 'Close',
+          }}
+          lang={lang}
+          onSuccess={handleProfileModalSuccess}
+        />
+      )}
     </div>
   );
 }

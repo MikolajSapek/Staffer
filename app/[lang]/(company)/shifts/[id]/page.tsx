@@ -69,7 +69,9 @@ export default async function ShiftDetailsPage({
           total_reviews,
           worker_details (
             avatar_url,
-            phone_number
+            phone_number,
+            experience,
+            description
           )
         )
       )

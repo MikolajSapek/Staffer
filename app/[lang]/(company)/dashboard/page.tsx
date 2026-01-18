@@ -65,9 +65,13 @@ export default async function CompanyDashboardPage({
           first_name,
           last_name,
           email,
+          average_rating,
+          total_reviews,
           worker_details:worker_details!worker_details_profile_id_fkey(
             avatar_url,
-            phone_number
+            phone_number,
+            experience,
+            description
           )
         )
       )
@@ -104,8 +108,12 @@ export default async function CompanyDashboardPage({
           first_name: worker.first_name,
           last_name: worker.last_name,
           email: worker.email,
+          average_rating: worker.average_rating,
+          total_reviews: worker.total_reviews,
           avatar_url: details?.avatar_url || null,
-          phone_number: details?.phone_number || null
+          phone_number: details?.phone_number || null,
+          experience: details?.experience || null,
+          description: details?.description || null
         } : null
       };
     })
