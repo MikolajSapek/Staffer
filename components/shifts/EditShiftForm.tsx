@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { updateShiftAction } from '@/app/actions/shifts';
 import { useToast } from '@/components/ui/use-toast';
 import { createClient } from '@/utils/supabase/client';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 
 interface Skill {
   id: string;
@@ -419,7 +420,7 @@ export default function EditShiftForm({
                 <Input
                   id="start_time"
                   type="datetime-local"
-                  step={60}
+                  step={600}
                   value={formData.start_time ? formData.start_time.slice(0, 16) : ''}
                   onChange={(e) => handleStartDateTimeChange(e.target.value)}
                   min={minStartDateTime}
@@ -437,7 +438,7 @@ export default function EditShiftForm({
                 <Input
                   id="end_time"
                   type="datetime-local"
-                  step={60}
+                  step={600}
                   value={formData.end_time ? formData.end_time.slice(0, 16) : ''}
                   onChange={(e) => handleEndDateTimeChange(e.target.value)}
                   min={minEndDateTime}

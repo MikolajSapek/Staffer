@@ -19,6 +19,7 @@ import CreateLocationModal from '@/components/CreateLocationModal';
 import { fromZonedTime } from 'date-fns-tz';
 import { z } from 'zod';
 import { createTemplate, deleteTemplate } from '@/app/actions/templates';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 
 interface CreateShiftFormProps {
   companyId: string;
@@ -365,21 +366,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     return null;
   };
 
-  const minStartDateTime = new Date().toISOString().slice(0, 16);
-  const minEndDateTime = formData.start_time
-    ? formData.start_time.slice(0, 16)
-    : minStartDateTime;
-
-  const handleStartDateTimeChange = (value: string) => {
-    const valueWithSeconds = value ? `${value}:00` : '';
-    setFormData({ ...formData, start_time: valueWithSeconds });
-  };
-
-  const handleEndDateTimeChange = (value: string) => {
-    const valueWithSeconds = value ? `${value}:00` : '';
-    setFormData({ ...formData, end_time: valueWithSeconds });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -718,45 +704,35 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
             {/* Date & Time */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>
+                <Label htmlFor="start_time">
                   {dict.startTime} <span className="text-red-500">*</span>
                 </Label>
-                <div className="grid gap-2">
-                  <Input
-                    id="start_time"
-                    type="datetime-local"
-                    step={60}
-                    value={formData.start_time ? formData.start_time.slice(0, 16) : ''}
-                    onChange={(e) => handleStartDateTimeChange(e.target.value)}
-                    min={minStartDateTime}
-                    required
-                    disabled={loading}
-                    className="w-full"
-                  />
-                  {error?.includes('Start time must be in the future') && (
-                    <p className="text-sm text-red-600">
-                      Start time must be in the future
-                    </p>
-                  )}
-                </div>
+                <DateTimePicker
+                  id="start_time"
+                  value={formData.start_time}
+                  onChange={(value) => setFormData({ ...formData, start_time: value })}
+                  min={new Date().toISOString()}
+                  required
+                  disabled={loading}
+                />
+                {error?.includes('Start time must be in the future') && (
+                  <p className="text-sm text-red-600">
+                    Start time must be in the future
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>
+                <Label htmlFor="end_time">
                   {dict.endTime} <span className="text-red-500">*</span>
                 </Label>
-                <div className="grid gap-2">
-                  <Input
-                    id="end_time"
-                    type="datetime-local"
-                    step={60}
-                    value={formData.end_time ? formData.end_time.slice(0, 16) : ''}
-                    onChange={(e) => handleEndDateTimeChange(e.target.value)}
-                    min={minEndDateTime}
-                    required
-                    disabled={loading}
-                    className="w-full"
-                  />
-                </div>
+                <DateTimePicker
+                  id="end_time"
+                  value={formData.end_time}
+                  onChange={(value) => setFormData({ ...formData, end_time: value })}
+                  min={formData.start_time || new Date().toISOString()}
+                  required
+                  disabled={loading}
+                />
               </div>
             </div>
 
