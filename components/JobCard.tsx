@@ -28,7 +28,7 @@ interface Shift {
   status: string;
   company_id: string;
   is_urgent: boolean;
-  requirements: any; // JSONB field
+  must_bring: string | null;
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {

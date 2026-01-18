@@ -115,6 +115,22 @@ The system uses a **fully normalized** skills architecture:
 | `notification_logs` | User notification history |
 | `user_consents` | GDPR consent tracking |
 
+### Database Views (Optimized Queries)
+| View | Purpose | Returns |
+|------|---------|---------|
+| `candidate_skills_view` ✅ | **Preferred** for displaying worker skills in UI | Single row per worker with `languages` and `licenses` as JSONB arrays of `{ id, name }` objects |
+| `worker_skills_display` | Individual skill rows with metadata | Multiple rows per worker (one per skill) |
+
+**Usage:**
+- Use `candidate_skills_view` when **displaying** worker skills (modals, cards, lists)
+  - Pre-aggregated data, no client-side parsing needed
+  - Type-safe: `Array<{ id: string; name: string }>`
+  - Better performance (fewer rows, smaller payload)
+- Use `worker_skills_display` for detailed skill analysis
+- Use `worker_skills` table directly when **modifying** skills (add/delete)
+
+See [OPTIMIZATION_CANDIDATE_SKILLS_VIEW.md](./OPTIMIZATION_CANDIDATE_SKILLS_VIEW.md) for details.
+
 ## 4. User Roles & UI Structure
 
 ### Worker Role

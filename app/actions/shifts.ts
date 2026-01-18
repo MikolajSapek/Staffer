@@ -123,6 +123,7 @@ export async function cancelWorkerAction(
  * this action will:
  * - Add the `p_shift_id` parameter
  * - Normalise any date values to full ISO strings with timezone.
+ * - Update shift requirements in the shift_requirements table
  */
 export async function updateShiftAction(
   shiftId: string,
@@ -189,6 +190,7 @@ export async function updateShiftAction(
       ? parseInt(formData.break_minutes, 10)
       : Number(formData.break_minutes) || 0;
 
+    // Update the shift via RPC
     const { error } = await supabase.rpc('update_shift_secure', {
       p_shift_id: shiftId,
       p_company_id: user.id,
@@ -215,6 +217,53 @@ export async function updateShiftAction(
         error: error.message,
       };
     }
+
+    // Update shift requirements (languages and licenses)
+    // 1. Delete existing requirements
+    const { error: deleteError } = await supabase
+      .from('shift_requirements')
+      .delete()
+      .eq('shift_id', shiftId);
+
+    if (deleteError) {
+      console.error('Error deleting old shift requirements:', deleteError);
+      return {
+        success: false,
+        message: 'Failed to update shift requirements',
+        error: deleteError.message,
+      };
+    }
+
+    // 2. Insert new requirements
+    const allSkillIds = [
+      ...(formData.required_language_ids || []),
+      ...(formData.required_licence_ids || [])
+    ];
+
+    if (allSkillIds.length > 0) {
+      const requirementsToInsert = allSkillIds.map((skillId) => ({
+        shift_id: shiftId,
+        skill_id: skillId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('shift_requirements')
+        .insert(requirementsToInsert);
+
+      if (insertError) {
+        console.error('Error inserting new shift requirements:', insertError);
+        return {
+          success: false,
+          message: 'Shift updated but failed to save requirements',
+          error: insertError.message,
+        };
+      }
+    }
+
+    // Revalidate paths
+    revalidatePath(`/shifts/${shiftId}`);
+    revalidatePath('/shifts');
+    revalidatePath('/dashboard');
 
     return {
       success: true,

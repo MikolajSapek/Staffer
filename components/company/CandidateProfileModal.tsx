@@ -93,14 +93,14 @@ export default function CandidateProfileModal({
   const [error, setError] = useState<string | null>(null);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [workerSkills, setWorkerSkills] = useState<{
-    languages: string[];
-    licenses: string[];
+    languages: Array<{ id: string; name: string }>;
+    licenses: Array<{ id: string; name: string }>;
   }>({ languages: [], licenses: [] });
 
   const profile = application.profiles;
   const shift = application.shifts;
 
-  // Fetch worker skills from worker_skills_display view when modal opens
+  // Fetch worker skills from candidate_skills_view when modal opens
   useEffect(() => {
     if (!open || !application.worker_id) {
       return;
@@ -109,35 +109,45 @@ export default function CandidateProfileModal({
     setSkillsLoading(true);
     const supabase = createClient();
     
+    // Type assertion for candidate_skills_view
+    type CandidateSkills = {
+      worker_id: string;
+      languages: Array<{ id: string; name: string }>;
+      licenses: Array<{ id: string; name: string }>;
+    };
+    
     supabase
-      .from('worker_skills_display')
+      .from('candidate_skills_view')
       .select('*')
       .eq('worker_id', application.worker_id)
-      .then(({ data, error }) => {
+      .limit(1)
+      .maybeSingle()
+      .then(({ data, error }: { data: CandidateSkills | null; error: any }) => {
         if (error) {
+          console.error('Error fetching candidate skills:', error);
           setWorkerSkills({ languages: [], licenses: [] });
+          setSkillsLoading(false);
           return;
         }
         
         if (!data) {
+          // Worker has no skills entry yet - this is normal
           setWorkerSkills({ languages: [], licenses: [] });
+          setSkillsLoading(false);
           return;
         }
         
-        const languages: string[] = [];
-        const licenses: string[] = [];
-        
-        data.forEach((skill: any) => {
-          if (skill.skill_category === 'language' && skill.skill_name) {
-            languages.push(skill.skill_name);
-          } else if (skill.skill_category === 'license' && skill.skill_name) {
-            licenses.push(skill.skill_name);
-          }
+        // Data comes directly as arrays of { id: string; name: string }
+        // No need for parsing or JSON.parse() - Supabase client handles JSONB automatically
+        setWorkerSkills({
+          languages: data.languages || [],
+          licenses: data.licenses || []
         });
         
-        setWorkerSkills({ languages, licenses });
+        setSkillsLoading(false);
       })
-      .finally(() => {
+      .catch(() => {
+        setWorkerSkills({ languages: [], licenses: [] });
         setSkillsLoading(false);
       });
   }, [open, application.worker_id]);
@@ -346,9 +356,9 @@ export default function CandidateProfileModal({
                       {dict.languages || 'Languages'}
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {workerSkills.languages.map((lang, idx) => (
-                        <Badge key={idx} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          {lang}
+                      {workerSkills.languages.map((lang) => (
+                        <Badge key={lang.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          {lang.name}
                         </Badge>
                       ))}
                     </div>
@@ -360,9 +370,9 @@ export default function CandidateProfileModal({
                       {dict.licenses || 'Licenses'}
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {workerSkills.licenses.map((license, idx) => (
-                        <Badge key={idx} variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
-                          {license}
+                      {workerSkills.licenses.map((license) => (
+                        <Badge key={license.id} variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+                          {license.name}
                         </Badge>
                       ))}
                     </div>

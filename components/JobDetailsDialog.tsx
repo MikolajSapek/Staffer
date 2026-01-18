@@ -36,7 +36,6 @@ interface Shift {
   status: string;
   company_id: string;
   is_urgent: boolean;
-  requirements: any; // JSONB field
   must_bring: string | null;
   locations: { name: string; address: string } | null;
   profiles: {
@@ -173,40 +172,6 @@ export function JobDetailsDialog({
 
   // Get category display name
   const categoryDisplay = dict.createShift?.categories?.[shift.category] || shift.category;
-
-  // Parse requirements (JSONB field could be array, object, or null)
-  const renderRequirements = () => {
-    if (!shift.requirements) return null;
-
-    let requirementsList: string[] = [];
-    
-    if (Array.isArray(shift.requirements)) {
-      requirementsList = shift.requirements;
-    } else if (typeof shift.requirements === 'object') {
-      // If it's an object, convert to array of key-value pairs or values
-      requirementsList = Object.entries(shift.requirements).map(([key, value]) => {
-        if (typeof value === 'string' && value.trim()) {
-          return value;
-        }
-        return `${key}: ${value}`;
-      }).filter(Boolean);
-    } else if (typeof shift.requirements === 'string') {
-      requirementsList = [shift.requirements];
-    }
-
-    if (requirementsList.length === 0) return null;
-
-    return (
-      <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-900">Requirements</h4>
-        <ul className="list-disc list-inside space-y-1 text-sm text-gray-900">
-          {requirementsList.map((req, idx) => (
-            <li key={idx}>{req}</li>
-          ))}
-        </ul>
-      </div>
-    );
-  };
 
   const handleApplyClick = () => {
     if (!user || userRole !== 'worker') {
@@ -433,9 +398,6 @@ export function JobDetailsDialog({
                 ) : null}
               </div>
             )}
-
-            {/* Requirements Section */}
-            {renderRequirements()}
 
             {/* Availability Info */}
             <div className="flex items-center gap-1 text-sm text-gray-900 pt-2 border-t border-gray-100">

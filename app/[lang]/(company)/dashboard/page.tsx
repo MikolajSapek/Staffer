@@ -120,7 +120,7 @@ export default async function CompanyDashboardPage({
     })
   }));
 
-  // Fetch worker skills for archived shifts
+  // Fetch worker skills for archived shifts using the optimized candidate_skills_view
   let mappedArchivedShiftsWithSkills = mappedArchivedShifts;
   
   if (mappedArchivedShifts && mappedArchivedShifts.length > 0) {
@@ -132,41 +132,36 @@ export default async function CompanyDashboardPage({
     const uniqueWorkerIds = [...new Set(allWorkerIds)];
     
     if (uniqueWorkerIds.length > 0) {
+      // Type definition for candidate_skills_view
+      type CandidateSkills = {
+        worker_id: string;
+        languages: Array<{ id: string; name: string }>;
+        licenses: Array<{ id: string; name: string }>;
+      };
+      
       const { data: workerSkills } = await supabase
-        .from('worker_skills')
-        .select('worker_id, skill_id, skill_name_debug, skills!inner(category)')
-        .in('worker_id', uniqueWorkerIds);
+        .from('candidate_skills_view')
+        .select('*')
+        .in('worker_id', uniqueWorkerIds) as { data: CandidateSkills[] | null; error: any };
 
-      // Group skills by worker_id and category
-      const skillsByWorker = workerSkills?.reduce((acc, skill) => {
-        if (!acc[skill.worker_id]) {
-          acc[skill.worker_id] = { languages: [], licenses: [] };
-        }
-        
-        // Skip skills without a name
-        if (!skill.skill_name_debug) {
-          return acc;
-        }
-        
-        const skillData = {
-          id: skill.skill_id,
-          name: skill.skill_name_debug,
+      // Create a map of worker_id to skills
+      // The view returns arrays of { id, name } objects directly - no parsing needed
+      const skillsByWorker: Record<string, { 
+        languages: Array<{id: string; name: string}>; 
+        licenses: Array<{id: string; name: string}> 
+      }> = {};
+
+      workerSkills?.forEach((row) => {
+        skillsByWorker[row.worker_id] = {
+          languages: row.languages || [],
+          licenses: row.licenses || []
         };
-        
-        const category = (skill.skills as any)?.category;
-        if (category === 'language') {
-          acc[skill.worker_id].languages.push(skillData);
-        } else if (category === 'license') {
-          acc[skill.worker_id].licenses.push(skillData);
-        }
-        
-        return acc;
-      }, {} as Record<string, { languages: Array<{id: string; name: string}>; licenses: Array<{id: string; name: string}> }>) || {};
+      });
 
       // Attach skills to each application
       mappedArchivedShiftsWithSkills = mappedArchivedShifts.map(shift => ({
         ...shift,
-        shift_applications: (shift.shift_applications || []).map(app => ({
+        shift_applications: (shift.shift_applications || []).map((app: any) => ({
           ...app,
           languages: app.worker_id ? (skillsByWorker[app.worker_id]?.languages || []) : [],
           licenses: app.worker_id ? (skillsByWorker[app.worker_id]?.licenses || []) : [],

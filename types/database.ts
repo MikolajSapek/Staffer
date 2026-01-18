@@ -200,15 +200,10 @@ export interface Database {
           is_break_paid: boolean;
           vacancies_total: number;
           vacancies_taken: number;
-          requirements: Json;
           must_bring: string | null;
           status: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent: boolean;
           possible_overtime: boolean;
-          /** @deprecated Legacy field - use shift_requirements table instead */
-          required_languages: string[] | null;
-          /** @deprecated Legacy field - use shift_requirements table instead */
-          required_licences: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -226,15 +221,10 @@ export interface Database {
           is_break_paid?: boolean;
           vacancies_total: number;
           vacancies_taken?: number;
-          requirements?: Json;
           must_bring?: string | null;
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
-          /** @deprecated Legacy field - use shift_requirements table instead */
-          required_languages?: string[] | null;
-          /** @deprecated Legacy field - use shift_requirements table instead */
-          required_licences?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -252,15 +242,10 @@ export interface Database {
           is_break_paid?: boolean;
           vacancies_total?: number;
           vacancies_taken?: number;
-          requirements?: Json;
           must_bring?: string | null;
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
-          /** @deprecated Legacy field - use shift_requirements table instead */
-          required_languages?: string[] | null;
-          /** @deprecated Legacy field - use shift_requirements table instead */
-          required_licences?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -619,6 +604,13 @@ export interface Database {
           skill_category: 'language' | 'license';
           verified: boolean;
           created_at: string;
+        };
+      };
+      candidate_skills_view: {
+        Row: {
+          worker_id: string;
+          languages: Array<{ id: string; name: string }>;
+          licenses: Array<{ id: string; name: string }>;
         };
       };
     };
