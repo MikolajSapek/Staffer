@@ -183,6 +183,11 @@ export interface Database {
           vacancies_total: number;
           vacancies_taken: number;
           requirements: Json;
+          must_bring: string | null;
+          required_language_ids: string[];
+          required_licence_ids: string[];
+          required_languages_text: string[];  // Tablice tekstowe (czytelne)
+          required_licences_text: string[];   // Tablice tekstowe (czytelne)
           status: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent: boolean;
           possible_overtime: boolean;
@@ -204,6 +209,11 @@ export interface Database {
           vacancies_total: number;
           vacancies_taken?: number;
           requirements?: Json;
+          must_bring?: string | null;
+          required_language_ids?: string[];
+          required_licence_ids?: string[];
+          required_languages_text?: string[];
+          required_licences_text?: string[];
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
@@ -224,6 +234,11 @@ export interface Database {
           vacancies_total?: number;
           vacancies_taken?: number;
           requirements?: Json;
+          must_bring?: string | null;
+          required_language_ids?: string[];
+          required_licence_ids?: string[];
+          required_languages_text?: string[];
+          required_licences_text?: string[];
           status?: 'published' | 'full' | 'completed' | 'cancelled';
           is_urgent?: boolean;
           possible_overtime?: boolean;
@@ -501,6 +516,64 @@ export interface Database {
           worker_name_snapshot?: string;
           payment_status?: 'pending' | 'paid' | 'cancelled';
           metadata?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      skills: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          category: 'language' | 'license';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          category: 'language' | 'license';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          category?: 'language' | 'license';
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      worker_skills: {
+        Row: {
+          id: string;
+          worker_id: string;
+          skill_id: string;
+          skill_name_debug: string | null;  // Auto-sync z skills.name via trigger
+          proof_document_id: string | null;
+          verified: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          worker_id: string;
+          skill_id: string;
+          skill_name_debug?: string | null;  // Trigger wypełni automatycznie
+          proof_document_id?: string | null;
+          verified?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          worker_id?: string;
+          skill_id?: string;
+          skill_name_debug?: string | null;
+          proof_document_id?: string | null;
+          verified?: boolean;
           created_at?: string;
           updated_at?: string;
         };

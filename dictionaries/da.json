@@ -529,7 +529,10 @@
       "acceptSuccess": "Kandidat accepteret!",
       "rejectSuccess": "Kandidat afvist.",
       "error": "Der opstod en fejl. Prøv venligst igen.",
-      "close": "Luk"
+      "close": "Luk",
+      "languages": "Sprog",
+      "licenses": "Licenser & Certificeringer",
+      "noQualifications": "Ingen specifikke kvalifikationer angivet"
     }
   },
   "timesheetsPage": {

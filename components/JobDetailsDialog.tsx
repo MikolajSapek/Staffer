@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { da } from 'date-fns/locale/da';
 import { formatInTimeZone } from 'date-fns-tz';
-import { MapPin, Clock, Building2, Calendar, Flame, X, Users } from 'lucide-react';
+import { MapPin, Clock, Building2, Calendar, Flame, X, Users, Briefcase } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import ApplyModal from '@/components/worker/ApplyModal';
 import CompanyProfileDialog from '@/components/CompanyProfileDialog';
 import { cn, getMapsLink } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/client';
 
 interface Shift {
   id: string;
@@ -36,6 +37,9 @@ interface Shift {
   company_id: string;
   is_urgent: boolean;
   requirements: any; // JSONB field
+  must_bring: string | null;
+  required_language_ids: string[];
+  required_licence_ids: string[];
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
@@ -97,6 +101,57 @@ export function JobDetailsDialog({
 }: JobDetailsDialogProps) {
   const [open, setOpen] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  
+  // State for skill names (fetched from IDs)
+  const [requiredLanguages, setRequiredLanguages] = useState<string[]>([]);
+  const [requiredLicences, setRequiredLicences] = useState<string[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(true);
+
+  // Fetch skill names from IDs when dialog opens
+  useEffect(() => {
+    if (!open) return;
+
+    async function fetchSkillNames() {
+      setSkillsLoading(true);
+      try {
+        const supabase = createClient();
+        
+        // Fetch language names
+        if (shift.required_language_ids && shift.required_language_ids.length > 0) {
+          const { data: languageData } = await supabase
+            .from('skills')
+            .select('name')
+            .in('id', shift.required_language_ids);
+          
+          if (languageData) {
+            setRequiredLanguages(languageData.map(s => s.name));
+          }
+        } else {
+          setRequiredLanguages([]);
+        }
+
+        // Fetch licence names
+        if (shift.required_licence_ids && shift.required_licence_ids.length > 0) {
+          const { data: licenceData } = await supabase
+            .from('skills')
+            .select('name')
+            .in('id', shift.required_licence_ids);
+          
+          if (licenceData) {
+            setRequiredLicences(licenceData.map(s => s.name));
+          }
+        } else {
+          setRequiredLicences([]);
+        }
+      } catch (error) {
+        console.error('Error fetching skill names:', error);
+      } finally {
+        setSkillsLoading(false);
+      }
+    }
+
+    fetchSkillNames();
+  }, [open, shift.required_language_ids, shift.required_licence_ids]);
 
   const timeZone = 'Europe/Copenhagen';
   const start = new Date(shift.start_time);
@@ -309,6 +364,72 @@ export function JobDetailsDialog({
                 <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
                   {shift.description}
                 </p>
+              </div>
+            )}
+
+            {/* Must Bring Section */}
+            {shift.must_bring && (
+              <div className="space-y-2 pt-2">
+                <div className="rounded-lg bg-muted p-4 border border-gray-200">
+                  <div className="flex items-start gap-3">
+                    <Briefcase className="h-5 w-5 text-gray-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-sm text-gray-900 mb-1">
+                        Must Bring
+                      </h4>
+                      <p className="text-sm text-gray-900">
+                        {shift.must_bring}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Languages & Licences Requirements */}
+            {((requiredLanguages && requiredLanguages.length > 0) || 
+              (requiredLicences && requiredLicences.length > 0) ||
+              (!skillsLoading && requiredLanguages.length === 0 && requiredLicences.length === 0)) && (
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                <h4 className="font-semibold text-sm text-gray-900">Requirements</h4>
+                
+                {/* Languages */}
+                {requiredLanguages && requiredLanguages.length > 0 ? (
+                  <div>
+                    <p className="text-xs text-gray-600 mb-2">Languages:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {requiredLanguages.map((lang, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {lang}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : !skillsLoading ? (
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">Languages:</p>
+                    <p className="text-xs text-muted-foreground">No language requirement</p>
+                  </div>
+                ) : null}
+
+                {/* Licences */}
+                {requiredLicences && requiredLicences.length > 0 ? (
+                  <div>
+                    <p className="text-xs text-gray-600 mb-2">Licences:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {requiredLicences.map((licence, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {licence}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : !skillsLoading ? (
+                  <div>
+                    <p className="text-xs text-gray-600 mb-1">Licences:</p>
+                    <p className="text-xs text-muted-foreground">No licences required</p>
+                  </div>
+                ) : null}
               </div>
             )}
 

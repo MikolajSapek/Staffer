@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { updateApplicationStatus } from '@/app/actions/applications';
 import { Loader2, Mail, Phone, User, Briefcase, Star } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-utils';
+import { createClient } from '@/utils/supabase/client';
 
 interface WorkerDetails {
   avatar_url: string | null;
@@ -31,7 +32,6 @@ interface Profile {
   email: string;
   average_rating: number | null;
   total_reviews: number;
-  // worker_details is returned as an object
   worker_details: WorkerDetails | null;
 }
 
@@ -72,6 +72,9 @@ interface CandidateProfileModalProps {
     rejectSuccess: string;
     error: string;
     close?: string;
+    languages?: string;
+    licenses?: string;
+    noQualifications?: string;
   };
   lang: string;
   onSuccess?: () => void;
@@ -86,12 +89,57 @@ export default function CandidateProfileModal({
   onSuccess,
 }: CandidateProfileModalProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+  const [workerSkills, setWorkerSkills] = useState<{
+    languages: string[];
+    licenses: string[];
+  }>({ languages: [], licenses: [] });
 
   const profile = application.profiles;
   const shift = application.shifts;
+
+  // Fetch worker skills when modal opens
+  useEffect(() => {
+    if (open && application.worker_id) {
+      setSkillsLoading(true);
+      const supabase = createClient();
+      
+      supabase
+        .from('worker_skills')
+        .select(`
+          skill_id,
+          skills (
+            id,
+            name,
+            category
+          )
+        `)
+        .eq('worker_id', application.worker_id)
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const languages: string[] = [];
+            const licenses: string[] = [];
+            
+            data.forEach((ws: any) => {
+              if (ws.skills) {
+                if (ws.skills.category === 'language') {
+                  languages.push(ws.skills.name);
+                } else if (ws.skills.category === 'license') {
+                  licenses.push(ws.skills.name);
+                }
+              }
+            });
+            
+            setWorkerSkills({ languages, licenses });
+          }
+        })
+        .finally(() => {
+          setSkillsLoading(false);
+        });
+    }
+  }, [open, application.worker_id]);
 
   if (!profile || !shift) {
     return null;
@@ -176,7 +224,7 @@ export default function CandidateProfileModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" suppressHydrationWarning>
         <DialogHeader>
           {/* Hero Section with Large Avatar */}
           <div className="flex flex-row gap-6 pb-6 border-b">
@@ -276,6 +324,52 @@ export default function CandidateProfileModal({
             </div>
           )}
 
+          {/* Skills & Qualifications Section */}
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-muted-foreground">
+              {dict.languages || 'Languages'} & {dict.licenses || 'Licenses'}
+            </div>
+            {skillsLoading ? (
+              <div className="pl-6 text-sm text-muted-foreground">
+                <p>Loading qualifications...</p>
+              </div>
+            ) : workerSkills.languages.length === 0 && workerSkills.licenses.length === 0 ? (
+              <div className="pl-6 text-sm text-muted-foreground">
+                <p>{dict.noQualifications || 'No qualifications listed'}</p>
+              </div>
+            ) : (
+              <div className="pl-6 space-y-2">
+                {workerSkills.languages.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {dict.languages || 'Languages'}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {workerSkills.languages.map((lang, idx) => (
+                        <Badge key={idx} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          {lang}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {workerSkills.licenses.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {dict.licenses || 'Licenses'}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {workerSkills.licenses.map((license, idx) => (
+                        <Badge key={idx} variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+                          {license}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Application Message */}
           {application.worker_message && (

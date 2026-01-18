@@ -24,6 +24,10 @@ interface WorkerDetails {
   description: string | null;
 }
 
+interface Skill {
+  id: string;
+  name: string;
+}
 
 interface Profile {
   id: string;
@@ -47,6 +51,8 @@ interface Application {
     id: string;
     title: string;
   } | null;
+  languages?: Skill[];
+  licenses?: Skill[];
 }
 
 interface Location {
@@ -249,7 +255,9 @@ export default function ShiftDetailsClient({
       shifts: {
         id: shift.id,
         title: shift.title,
-      }
+      },
+      languages: application.languages || [],
+      licenses: application.licenses || [],
     };
     
     console.log('Enriched application with worker_details:', enrichedApplication);
@@ -620,6 +628,9 @@ export default function ShiftDetailsClient({
             rejectSuccess: 'Application rejected',
             error: 'An error occurred',
             close: 'Close',
+            languages: 'Languages',
+            licenses: 'Licenses & Certifications',
+            noQualifications: 'No specific qualifications listed'
           }}
           lang={lang}
           onSuccess={handleProfileModalSuccess}

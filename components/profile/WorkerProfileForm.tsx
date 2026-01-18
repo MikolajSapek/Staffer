@@ -66,6 +66,11 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   // Verification wizard states
   const [showVerificationWizard, setShowVerificationWizard] = useState(false);
 
+  // Skills states
+  const [availableSkills, setAvailableSkills] = useState<Array<{ id: string; name: string; category: 'language' | 'license' }>>([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(true);
+
   // Initialize form data with empty strings
   const [formData, setFormData] = useState({
     first_name: '',
@@ -107,12 +112,14 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         if (userError) {
           setAuthError(dict.profile.authError);
           setIsLoading(false);
+          setSkillsLoading(false);
           return;
         }
 
         if (!authUser) {
           setAuthError(dict.profile.notLoggedIn);
           setIsLoading(false);
+          setSkillsLoading(false);
           return;
         }
 
@@ -120,6 +127,29 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
 
         // Fetch profile data to get verification_status
         await fetchProfileData(authUser.id);
+
+        // Fetch all available skills from the skills table (all 9 records)
+        const { data: skillsData, error: skillsError } = await supabase
+          .from('skills')
+          .select('id, name, category')
+          .order('category', { ascending: true })
+          .order('name', { ascending: true });
+
+        if (!skillsError && skillsData) {
+          setAvailableSkills(skillsData);
+        }
+
+        // Fetch current user's selected skills from worker_skills
+        const { data: workerSkillsData, error: workerSkillsError } = await supabase
+          .from('worker_skills')
+          .select('skill_id')
+          .eq('worker_id', authUser.id);
+
+        if (!workerSkillsError && workerSkillsData) {
+          setSelectedSkillIds(workerSkillsData.map((ws) => ws.skill_id));
+        }
+
+        setSkillsLoading(false);
 
         // Fetch worker details using secure RPC (decrypts CPR)
         const { data: workerData, error: workerError } = await supabase.rpc('get_worker_profile_secure');
@@ -521,6 +551,38 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         setSubmitError(sizeUpdateError.message || 'Kunne ikke gemme størrelser');
         setSubmitLoading(false);
         return;
+      }
+
+      // SYNC PATTERN for worker_skills:
+      // 1. Delete all existing skills for this worker
+      const { error: deleteError } = await supabase
+        .from('worker_skills')
+        .delete()
+        .eq('worker_id', user.id);
+
+      if (deleteError) {
+        setSubmitError(deleteError.message || 'Could not update skills');
+        setSubmitLoading(false);
+        return;
+      }
+
+      // 2. Insert the newly selected skills (only if any are selected)
+      if (selectedSkillIds.length > 0) {
+        const skillsToInsert = selectedSkillIds.map((skillId) => ({
+          worker_id: user.id, // Explicitly set to authenticated user's ID for security
+          skill_id: skillId,
+          verified: false, // Default to unverified
+        }));
+
+        const { error: insertError } = await supabase
+          .from('worker_skills')
+          .insert(skillsToInsert);
+
+        if (insertError) {
+          setSubmitError(insertError.message || 'Could not save skills');
+          setSubmitLoading(false);
+          return;
+        }
       }
 
       // Immediately update formData to reflect saved values (no need to wait for refresh)
@@ -1155,6 +1217,86 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                   />
                 </div>
               </div>
+            </div>
+
+                {/* Skills Section */}
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold">Skills & Qualifications</h3>
+                    <p className="text-sm text-muted-foreground">Select your languages and licenses</p>
+                  </div>
+              
+              {skillsLoading ? (
+                <div className="py-4 text-center text-muted-foreground">
+                  <p>Loading skills...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Languages */}
+                  {availableSkills.filter(s => s.category === 'language').length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">Languages</Label>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {availableSkills
+                          .filter((skill) => skill.category === 'language')
+                          .map((skill) => (
+                            <label
+                              key={skill.id}
+                              className="flex items-center space-x-2 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedSkillIds.includes(skill.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedSkillIds([...selectedSkillIds, skill.id]);
+                                  } else {
+                                    setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skill.id));
+                                  }
+                                }}
+                                disabled={submitLoading}
+                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              <span className="text-sm">{skill.name}</span>
+                            </label>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Licenses */}
+                  {availableSkills.filter(s => s.category === 'license').length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">Licenses</Label>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {availableSkills
+                          .filter((skill) => skill.category === 'license')
+                          .map((skill) => (
+                            <label
+                              key={skill.id}
+                              className="flex items-center space-x-2 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedSkillIds.includes(skill.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedSkillIds([...selectedSkillIds, skill.id]);
+                                  } else {
+                                    setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skill.id));
+                                  }
+                                }}
+                                disabled={submitLoading}
+                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              <span className="text-sm">{skill.name}</span>
+                            </label>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
                 <div className="flex justify-end pt-6 border-t">

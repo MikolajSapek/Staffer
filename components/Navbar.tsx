@@ -248,7 +248,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   }
 
   return (
-    <nav className="border-b bg-background sticky top-0 z-50">
+    <nav className="border-b bg-background sticky top-0 z-50" suppressHydrationWarning={true}>
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="italic font-bold text-2xl tracking-tight text-slate-900">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,13 @@ import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { updateShiftAction } from '@/app/actions/shifts';
 import { useToast } from '@/components/ui/use-toast';
+import { createClient } from '@/utils/supabase/client';
+
+interface Skill {
+  id: string;
+  name: string;
+  category: 'language' | 'license';
+}
 
 interface Location {
   id: string;
@@ -39,6 +46,9 @@ interface EditShiftFormProps {
     vacancies_total: number;
     is_urgent: boolean;
     possible_overtime: boolean;
+    must_bring: string | null;
+    required_language_ids: string[];
+    required_licence_ids: string[];
     company_id: string;
     locations?: Location | null;
   };
@@ -135,6 +145,9 @@ export default function EditShiftForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Skills state
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
 
   const [formData, setFormData] = useState({
     title: initialData.title || '',
@@ -149,7 +162,31 @@ export default function EditShiftForm({
     vacancies_total: initialData.vacancies_total.toString(),
     is_urgent: initialData.is_urgent,
     possible_overtime: initialData.possible_overtime,
+    must_bring: initialData.must_bring || '',
+    required_language_ids: initialData.required_language_ids || [],
+    required_licence_ids: initialData.required_licence_ids || [],
   });
+  
+  // Fetch available skills on mount
+  useEffect(() => {
+    async function fetchSkills() {
+      try {
+        const supabase = createClient();
+        const { data: skillsData, error: skillsError } = await supabase
+          .from('skills')
+          .select('id, name, category')
+          .order('name', { ascending: true });
+
+        if (!skillsError && skillsData) {
+          setAvailableSkills(skillsData);
+        }
+      } catch (err) {
+        // Continue without skills
+      }
+    }
+
+    fetchSkills();
+  }, []);
 
   const isLocked = vacanciesTaken > 0;
 
@@ -246,6 +283,9 @@ export default function EditShiftForm({
         vacancies_total: parseInt(formData.vacancies_total),
         is_urgent: formData.is_urgent,
         possible_overtime: formData.possible_overtime,
+        must_bring: formData.must_bring.trim() || null,
+        required_language_ids: formData.required_language_ids,
+        required_licence_ids: formData.required_licence_ids,
       };
 
       const result = await updateShiftAction(shiftId, payload);
@@ -469,6 +509,97 @@ export default function EditShiftForm({
               disabled={loading}
             />
             <p className="text-xs text-muted-foreground">{dict.descriptionHint}</p>
+          </div>
+
+          {/* Must Bring Section */}
+          <div className="space-y-2">
+            <Label htmlFor="must_bring">Must Bring</Label>
+            <Input
+              id="must_bring"
+              value={formData.must_bring}
+              onChange={(e) => setFormData({ ...formData, must_bring: e.target.value })}
+              placeholder="e.g., Black shoes, Work uniform, Safety vest"
+              disabled={loading}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Items or equipment the worker must bring
+            </p>
+          </div>
+
+          {/* Requirements Section */}
+          <div className="space-y-4 pt-2 border-t">
+            <h3 className="text-base font-semibold">Requirements</h3>
+            
+            {/* Required Languages */}
+            <div className="space-y-2">
+              <Label>Required Languages</Label>
+              <div className="grid grid-cols-2 gap-3 p-4 border rounded-md bg-gray-50">
+                {availableSkills
+                  .filter(skill => skill.category === 'language')
+                  .map((skill) => (
+                    <label
+                      key={skill.id}
+                      className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.required_language_ids.includes(skill.id)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData(prev => ({
+                            ...prev,
+                            required_language_ids: checked
+                              ? [...prev.required_language_ids, skill.id]
+                              : prev.required_language_ids.filter(id => id !== skill.id)
+                          }));
+                        }}
+                        disabled={loading}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium">{skill.name}</span>
+                    </label>
+                  ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave unchecked if no language requirement
+              </p>
+            </div>
+
+            {/* Required Licences */}
+            <div className="space-y-2">
+              <Label>Required Licences</Label>
+              <div className="grid grid-cols-1 gap-3 p-4 border rounded-md bg-gray-50">
+                {availableSkills
+                  .filter(skill => skill.category === 'license')
+                  .map((skill) => (
+                    <label
+                      key={skill.id}
+                      className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.required_licence_ids.includes(skill.id)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData(prev => ({
+                            ...prev,
+                            required_licence_ids: checked
+                              ? [...prev.required_licence_ids, skill.id]
+                              : prev.required_licence_ids.filter(id => id !== skill.id)
+                          }));
+                        }}
+                        disabled={loading}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium">{skill.name}</span>
+                    </label>
+                  ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave unchecked if no licences required
+              </p>
+            </div>
           </div>
 
           {/* Boolean Flags - Urgent and Possible Overtime */}

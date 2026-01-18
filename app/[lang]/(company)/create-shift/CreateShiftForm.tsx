@@ -145,6 +145,12 @@ const JOB_CATEGORY_VALUES = [
   'other',
 ] as const;
 
+interface Skill {
+  id: string;
+  name: string;
+  category: 'language' | 'license';
+}
+
 interface ShiftTemplate {
   id: string;
   template_name: string;
@@ -180,6 +186,9 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
   const [templateName, setTemplateName] = useState('');
   const [locations, setLocations] = useState<Array<{ id: string; name: string; address: string }>>(initialLocations);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
+  
+  // Skills state
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -194,12 +203,26 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     vacancies_total: '1',
     is_urgent: false,
     possible_overtime: false,
+    must_bring: '',
+    required_languages_text: [] as string[],  // Tablice tekstowe z nazwami
+    required_licences_text: [] as string[],   // Tablice tekstowe z nazwami
   });
   // Fetch templates on mount
   useEffect(() => {
     async function fetchTemplates() {
       try {
         const supabase = createClient();
+        
+        // Fetch available skills
+        const { data: skillsData, error: skillsError } = await supabase
+          .from('skills')
+          .select('id, name, category')
+          .order('name', { ascending: true });
+
+        if (!skillsError && skillsData) {
+          setAvailableSkills(skillsData);
+        }
+        
         const { data, error } = await supabase
           .from('shift_templates' as any)
           .select('*')
@@ -395,6 +418,13 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         status: 'published' as const,
         is_urgent: formData.is_urgent,
         possible_overtime: formData.possible_overtime,
+        must_bring: formData.must_bring.trim() || null,
+        // Tablice tekstowe - czytelne w bazie danych
+        required_languages_text: formData.required_languages_text,
+        required_licences_text: formData.required_licences_text,
+        // Pozostaw puste tablice UUID dla kompatybilności
+        required_language_ids: [],
+        required_licence_ids: [],
       };
 
       // Insert the shift
@@ -777,24 +807,115 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
               )}
             </div>
 
-            {/* Description */}
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">{dict.description}</Label>
+            <textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder={dict.descriptionPlaceholder}
+              disabled={loading}
+            />
+            <p className="text-xs text-muted-foreground">
+              {dict.descriptionHint}
+            </p>
+          </div>
+
+          {/* Must Bring Section */}
+          <div className="space-y-2">
+            <Label htmlFor="must_bring">Must Bring</Label>
+            <Input
+              id="must_bring"
+              value={formData.must_bring}
+              onChange={(e) => setFormData({ ...formData, must_bring: e.target.value })}
+              placeholder="e.g., Black shoes, Work uniform, Safety vest"
+              disabled={loading}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Items or equipment the worker must bring to this shift
+            </p>
+          </div>
+
+          {/* Requirements Section */}
+          <div className="space-y-4 pt-2 border-t">
+            <h3 className="text-base font-semibold">Requirements</h3>
+            
+            {/* Required Languages */}
             <div className="space-y-2">
-              <Label htmlFor="description">{dict.description}</Label>
-              <textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder={dict.descriptionPlaceholder}
-                disabled={loading}
-              />
+              <Label>Required Languages</Label>
+              <div className="grid grid-cols-2 gap-3 p-4 border rounded-md bg-gray-50">
+                {availableSkills
+                  .filter(skill => skill.category === 'language')
+                  .map((skill) => (
+                    <label
+                      key={skill.id}
+                      className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.required_languages_text.includes(skill.name)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData(prev => ({
+                            ...prev,
+                            required_languages_text: checked
+                              ? [...prev.required_languages_text, skill.name]
+                              : prev.required_languages_text.filter(name => name !== skill.name)
+                          }));
+                        }}
+                        disabled={loading}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium">{skill.name}</span>
+                    </label>
+                  ))}
+              </div>
               <p className="text-xs text-muted-foreground">
-                {dict.descriptionHint}
+                Leave unchecked if no language requirement
               </p>
             </div>
 
-            {/* Boolean Flags - Urgent and Possible Overtime */}
-            <div className="space-y-4 pt-4 border-t">
+            {/* Required Licences */}
+            <div className="space-y-2">
+              <Label>Required Licences</Label>
+              <div className="grid grid-cols-1 gap-3 p-4 border rounded-md bg-gray-50">
+                {availableSkills
+                  .filter(skill => skill.category === 'license')
+                  .map((skill) => (
+                    <label
+                      key={skill.id}
+                      className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.required_licences_text.includes(skill.name)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData(prev => ({
+                            ...prev,
+                            required_licences_text: checked
+                              ? [...prev.required_licences_text, skill.name]
+                              : prev.required_licences_text.filter(name => name !== skill.name)
+                          }));
+                        }}
+                        disabled={loading}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium">{skill.name}</span>
+                    </label>
+                  ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave unchecked if no licences required
+              </p>
+            </div>
+          </div>
+
+          {/* Boolean Flags - Urgent and Possible Overtime */}
+          <div className="space-y-4 pt-4 border-t">
               {/* Mark as Urgent */}
               <div className="flex items-start space-x-2">
                 <input

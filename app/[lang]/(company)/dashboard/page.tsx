@@ -102,6 +102,7 @@ export default async function CompanyDashboardPage({
 
       return {
         ...app,
+        worker_id: worker?.id,
         // Spłaszczamy strukturę do formatu oczekiwanego przez ArchivedShiftsList
         profiles: worker ? {
           id: worker.id,
@@ -118,6 +119,61 @@ export default async function CompanyDashboardPage({
       };
     })
   }));
+
+  // Fetch worker skills for archived shifts
+  let mappedArchivedShiftsWithSkills = mappedArchivedShifts;
+  
+  if (mappedArchivedShifts && mappedArchivedShifts.length > 0) {
+    const allWorkerIds = mappedArchivedShifts
+      .flatMap(shift => shift.shift_applications || [])
+      .map(app => app.worker_id)
+      .filter(Boolean);
+    
+    const uniqueWorkerIds = [...new Set(allWorkerIds)];
+    
+    if (uniqueWorkerIds.length > 0) {
+      const { data: workerSkills } = await supabase
+        .from('worker_skills')
+        .select('worker_id, skill_id, skill_name_debug, skills!inner(category)')
+        .in('worker_id', uniqueWorkerIds);
+
+      // Group skills by worker_id and category
+      const skillsByWorker = workerSkills?.reduce((acc, skill) => {
+        if (!acc[skill.worker_id]) {
+          acc[skill.worker_id] = { languages: [], licenses: [] };
+        }
+        
+        // Skip skills without a name
+        if (!skill.skill_name_debug) {
+          return acc;
+        }
+        
+        const skillData = {
+          id: skill.skill_id,
+          name: skill.skill_name_debug,
+        };
+        
+        const category = (skill.skills as any)?.category;
+        if (category === 'language') {
+          acc[skill.worker_id].languages.push(skillData);
+        } else if (category === 'license') {
+          acc[skill.worker_id].licenses.push(skillData);
+        }
+        
+        return acc;
+      }, {} as Record<string, { languages: Array<{id: string; name: string}>; licenses: Array<{id: string; name: string}> }>) || {};
+
+      // Attach skills to each application
+      mappedArchivedShiftsWithSkills = mappedArchivedShifts.map(shift => ({
+        ...shift,
+        shift_applications: (shift.shift_applications || []).map(app => ({
+          ...app,
+          languages: app.worker_id ? (skillsByWorker[app.worker_id]?.languages || []) : [],
+          licenses: app.worker_id ? (skillsByWorker[app.worker_id]?.licenses || []) : [],
+        }))
+      }));
+    }
+  }
 
   // Query 1: Count locations for this company (only non-archived)
   const { count: locationsCount } = await supabase
@@ -190,7 +246,7 @@ export default async function CompanyDashboardPage({
         </div>
 
         <ArchivedShiftsList
-          archivedShifts={mappedArchivedShifts}
+          archivedShifts={mappedArchivedShiftsWithSkills}
           lang={lang}
           dict={dict}
         />

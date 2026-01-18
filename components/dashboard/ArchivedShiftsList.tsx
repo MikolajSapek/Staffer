@@ -15,6 +15,11 @@ interface WorkerDetails {
   description: string | null;
 }
 
+interface Skill {
+  id: string;
+  name: string;
+}
+
 interface Profile {
   id: string;
   first_name: string | null;
@@ -37,6 +42,8 @@ interface Application {
     id: string;
     title: string;
   } | null;
+  languages?: Skill[];
+  licenses?: Skill[];
 }
 
 interface Shift {
@@ -134,7 +141,9 @@ export default function ArchivedShiftsList({
       shifts: {
         id: shift.id,
         title: shift.title,
-      }
+      },
+      languages: app.languages || [],
+      licenses: app.licenses || [],
     };
     
     setSelectedApplication(application);
@@ -317,6 +326,9 @@ export default function ArchivedShiftsList({
             rejectSuccess: 'Application rejected',
             error: 'An error occurred',
             close: 'Close',
+            languages: 'Languages',
+            licenses: 'Licenses & Certifications',
+            noQualifications: 'No specific qualifications listed'
           }}
           lang={lang}
           onSuccess={handleModalSuccess}

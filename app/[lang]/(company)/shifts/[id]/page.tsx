@@ -121,10 +121,60 @@ export default async function ShiftDetailsPage({
     (app: any) => app.status === 'accepted'
   ) || [];
 
+  // Fetch worker skills for hired team (languages and licenses)
+  let hiredTeamWithSkills = hiredTeam;
+  
+  if (hiredTeam.length > 0) {
+    const workerIds = hiredTeam.map((app: any) => app.profiles?.id).filter(Boolean);
+    
+    if (workerIds.length > 0) {
+      const { data: workerSkills } = await supabase
+        .from('worker_skills')
+        .select('worker_id, skill_id, skill_name_debug, skills!inner(category)')
+        .in('worker_id', workerIds);
+
+      // Group skills by worker_id and category
+      const skillsByWorker = workerSkills?.reduce((acc, skill) => {
+        if (!acc[skill.worker_id]) {
+          acc[skill.worker_id] = { languages: [], licenses: [] };
+        }
+        
+        // Skip skills without a name
+        if (!skill.skill_name_debug) {
+          return acc;
+        }
+        
+        const skillData = {
+          id: skill.skill_id,
+          name: skill.skill_name_debug,
+        };
+        
+        const category = (skill.skills as any)?.category;
+        if (category === 'language') {
+          acc[skill.worker_id].languages.push(skillData);
+        } else if (category === 'license') {
+          acc[skill.worker_id].licenses.push(skillData);
+        }
+        
+        return acc;
+      }, {} as Record<string, { languages: Array<{id: string; name: string}>; licenses: Array<{id: string; name: string}> }>) || {};
+
+      // Attach skills to each hired team application
+      hiredTeamWithSkills = hiredTeam.map(app => {
+        const workerId = (app as any).profiles?.id;
+        return {
+          ...app,
+          languages: workerId ? (skillsByWorker[workerId]?.languages || []) : [],
+          licenses: workerId ? (skillsByWorker[workerId]?.licenses || []) : [],
+        };
+      });
+    }
+  }
+
   // Fetch existing reviews for all workers in hired team if shift is completed/archived
   let reviewsMap: Record<string, { rating: number; comment: string | null; tags: string[] | null }> = {};
   if (shift.status === 'completed' || shift.status === 'cancelled') {
-    const workerIds = hiredTeam.map((app: any) => app.profiles?.id).filter(Boolean);
+    const workerIds = hiredTeamWithSkills.map((app: any) => app.profiles?.id).filter(Boolean);
     if (workerIds.length > 0) {
       const { data: reviews } = await supabase
         .from('reviews')
@@ -184,7 +234,7 @@ export default async function ShiftDetailsPage({
   return (
     <ShiftDetailsClient
       shift={shiftWithRelations}
-      hiredTeam={hiredTeam}
+      hiredTeam={hiredTeamWithSkills}
       reviewsMap={reviewsMap}
       disputesMap={disputesMap}
       lang={lang}

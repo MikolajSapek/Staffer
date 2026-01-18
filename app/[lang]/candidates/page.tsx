@@ -81,7 +81,6 @@ export default async function CandidatesPage({
     .gt('shifts.end_time', threeDaysAgo)
     .order('applied_at', { ascending: false });
 
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
