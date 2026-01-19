@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { PasswordRequirements, validatePassword } from '@/components/ui/password-requirements';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
@@ -75,9 +76,9 @@ export default function UpdatePasswordForm({ dict, lang }: UpdatePasswordFormPro
       return;
     }
 
-    // Password length validation
-    if (trimmedNewPassword.length < 6) {
-      setError(dict.validation.passwordRequired);
+    // Password strength validation
+    if (!validatePassword(trimmedNewPassword)) {
+      setError('Password must contain at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character');
       setLoading(false);
       return;
     }
@@ -124,28 +125,29 @@ export default function UpdatePasswordForm({ dict, lang }: UpdatePasswordFormPro
           )}
           <div className="space-y-2">
             <Label htmlFor="newPassword">{dict.newPassword}</Label>
-            <Input
+            <PasswordInput
               id="newPassword"
-              type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               disabled={loading}
               required
               autoComplete="new-password"
-              minLength={6}
+              minLength={8}
             />
+            {newPassword && (
+              <PasswordRequirements password={newPassword} lang={lang} className="mt-3" />
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">{dict.confirmNewPassword}</Label>
-            <Input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={loading}
               required
               autoComplete="new-password"
-              minLength={6}
+              minLength={8}
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>

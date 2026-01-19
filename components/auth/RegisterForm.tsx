@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { PasswordRequirements, getPasswordRegex } from '@/components/ui/password-requirements';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
@@ -40,7 +42,13 @@ interface RegisterFormProps {
 export default function RegisterForm({ defaultRole = 'worker', lang, dict }: RegisterFormProps) {
   const registerSchema = z.object({
     email: z.string().email(dict.validation.invalidEmail),
-    password: z.string().min(6, dict.validation.passwordRequired),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(
+        getPasswordRegex(),
+        'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character'
+      ),
     role: z.enum(['worker', 'company']),
   });
   const router = useRouter();
@@ -199,13 +207,19 @@ export default function RegisterForm({ defaultRole = 'worker', lang, dict }: Reg
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">{dict.password}</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
             />
+            {formData.password && (
+              <PasswordRequirements 
+                password={formData.password}
+                lang={lang}
+                className="mt-3" 
+              />
+            )}
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? dict.signingUp : dict.signUp}

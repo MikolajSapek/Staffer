@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
+import { PasswordRequirements, validatePassword } from '@/components/ui/password-requirements';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,6 +42,7 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
   const [newsletterSubscription, setNewsletterSubscription] = useState(false);
 
   // Change Password state
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -198,8 +201,9 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
     setSubmitSuccess(false);
 
     try {
-      if (!newPassword || !confirmPassword) {
-        setSubmitError(dict.settings?.passwordRequired || 'Password is required');
+      // Validate all required fields
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        setSubmitError(dict.settings?.passwordRequired || 'All password fields are required');
         setSubmitLoading(false);
         return;
       }
@@ -210,25 +214,52 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
         return;
       }
 
-      if (newPassword.length < 6) {
-        setSubmitError(dict.settings?.passwordTooShort || 'Password must be at least 6 characters');
+      if (!validatePassword(newPassword)) {
+        setSubmitError(dict.settings?.passwordTooWeak || 'Password must contain at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character');
+        setSubmitLoading(false);
+        return;
+      }
+
+      // Check if new password is different from current password
+      if (currentPassword === newPassword) {
+        setSubmitError(dict.settings?.passwordSameAsOld || 'New password must be different from current password');
         setSubmitLoading(false);
         return;
       }
 
       const supabase = createClient();
 
-      const { error } = await supabase.auth.updateUser({
+      // Verify current password by attempting to sign in
+      if (!user?.email) {
+        setSubmitError(dict.settings?.userEmailNotFound || 'User email not found');
+        setSubmitLoading(false);
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        setSubmitError(dict.settings?.incorrectCurrentPassword || 'Current password is incorrect');
+        setSubmitLoading(false);
+        return;
+      }
+
+      // Current password verified, now update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (error) {
-        setSubmitError(error.message || 'Could not update password');
+      if (updateError) {
+        setSubmitError(updateError.message || 'Could not update password');
         setSubmitLoading(false);
         return;
       }
 
       setSubmitSuccess(true);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
@@ -555,30 +586,46 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                 )}
 
                 <div className="space-y-2">
+                  <Label htmlFor="current_password">{dict.settings?.currentPassword || 'Current Password'} *</Label>
+                  <PasswordInput
+                    id="current_password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    placeholder={dict.settings?.currentPasswordPlaceholder || 'Enter current password'}
+                    disabled={submitLoading}
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="new_password">{dict.settings?.newPassword || 'New Password'} *</Label>
-                  <Input
+                  <PasswordInput
                     id="new_password"
-                    type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     placeholder={dict.settings?.newPasswordPlaceholder || 'Enter new password'}
                     disabled={submitLoading}
+                    autoComplete="new-password"
                   />
+                  {newPassword && (
+                    <PasswordRequirements password={newPassword} lang={lang} className="mt-3" />
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="confirm_password">
-                    {dict.settings?.confirmPassword || 'Confirm Password'} *
+                    {dict.settings?.confirmPassword || 'Confirm New Password'} *
                   </Label>
-                  <Input
+                  <PasswordInput
                     id="confirm_password"
-                    type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder={dict.settings?.confirmPasswordPlaceholder || 'Confirm new password'}
                     disabled={submitLoading}
+                    autoComplete="new-password"
                   />
                 </div>
 

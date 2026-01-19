@@ -55,7 +55,7 @@
     "validation": {
       "emailRequired": "Email and password are required",
       "invalidEmail": "Invalid email format",
-      "passwordRequired": "Password must be at least 6 characters",
+      "passwordRequired": "Password must be at least 8 characters and contain 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character",
       "unknownError": "Unknown error occurred",
       "loginFailed": "Login failed - no user data received",
       "registrationFailed": "An error occurred during registration",
@@ -81,7 +81,7 @@
     "validation": {
       "emailRequired": "Email is required",
       "invalidEmail": "Invalid email format",
-      "passwordRequired": "Password must be at least 6 characters",
+      "passwordRequired": "Password must be at least 8 characters and contain 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character",
       "unknownError": "Unknown error occurred"
     }
   },
@@ -668,15 +668,21 @@
     "notifyAllJobsDesc": "Get notified about all new jobs",
     "newsletterSubscription": "Receive newsletters",
     "newsletterSubscriptionDesc": "Subscribe to our newsletter",
+    "currentPassword": "Current Password",
+    "currentPasswordPlaceholder": "Enter current password",
     "newPassword": "New Password",
     "newPasswordPlaceholder": "Enter new password",
-    "confirmPassword": "Confirm Password",
+    "confirmPassword": "Confirm New Password",
     "confirmPasswordPlaceholder": "Confirm new password",
     "changePassword": "Change Password",
     "changingPassword": "Changing...",
-    "passwordRequired": "Password is required",
+    "passwordRequired": "All password fields are required",
     "passwordMismatch": "Passwords do not match",
-    "passwordTooShort": "Password must be at least 6 characters"
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordTooWeak": "Password must contain at least 8 characters, 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character",
+    "incorrectCurrentPassword": "Current password is incorrect",
+    "passwordSameAsOld": "New password must be different from current password",
+    "userEmailNotFound": "User email not found"
   }
 }
 

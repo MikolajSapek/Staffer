@@ -55,7 +55,7 @@
     "validation": {
       "emailRequired": "Email og adgangskode er påkrævet",
       "invalidEmail": "Ugyldig email-format",
-      "passwordRequired": "Adgangskode skal være mindst 6 tegn",
+      "passwordRequired": "Adgangskode skal være mindst 8 tegn og indeholde 1 stort bogstav, 1 lille bogstav, 1 tal og 1 specialtegn",
       "unknownError": "Ukendt fejl ved login",
       "loginFailed": "Login mislykkedes - ingen brugerdata modtaget",
       "registrationFailed": "Der opstod en fejl ved registrering",
@@ -81,7 +81,7 @@
     "validation": {
       "emailRequired": "Email er påkrævet",
       "invalidEmail": "Ugyldig email-format",
-      "passwordRequired": "Adgangskode skal være mindst 6 tegn",
+      "passwordRequired": "Adgangskode skal være mindst 8 tegn og indeholde 1 stort bogstav, 1 lille bogstav, 1 tal og 1 specialtegn",
       "unknownError": "Ukendt fejl opstod"
     }
   },
@@ -654,15 +654,21 @@
     "notifyAllJobsDesc": "Få notifikation om alle nye jobs",
     "newsletterSubscription": "Modtag nyhedsbreve",
     "newsletterSubscriptionDesc": "Abonner på vores nyhedsbrev",
+    "currentPassword": "Nuværende Adgangskode",
+    "currentPasswordPlaceholder": "Indtast nuværende adgangskode",
     "newPassword": "Ny Adgangskode",
     "newPasswordPlaceholder": "Indtast ny adgangskode",
-    "confirmPassword": "Bekræft Adgangskode",
+    "confirmPassword": "Bekræft Ny Adgangskode",
     "confirmPasswordPlaceholder": "Bekræft ny adgangskode",
     "changePassword": "Skift Adgangskode",
     "changingPassword": "Ændrer...",
-    "passwordRequired": "Adgangskode er påkrævet",
+    "passwordRequired": "Alle adgangskodefelter er påkrævet",
     "passwordMismatch": "Adgangskoder matcher ikke",
-    "passwordTooShort": "Adgangskode skal være mindst 6 tegn"
+    "passwordTooShort": "Adgangskode skal være mindst 8 tegn",
+    "passwordTooWeak": "Adgangskode skal indeholde mindst 8 tegn, 1 stort bogstav, 1 lille bogstav, 1 tal og 1 specialtegn",
+    "incorrectCurrentPassword": "Nuværende adgangskode er forkert",
+    "passwordSameAsOld": "Ny adgangskode skal være anderledes end nuværende adgangskode",
+    "userEmailNotFound": "Brugerens email blev ikke fundet"
   }
 }
 
