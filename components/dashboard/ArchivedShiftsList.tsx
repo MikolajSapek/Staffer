@@ -243,15 +243,21 @@ export default function ArchivedShiftsList({
                     
                     return (
                       <div key={app.id} className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage 
-                            src={worker.avatarUrl || undefined} 
-                            alt={worker.fullName}
-                          />
-                          <AvatarFallback>
-                            <User className="h-5 w-5" />
-                          </AvatarFallback>
-                        </Avatar>
+                        <button
+                          type="button"
+                          onClick={(e) => handleWorkerClick(app, shift, e)}
+                          className="flex-shrink-0"
+                        >
+                          <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+                            <AvatarImage 
+                              src={worker.avatarUrl || undefined} 
+                              alt={worker.fullName}
+                            />
+                            <AvatarFallback>
+                              <User className="h-5 w-5" />
+                            </AvatarFallback>
+                          </Avatar>
+                        </button>
                         <div className="flex-1 min-w-0">
                           <button
                             type="button"

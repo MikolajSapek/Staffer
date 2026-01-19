@@ -139,7 +139,12 @@
     "date": "Date",
     "time": "Time",
     "rate": "Rate",
-    "booked": "Booked"
+    "booked": "Booked",
+    "applicants": "Applicants",
+    "applicantsDesc": "Review applications requiring action",
+    "templates": "Templates",
+    "pending": "Pending",
+    "team": "Team"
   },
   "status": {
     "active": "Active",
@@ -478,6 +483,8 @@
   "companyShifts": {
     "title": "My Shifts",
     "description": "Manage your job listings and view archived shifts.",
+    "archiveTitle": "Archived Shifts",
+    "archiveDescription": "View your completed and cancelled shifts.",
     "activeShifts": "Active Shifts",
     "archiveShifts": "Archive Shifts",
     "noActiveShifts": "No active shifts found.",
@@ -489,9 +496,11 @@
     "booked": "Booked",
     "status": "Status",
     "location": "Location",
+    "locationNotSpecified": "Location not specified",
     "viewDetails": "View Details",
     "edit": "Edit",
-    "cancel": "Cancel Shift"
+    "cancel": "Cancel Shift",
+    "createNewShift": "Create New Shift"
   },
   "companyLocations": {
     "title": "Company Locations",

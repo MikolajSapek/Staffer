@@ -25,7 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { formatDateShort, formatTime } from '@/lib/date-utils';
 import { createClient } from '@/utils/supabase/client';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, Pencil } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface Timesheet {
@@ -443,8 +443,8 @@ export default function TimesheetsClient({
                           variant="secondary"
                           className="bg-amber-500 hover:bg-amber-600 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Correct
+                          <Clock className="mr-2 h-4 w-4" />
+                          Add Overtime
                         </Button>
                       </div>
                     </TableCell>

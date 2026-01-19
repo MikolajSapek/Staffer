@@ -167,22 +167,26 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
           if (workerData) {
             const data = workerData as Record<string, unknown>;
             
-            // If RPC doesn't return shirt_size/shoe_size, fetch directly from worker_details
+            // If RPC doesn't return certain fields, fetch directly from worker_details
             let shirtSize = data.shirt_size;
             let shoeSize = data.shoe_size;
+            let description = data.description;
+            let experience = data.experience;
             
             // Check if values are null/undefined (not just falsy, to allow empty strings)
-            if (shirtSize == null || shoeSize == null) {
-              const { data: sizeData } = await supabase
+            if (shirtSize == null || shoeSize == null || description == null || experience == null) {
+              const { data: additionalData } = await supabase
                 .from('worker_details')
-                .select('shirt_size, shoe_size')
+                .select('shirt_size, shoe_size, description, experience')
                 .eq('profile_id', authUser.id)
                 .single();
               
-              if (sizeData) {
+              if (additionalData) {
                 // Only use fetched values if current values are null/undefined
-                if (shirtSize == null) shirtSize = sizeData.shirt_size;
-                if (shoeSize == null) shoeSize = sizeData.shoe_size;
+                if (shirtSize == null) shirtSize = additionalData.shirt_size;
+                if (shoeSize == null) shoeSize = additionalData.shoe_size;
+                if (description == null) description = additionalData.description;
+                if (experience == null) experience = additionalData.experience;
               }
             }
             
@@ -192,8 +196,8 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
               phone_number: data.phone_number || '',
               shirt_size: (shirtSize as string) || '',
               shoe_size: (shoeSize as string) || '',
-              description: data.description || '',
-              experience: data.experience || '',
+              description: (description as string) || '',
+              experience: (experience as string) || '',
               cpr_number: data.cpr_number || '', // Now decrypted, safe to show in form
             });
 
@@ -480,41 +484,23 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         }
       }
 
-      // Update worker_details directly (without RPC for now, as we're removing bank/tax from profile)
+      // Update worker_details directly (combined update for all fields)
       const { error: updateError } = await supabase
         .from('worker_details')
-        .upsert({
-          profile_id: user.id,
+        .update({
           first_name: formData.first_name.trim(),
           last_name: formData.last_name.trim(),
           phone_number: formData.phone_number.trim(),
           description: formData.description.trim() || null,
           experience: formData.experience.trim() || null,
           avatar_url: avatarUrl || null,
-        }, {
-          onConflict: 'profile_id'
-        });
-
-      const rpcError = updateError;
-
-      if (rpcError) {
-        setSubmitError(rpcError.message || 'Kunne ikke gemme oplysninger');
-        setSubmitLoading(false);
-        return;
-      }
-
-      // Update shirt_size and shoe_size directly in worker_details table
-      // (these fields are not handled by the RPC function)
-      const { error: sizeUpdateError } = await supabase
-        .from('worker_details')
-        .update({
           shirt_size: formData.shirt_size.trim() || null,
           shoe_size: formData.shoe_size.trim() || null,
         })
         .eq('profile_id', user.id);
 
-      if (sizeUpdateError) {
-        setSubmitError(sizeUpdateError.message || 'Kunne ikke gemme størrelser');
+      if (updateError) {
+        setSubmitError(updateError.message || 'Kunne ikke gemme oplysninger');
         setSubmitLoading(false);
         return;
       }
@@ -576,37 +562,41 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         // First try to get data from RPC
         const { data: refreshedData } = await supabaseRefresh.rpc('get_worker_profile_secure');
         
-        // If RPC doesn't return shirt_size/shoe_size, fetch directly from worker_details
+        // If RPC doesn't return certain fields, fetch directly from worker_details
         let shirtSize = refreshedData?.shirt_size;
         let shoeSize = refreshedData?.shoe_size;
+        let description = refreshedData?.description;
+        let experience = refreshedData?.experience;
         
         // Check if values are null/undefined (not just falsy, to allow empty strings)
-        if (shirtSize == null || shoeSize == null) {
-          const { data: sizeData } = await supabaseRefresh
+        if (shirtSize == null || shoeSize == null || description == null || experience == null) {
+          const { data: additionalData } = await supabaseRefresh
             .from('worker_details')
-            .select('shirt_size, shoe_size')
+            .select('shirt_size, shoe_size, description, experience')
             .eq('profile_id', user.id)
             .single();
           
-          if (sizeData) {
+          if (additionalData) {
             // Only use fetched values if current values are null/undefined
-            if (shirtSize == null) shirtSize = sizeData.shirt_size;
-            if (shoeSize == null) shoeSize = sizeData.shoe_size;
+            if (shirtSize == null) shirtSize = additionalData.shirt_size;
+            if (shoeSize == null) shoeSize = additionalData.shoe_size;
+            if (description == null) description = additionalData.description;
+            if (experience == null) experience = additionalData.experience;
           }
         }
         
         if (refreshedData) {
           setWorkerDetails(refreshedData);
           const data = refreshedData as Record<string, unknown>;
-          // Update form with refreshed data (including decrypted CPR and sizes)
+          // Update form with refreshed data (including decrypted CPR, sizes, description, and experience)
           setFormData({
             first_name: (data.first_name as string) || '',
             last_name: (data.last_name as string) || '',
             phone_number: (data.phone_number as string) || '',
             shirt_size: (shirtSize as string) || (data.shirt_size as string) || '',
             shoe_size: (shoeSize as string) || (data.shoe_size as string) || '',
-            description: (data.description as string) || '',
-            experience: (data.experience as string) || '',
+            description: (description as string) || (data.description as string) || '',
+            experience: (experience as string) || (data.experience as string) || '',
             cpr_number: (data.cpr_number as string) || '', // Decrypted CPR
           });
           if (data.avatar_url) {

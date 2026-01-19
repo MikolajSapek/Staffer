@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { getDictionary } from '@/app/[lang]/dictionaries';
-import StatsCards from '@/components/dashboard/StatsCards';
+import DashboardActionButtons from '@/components/dashboard/DashboardActionButtons';
 import ArchivedShiftsList from '@/components/dashboard/ArchivedShiftsList';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default async function CompanyDashboardPage({
   params,
@@ -50,9 +51,9 @@ export default async function CompanyDashboardPage({
   // Get current time for filtering
   const now = new Date().toISOString();
 
-  // Fetch archived shifts with detailed profile information
-  // Using status filter for archived shifts
-  const { data: archivedShifts, error: archivedError } = await supabase
+  // Fetch active (upcoming) shifts with detailed profile information
+  // Active = end_time >= now AND status != 'cancelled'
+  const { data: activeShifts, error: activeError } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -77,16 +78,17 @@ export default async function CompanyDashboardPage({
       )
     `)
     .eq('company_id', user.id)
-    .or('status.eq.cancelled,status.eq.completed')
-    .order('end_time', { ascending: false })
+    .gte('end_time', now)
+    .neq('status', 'cancelled')
+    .order('start_time', { ascending: true })
     .limit(10);
 
-  if (archivedError) {
-    console.error('Error fetching archived shifts:', archivedError);
+  if (activeError) {
+    console.error('Error fetching active shifts:', activeError);
   }
 
   // Map shifts to flatten avatar_url and phone_number from worker_details
-  const mappedArchivedShifts = (archivedShifts || []).map((shift) => ({
+  const mappedActiveShifts = (activeShifts || []).map((shift) => ({
     ...shift,
     locations: shift.location, // Mapowanie dla kompatybilności
     shift_applications: (shift.shift_applications || []).map((app: any) => {
@@ -103,7 +105,7 @@ export default async function CompanyDashboardPage({
       return {
         ...app,
         worker_id: worker?.id,
-        // Spłaszczamy strukturę do formatu oczekiwanego przez ArchivedShiftsList
+        // Spłaszczamy strukturę do formatu oczekiwanego przez komponenty
         profiles: worker ? {
           id: worker.id,
           first_name: worker.first_name,
@@ -120,11 +122,11 @@ export default async function CompanyDashboardPage({
     })
   }));
 
-  // Fetch worker skills for archived shifts using the optimized candidate_skills_view
-  let mappedArchivedShiftsWithSkills = mappedArchivedShifts;
+  // Fetch worker skills for active shifts using the optimized candidate_skills_view
+  let mappedActiveShiftsWithSkills = mappedActiveShifts;
   
-  if (mappedArchivedShifts && mappedArchivedShifts.length > 0) {
-    const allWorkerIds = mappedArchivedShifts
+  if (mappedActiveShifts && mappedActiveShifts.length > 0) {
+    const allWorkerIds = mappedActiveShifts
       .flatMap(shift => shift.shift_applications || [])
       .map(app => app.worker_id)
       .filter(Boolean);
@@ -159,7 +161,7 @@ export default async function CompanyDashboardPage({
       });
 
       // Attach skills to each application
-      mappedArchivedShiftsWithSkills = mappedArchivedShifts.map(shift => ({
+      mappedActiveShiftsWithSkills = mappedActiveShifts.map(shift => ({
         ...shift,
         shift_applications: (shift.shift_applications || []).map((app: any) => ({
           ...app,
@@ -170,34 +172,12 @@ export default async function CompanyDashboardPage({
     }
   }
 
-  // Query 1: Count locations for this company (only non-archived)
-  const { count: locationsCount } = await supabase
-    .from('locations')
+  // Count pending applications (for Applicants button badge)
+  const { count: pendingCount } = await supabase
+    .from('shift_applications')
     .select('*', { count: 'exact', head: true })
     .eq('company_id', user.id)
-    .eq('is_archived', false);
-
-  // Query 2: Count active shifts (end_time > now AND status != 'cancelled')
-  const { count: activeShiftsCount } = await supabase
-    .from('shifts')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', user.id)
-    .gt('end_time', now)
-    .neq('status', 'cancelled');
-
-  // Query 3: Sum vacancies_taken from shifts table for this company
-  const { data: shiftsData } = await supabase
-    .from('shifts')
-    .select('vacancies_taken')
-    .eq('company_id', user.id);
-
-  const totalHires = shiftsData?.reduce((sum, shift) => sum + (shift.vacancies_taken || 0), 0) || 0;
-
-  // Query 4: Count managers for this company
-  const { count: managersCount } = await supabase
-    .from('managers')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', user.id);
+    .eq('status', 'pending');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -220,38 +200,50 @@ export default async function CompanyDashboardPage({
           </Button>
         </div>
 
-        {/* Stats Cards */}
+        {/* Action Buttons */}
         <div className="mb-8">
-          <StatsCards
-            stats={{
-              shifts: activeShiftsCount || 0,
-              locations: locationsCount || 0,
-              hires: totalHires,
-              managers: managersCount || 0,
-            }}
-            dict={{
-              activeShifts: dict.dashboard.activeShifts,
-              totalLocations: dict.dashboard.totalLocations,
-              totalHires: dict.dashboard.totalHires,
-              clickToView: dict.dashboard.clickToView,
-              clickToManage: dict.dashboard.clickToManage,
-            }}
+          <DashboardActionButtons
+            pendingCount={pendingCount || 0}
             lang={lang}
+            dict={{
+              applicants: dict.dashboard.applicants,
+              applicantsDesc: dict.dashboard.applicantsDesc,
+              archiveShifts: dict.companyShifts.archiveShifts,
+              locations: dict.dashboard.locations,
+              templates: dict.dashboard.templates,
+              pending: dict.dashboard.pending,
+            }}
           />
         </div>
       </div>
 
-      {/* Archive Shifts Section */}
-      <div id="archive-shifts" className="mb-8 scroll-mt-8">
+      {/* Active Shifts Section */}
+      <div id="active-shifts" className="mb-8 scroll-mt-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold">{dict.companyShifts.archiveShifts}</h2>
+          <h2 className="text-2xl font-semibold">{dict.companyShifts.activeShifts}</h2>
         </div>
 
-        <ArchivedShiftsList
-          archivedShifts={mappedArchivedShiftsWithSkills}
-          lang={lang}
-          dict={dict}
-        />
+        {mappedActiveShiftsWithSkills && mappedActiveShiftsWithSkills.length > 0 ? (
+          <ArchivedShiftsList
+            archivedShifts={mappedActiveShiftsWithSkills}
+            lang={lang}
+            dict={dict}
+          />
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground mb-4">
+                {dict.companyShifts.noActiveShifts}
+              </p>
+              <Button asChild>
+                <Link href={`/${lang}/create-shift`}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {dict.dashboard.createJobListing}
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -139,7 +139,12 @@
     "date": "Dato",
     "time": "Tid",
     "rate": "Sats",
-    "booked": "Booket"
+    "booked": "Booket",
+    "applicants": "Ansøgere",
+    "applicantsDesc": "Gennemgå ansøgninger, der kræver handling",
+    "templates": "Skabeloner",
+    "pending": "Afventende",
+    "team": "Hold"
   },
   "status": {
     "active": "Aktiv",
@@ -462,6 +467,8 @@
   "companyShifts": {
     "title": "Mine vagter",
     "description": "Administrer dine jobopslag og se arkiverede vagter.",
+    "archiveTitle": "Arkiverede vagter",
+    "archiveDescription": "Se dine afsluttede og annullerede vagter.",
     "activeShifts": "Aktive vagter",
     "archiveShifts": "Arkiverede vagter",
     "noActiveShifts": "Ingen aktive vagter fundet.",
@@ -477,6 +484,7 @@
     "viewDetails": "Se detaljer",
     "edit": "Rediger",
     "cancel": "Annuller vagt",
+    "createNewShift": "Opret ny vagt",
     "createNewShift": "Opret ny vagt"
   },
   "companyLocations": {

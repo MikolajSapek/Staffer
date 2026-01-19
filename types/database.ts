@@ -48,6 +48,8 @@ export interface Database {
           last_name: string;
           phone_number: string;
           avatar_url: string | null;
+          description: string | null;
+          experience: string | null;
           cpr_number_encrypted: string;
           tax_card_type: 'Hovedkort' | 'Bikort' | 'Frikort';
           bank_reg_number: string;
@@ -72,6 +74,8 @@ export interface Database {
           last_name: string;
           phone_number: string;
           avatar_url?: string | null;
+          description?: string | null;
+          experience?: string | null;
           cpr_number_encrypted: string;
           tax_card_type: 'Hovedkort' | 'Bikort' | 'Frikort';
           bank_reg_number: string;
@@ -96,6 +100,8 @@ export interface Database {
           last_name?: string;
           phone_number?: string;
           avatar_url?: string | null;
+          description?: string | null;
+          experience?: string | null;
           cpr_number_encrypted?: string;
           tax_card_type?: 'Hovedkort' | 'Bikort' | 'Frikort';
           bank_reg_number?: string;

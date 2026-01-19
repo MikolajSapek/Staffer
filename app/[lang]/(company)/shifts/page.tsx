@@ -5,10 +5,13 @@ import ActiveShiftsList from './ActiveShiftsList';
 
 export default async function ShiftsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ lang: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
   const { lang } = await params;
+  const { status } = await searchParams;
   const dict = await getDictionary(lang as 'en-US' | 'da');
   const supabase = await createClient();
   
@@ -36,8 +39,11 @@ export default async function ShiftsPage({
   // Get current time for filtering
   const now = new Date().toISOString();
 
-  // Fetch only active shifts (end_time > now) with hired team data
-  const { data: shifts, error: shiftsError } = await supabase
+  // Determine if showing archive or active shifts
+  const isArchive = status === 'completed';
+
+  // Fetch shifts based on view type
+  let shiftsQuery = supabase
     .from('shifts')
     .select(`
       *,
@@ -59,10 +65,22 @@ export default async function ShiftsPage({
         )
       )
     `)
-    .eq('company_id', user.id)
-    .gt('end_time', now)
-    .neq('status', 'cancelled')
-    .order('start_time', { ascending: true });
+    .eq('company_id', user.id);
+
+  if (isArchive) {
+    // Archive: completed or cancelled shifts, sorted by end_time descending (most recent first)
+    shiftsQuery = shiftsQuery
+      .or('status.eq.cancelled,status.eq.completed')
+      .order('end_time', { ascending: false });
+  } else {
+    // Active: future shifts (end_time >= now) that aren't cancelled
+    shiftsQuery = shiftsQuery
+      .gte('end_time', now)
+      .neq('status', 'cancelled')
+      .order('start_time', { ascending: true });
+  }
+
+  const { data: shifts, error: shiftsError } = await shiftsQuery;
 
   if (shiftsError) {
     console.error('Error fetching shifts:', shiftsError);
@@ -102,15 +120,26 @@ export default async function ShiftsPage({
     };
   });
 
+  // Override title and description based on view
+  const pageDict = {
+    ...dict.companyShifts,
+    title: isArchive ? dict.companyShifts.archiveTitle : dict.companyShifts.title,
+    description: isArchive 
+      ? dict.companyShifts.archiveDescription
+      : dict.companyShifts.description,
+    activeShifts: isArchive ? dict.companyShifts.archiveShifts : dict.companyShifts.activeShifts,
+  };
+
   return (
     <ActiveShiftsList
       shifts={mappedShifts}
-      dict={dict.companyShifts}
+      dict={pageDict}
       statusDict={dict.status}
       lang={lang}
       locations={locationsData || []}
       createShiftDict={dict.createShift}
       shiftOptions={dict.shiftOptions}
+      isArchive={isArchive}
     />
   );
 }
