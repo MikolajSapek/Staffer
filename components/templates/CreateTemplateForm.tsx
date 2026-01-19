@@ -14,17 +14,14 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
-import { Loader2, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
 import CreateLocationModal from '@/components/CreateLocationModal';
-import { fromZonedTime } from 'date-fns-tz';
-import { z } from 'zod';
-import { createTemplate, deleteTemplate } from '@/app/actions/templates';
-import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { createTemplate } from '@/app/actions/templates';
+import { TimePicker } from '@/components/ui/time-picker';
 
-interface CreateShiftFormProps {
+interface CreateTemplateFormProps {
   companyId: string;
   locations: Array<{ id: string; name: string; address: string }>;
-  initialTemplates?: ShiftTemplate[];
   locationFormDict: {
     addTitle: string;
     addDescription: string;
@@ -42,6 +39,8 @@ interface CreateShiftFormProps {
   dict: {
     formTitle: string;
     formDescription: string;
+    templateName: string;
+    templateNamePlaceholder: string;
     jobTitle: string;
     jobTitlePlaceholder: string;
     description: string;
@@ -70,12 +69,13 @@ interface CreateShiftFormProps {
     noLocations: string;
     goToLocations: string;
     submit: string;
-    creating: string;
+    saving: string;
     cancel: string;
     successTitle: string;
     successMessage: string;
     redirecting: string;
     validation: {
+      templateNameRequired: string;
       titleRequired: string;
       locationRequired: string;
       categoryRequired: string;
@@ -85,29 +85,9 @@ interface CreateShiftFormProps {
       vacanciesRequired: string;
       endTimeAfterStart: string;
       minShiftDuration: string;
-      companyProfileIncomplete?: string;
-    };
-    templates: {
-      loadTemplate: string;
-      selectTemplatePlaceholder: string;
-      saveAsTemplate: string;
-      templateName: string;
-      templateNamePlaceholder: string;
-      templateSaved: string;
-      templateNameRequired: string;
     };
   };
   shiftOptions: {
-    roles: {
-      placeholder: string;
-      waiter: string;
-      bartender: string;
-      chef: string;
-      dishwasher: string;
-      runner: string;
-      manager: string;
-      cleaning: string;
-    };
     breaks: {
       placeholder: string;
       none: string;
@@ -154,80 +134,47 @@ interface Skill {
   category: 'language' | 'license';
 }
 
-interface ShiftTemplate {
-  id: string;
-  template_name: string;
-  title: string;
-  description: string | null;
-  category: string;
-  hourly_rate: number;
-  vacancies_total: number;
-  location_id: string | null;
-  must_bring: string | null;
-  break_minutes: number;
-  is_break_paid: boolean;
-  shift_template_requirements?: Array<{
-    id: string;
-    skill_id: string;
-    skills?: {
-      id: string;
-      name: string;
-      category: string;
-    };
-  }>;
-}
-
-// Ensure start time is in the future
-const formSchema = z.object({
-  start_time: z.string(),
-}).refine(({ start_time }) => {
-  if (!start_time) return false;
-  const start = new Date(start_time);
-  if (Number.isNaN(start.getTime())) return false;
-  return start > new Date();
-}, {
-  message: 'Start time must be in the future',
-  path: ['start_time'],
-});
-
-export default function CreateShiftForm({ companyId, locations: initialLocations, initialTemplates = [], locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
+export default function CreateTemplateForm({ 
+  companyId, 
+  locations: initialLocations, 
+  locationFormDict, 
+  dict, 
+  shiftOptions, 
+  lang 
+}: CreateTemplateFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [templates, setTemplates] = useState<ShiftTemplate[]>(initialTemplates);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
-  const [templateName, setTemplateName] = useState('');
   const [locations, setLocations] = useState<Array<{ id: string; name: string; address: string }>>(initialLocations);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   
   // Skills state
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]); // Track selected skill IDs
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
+    template_name: '',
     title: '',
     description: '',
     category: '',
     location_id: initialLocations.length > 0 ? initialLocations[0].id : '',
-    start_time: '',
-    end_time: '',
+    start_time: '09:00', // Time only format
+    end_time: '17:00',   // Time only format
     hourly_rate: '',
     break_minutes: '0',
     is_break_paid: false,
     vacancies_total: '1',
-    is_urgent: false,
     possible_overtime: false,
     must_bring: '',
   });
+
   // Fetch skills on mount
   useEffect(() => {
     async function fetchSkills() {
       try {
         const supabase = createClient();
         
-        // Fetch available skills
         const { data: skillsData, error: skillsError } = await supabase
           .from('skills')
           .select('id, name, category')
@@ -237,7 +184,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
           setAvailableSkills(skillsData);
         }
       } catch (err) {
-        // Error fetching skills - continue without them
         console.error('Error fetching skills:', err);
       }
     }
@@ -245,79 +191,16 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     fetchSkills();
   }, []);
 
-  // Load template when selected
-  const handleTemplateSelect = (templateId: string) => {
-    setSelectedTemplateId(templateId);
-    if (!templateId) return;
-
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      // Extract skill IDs from template requirements
-      const templateSkillIds = template.shift_template_requirements?.map(req => req.skill_id) || [];
-      
-      setFormData({
-        ...formData,
-        title: template.title || '',
-        description: template.description || '',
-        category: template.category || '',
-        location_id: template.location_id || (locations.length > 0 ? locations[0].id : ''),
-        hourly_rate: template.hourly_rate?.toString() || '',
-        vacancies_total: template.vacancies_total?.toString() || '1',
-        must_bring: template.must_bring || '',
-        break_minutes: template.break_minutes?.toString() || '0',
-        is_break_paid: template.is_break_paid || false,
-        // Don't overwrite start_time and end_time
-      });
-      
-      // Set selected skill IDs from template
-      setSelectedSkillIds(templateSkillIds);
-    }
-  };
-
   // Handle location creation success
   const handleLocationCreated = (newLocation: { id: string; name: string; address: string }) => {
-    // Add the new location to the list
     setLocations((prev) => [newLocation, ...prev]);
-    // Auto-select the new location
     setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
   };
 
-  // Handle template deletion
-  const handleDeleteTemplate = async (templateId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    const template = templates.find(t => t.id === templateId);
-    if (!template) return;
-    
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the template "${template.template_name}"? This action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
-    
-    try {
-      const result = await deleteTemplate(templateId);
-      
-      if (result.success) {
-        // Remove from local state
-        setTemplates(prev => prev.filter(t => t.id !== templateId));
-        
-        // Clear selection if this template was selected
-        if (selectedTemplateId === templateId) {
-          setSelectedTemplateId('');
-        }
-        
-        alert('Template deleted successfully');
-      } else {
-        alert(`Failed to delete template: ${result.error || result.message}`);
-      }
-    } catch (err) {
-      console.error('Error deleting template:', err);
-      alert('An unexpected error occurred while deleting the template');
-    }
-  };
-
   const validateForm = (): string | null => {
+    if (!formData.template_name.trim()) {
+      return dict.validation.templateNameRequired;
+    }
     if (!formData.title.trim()) {
       return dict.validation.titleRequired;
     }
@@ -330,10 +213,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     if (!formData.start_time) {
       return dict.validation.startTimeRequired;
     }
-    const startTimeValidation = formSchema.safeParse({ start_time: formData.start_time });
-    if (!startTimeValidation.success) {
-      return startTimeValidation.error.issues[0]?.message || 'Start time must be in the future';
-    }
     if (!formData.end_time) {
       return dict.validation.endTimeRequired;
     }
@@ -344,21 +223,21 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
       return dict.validation.vacanciesRequired;
     }
 
-    // Validate template name if saving as template
-    if (saveAsTemplate && !templateName.trim()) {
-      return dict.templates.templateNameRequired;
-    }
-
     // Validate that end time is after start time
     if (formData.start_time && formData.end_time) {
-      const start = new Date(formData.start_time);
-      const end = new Date(formData.end_time);
-      if (end <= start) {
+      const [startHour, startMin] = formData.start_time.split(':').map(Number);
+      const [endHour, endMin] = formData.end_time.split(':').map(Number);
+      
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      
+      if (endMinutes <= startMinutes) {
         return dict.validation.endTimeAfterStart;
       }
-      // Validate minimum shift duration (2 hours)
-      const diffInHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      if (diffInHours < 2) {
+      
+      // Validate minimum duration (2 hours = 120 minutes)
+      const diffInMinutes = endMinutes - startMinutes;
+      if (diffInMinutes < 120) {
         return dict.validation.minShiftDuration;
       }
     }
@@ -381,162 +260,39 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     setLoading(true);
 
     try {
-      const supabase = createClient();
-
-      // Get the current authenticated user - company_id must match auth.uid()
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Check if company profile is complete
-      const { data: companyDetails, error: companyError } = await supabase
-        .from('company_details')
-        .select('company_name, cvr_number, main_address')
-        .eq('profile_id', user.id)
-        .single();
-
-      if (companyError?.code === 'PGRST116') {
-        setError('Access denied. Please contact support if this persists.');
-        setLoading(false);
-        return;
-      }
-
-      if (companyError || !companyDetails) {
-        throw new Error('Company profile not found. Please complete your company setup first.');
-      }
-
-      // Validate that required fields are filled
-      const profile = companyDetails as {
-        company_name: string | null;
-        cvr_number: string | null;
-        main_address: string | null;
-      };
-
-      if (!profile.company_name || !profile.company_name.trim()) {
-        throw new Error(dict.validation.companyProfileIncomplete || 'Company profile is incomplete. Please complete your company profile first.');
-      }
-
-      if (!profile.cvr_number || !profile.cvr_number.trim()) {
-        throw new Error(dict.validation.companyProfileIncomplete || 'Company profile is incomplete. Please complete your company profile first.');
-      }
-
-      if (!profile.main_address || !profile.main_address.trim()) {
-        throw new Error(dict.validation.companyProfileIncomplete || 'Company profile is incomplete. Please complete your company profile first.');
-      }
-
-      // Convert local time strings to UTC using Copenhagen timezone
-      const timeZone = 'Europe/Copenhagen';
-      
-      // Convert "2026-01-01T09:00" (Denmark time) -> UTC Date Object
-      const startUtc = fromZonedTime(formData.start_time, timeZone);
-      const endUtc = fromZonedTime(formData.end_time, timeZone);
-
-      // Construct the payload with proper data types
-      const payload = {
-        company_id: user.id, // CRITICAL: Must match auth.uid() for RLS policy
-        location_id: formData.location_id || null,
-        title: formData.title.trim(),
-        description: formData.description.trim() || null,
-        category: formData.category,
-        start_time: startUtc.toISOString(), // Send explicit UTC
-        end_time: endUtc.toISOString(),
-        hourly_rate: parseFloat(formData.hourly_rate),
-        break_minutes: parseInt(formData.break_minutes) || 0,
-        is_break_paid: parseInt(formData.break_minutes) > 0 ? formData.is_break_paid : false,
-        vacancies_total: parseInt(formData.vacancies_total),
-        vacancies_taken: 0,
-        status: 'published' as const,
-        is_urgent: formData.is_urgent,
-        possible_overtime: formData.possible_overtime,
-        must_bring: formData.must_bring.trim() || null,
-      };
-
-      // Insert the shift and get the new shift ID
-      const { data: newShift, error: shiftError } = await supabase
-        .from('shifts')
-        .insert(payload as any)
-        .select('id')
-        .single();
-
-      if (shiftError || !newShift) {
-        console.error('Failed to create shift:', JSON.stringify(shiftError, null, 2));
-        throw shiftError || new Error('Failed to create shift');
-      }
-
-      const newShiftId = (newShift as any).id;
-
-      // CRITICAL: Save shift requirements using newShiftId
-      // Requirements MUST be saved for data integrity
-      // BUSINESS DECISION: Filter out license skills (only save language skills)
+      // Filter to only language skills (business decision)
       const languageSkillIds = selectedSkillIds.filter(id => {
         const skill = availableSkills.find(s => s.id === id);
         return skill && skill.category === 'language';
       });
       
-      if (languageSkillIds.length > 0) {
-        const requirementsToInsert = languageSkillIds.map((skillId) => ({
-          shift_id: newShiftId,
-          skill_id: skillId,
-        }));
+      const templateResult = await createTemplate({
+        template_name: formData.template_name.trim(),
+        title: formData.title.trim(),
+        description: formData.description.trim() || null,
+        category: formData.category,
+        location_id: formData.location_id || null,
+        hourly_rate: parseFloat(formData.hourly_rate),
+        vacancies_total: parseInt(formData.vacancies_total),
+        must_bring: formData.must_bring.trim() || null,
+        break_minutes: parseInt(formData.break_minutes) || 0,
+        is_break_paid: parseInt(formData.break_minutes) > 0 ? formData.is_break_paid : false,
+        skill_ids: languageSkillIds,
+      });
 
-        const { error: requirementsError } = await (supabase
-          .from('shift_requirements') as any)
-          .insert(requirementsToInsert)
-          .select();
-
-        if (requirementsError) {
-          const errorMessage = requirementsError.message 
-            ? `Database error: ${requirementsError.message}` 
-            : 'Unknown database error. The shift_requirements table may not exist.';
-
-          alert(`⚠️ CRITICAL ERROR\n\nShift created successfully, but failed to save requirements.\n\n${errorMessage}\n\nPlease edit the shift to add requirements, or contact support.`);
-
-          setError(`Shift created, but failed to save requirements. ${errorMessage} Please edit the shift to add requirements.`);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Save as template if checkbox is checked
-      if (saveAsTemplate && templateName.trim()) {
-        // BUSINESS DECISION: Filter out license skills when saving templates
-        const languageSkillIdsForTemplate = selectedSkillIds.filter(id => {
-          const skill = availableSkills.find(s => s.id === id);
-          return skill && skill.category === 'language';
-        });
-        
-        const templateResult = await createTemplate({
-          template_name: templateName.trim(),
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          category: formData.category,
-          location_id: formData.location_id || null,
-          hourly_rate: parseFloat(formData.hourly_rate),
-          vacancies_total: parseInt(formData.vacancies_total),
-          must_bring: formData.must_bring.trim() || null,
-          break_minutes: parseInt(formData.break_minutes) || 0,
-          is_break_paid: parseInt(formData.break_minutes) > 0 ? formData.is_break_paid : false,
-          skill_ids: languageSkillIdsForTemplate, // Pass only language skill IDs
-        });
-
-        if (!templateResult.success) {
-          // Don't throw - shift was created successfully, template save is secondary
-          console.error('Failed to save template:', templateResult.error);
-        }
+      if (!templateResult.success) {
+        throw new Error(templateResult.error || 'Failed to create template');
       }
 
       // Show success message
       setSuccess(true);
 
-      // Refresh to sync server state and redirect after 1.5 seconds
-      router.refresh();
+      // Redirect to templates list after 1.5 seconds
       setTimeout(() => {
-        router.push(`/${lang}/dashboard`);
+        router.push(`/${lang}/templates`);
       }, 1500);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : dict.validation.titleRequired;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create template';
       setError(errorMessage);
       setLoading(false);
     }
@@ -577,45 +333,24 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
               </div>
             )}
 
-            {/* Load Template Dropdown */}
-            {templates.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="template-select">{dict.templates.loadTemplate}</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedTemplateId || undefined}
-                    onValueChange={handleTemplateSelect}
-                    disabled={loading}
-                  >
-                    <SelectTrigger id="template-select" className="w-full">
-                      <SelectValue placeholder={dict.templates.selectTemplatePlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span>{template.template_name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedTemplateId && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => handleDeleteTemplate(selectedTemplateId, e)}
-                      disabled={loading}
-                      className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      title="Delete template"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Template Name - TOP OF FORM */}
+            <div className="space-y-2">
+              <Label htmlFor="template-name">
+                {dict.templateName} <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="template-name"
+                value={formData.template_name}
+                onChange={(e) => setFormData({ ...formData, template_name: e.target.value })}
+                placeholder={dict.templateNamePlaceholder}
+                required
+                disabled={loading}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Give this template a memorable name for quick access
+              </p>
+            </div>
 
             {/* Title */}
             <div className="space-y-2">
@@ -713,38 +448,37 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
               </div>
             </div>
 
-            {/* Date & Time */}
+            {/* Time Pickers (no date) */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="start_time">
                   {dict.startTime} <span className="text-red-500">*</span>
                 </Label>
-                <DateTimePicker
+                <TimePicker
                   id="start_time"
                   value={formData.start_time}
                   onChange={(value) => setFormData({ ...formData, start_time: value })}
-                  min={new Date().toISOString()}
                   required
                   disabled={loading}
                 />
-                {error?.includes('Start time must be in the future') && (
-                  <p className="text-sm text-red-600">
-                    Start time must be in the future
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Typical start time for this role
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="end_time">
                   {dict.endTime} <span className="text-red-500">*</span>
                 </Label>
-                <DateTimePicker
+                <TimePicker
                   id="end_time"
                   value={formData.end_time}
                   onChange={(value) => setFormData({ ...formData, end_time: value })}
-                  min={formData.start_time || new Date().toISOString()}
                   required
                   disabled={loading}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Typical end time for this role
+                </p>
               </div>
             </div>
 
@@ -762,7 +496,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   value={formData.hourly_rate}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Only allow positive numbers
                     if (value === '' || (parseFloat(value) > 0)) {
                       setFormData({ ...formData, hourly_rate: value });
                     }
@@ -787,7 +520,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   value={formData.vacancies_total}
                   onChange={(e) => {
                     const value = e.target.value;
-                    // Only allow positive integers
                     if (value === '' || (parseInt(value) >= 1)) {
                       setFormData({ ...formData, vacancies_total: value });
                     }
@@ -814,7 +546,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   setFormData({ 
                     ...formData, 
                     break_minutes: breakMinutes,
-                    // Reset is_break_paid to false when break is set to 0
                     is_break_paid: breakMinutes === '0' ? false : formData.is_break_paid
                   });
                 }}
@@ -824,21 +555,11 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   <SelectValue placeholder={shiftOptions.breaks?.placeholder || 'Select break duration'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">
-                    No break
-                  </SelectItem>
-                  <SelectItem value="15">
-                    15 minutes
-                  </SelectItem>
-                  <SelectItem value="30">
-                    30 minutes
-                  </SelectItem>
-                  <SelectItem value="45">
-                    45 minutes
-                  </SelectItem>
-                  <SelectItem value="60">
-                    60 minutes
-                  </SelectItem>
+                  <SelectItem value="0">No break</SelectItem>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="45">45 minutes</SelectItem>
+                  <SelectItem value="60">60 minutes</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -849,7 +570,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                     {dict.breakPaymentStatus || 'Is this break paid?'}
                   </Label>
                   <div className="flex flex-col gap-2">
-                    {/* Option: UNPAID */}
                     <label className="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-gray-200">
                       <input 
                         type="radio" 
@@ -865,7 +585,6 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                       </div>
                     </label>
 
-                    {/* Option: PAID */}
                     <label className="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white border border-transparent hover:border-gray-200">
                       <input 
                         type="radio" 
@@ -913,7 +632,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              Items or equipment the worker must bring to this shift
+              Items or equipment the worker must bring
             </p>
           </div>
 
@@ -954,119 +673,29 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                 Leave unchecked if no language requirement
               </p>
             </div>
-
-            {/* Required Licences - HIDDEN FOR NOW (business decision) */}
-            {false && (
-            <div className="space-y-2">
-              <Label>Required Licences</Label>
-              <div className="grid grid-cols-1 gap-3 p-4 border rounded-md bg-gray-50">
-                {availableSkills
-                  .filter(skill => skill.category === 'license')
-                  .map((skill) => (
-                    <label
-                      key={skill.id}
-                      className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedSkillIds.includes(skill.id)}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setSelectedSkillIds(prev =>
-                            checked
-                              ? [...prev, skill.id]
-                              : prev.filter(id => id !== skill.id)
-                          );
-                        }}
-                        disabled={loading}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <span className="text-sm font-medium">{skill.name}</span>
-                    </label>
-                  ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Leave unchecked if no licences required
-              </p>
-            </div>
-            )}
           </div>
 
-          {/* Boolean Flags - Urgent and Possible Overtime */}
+          {/* Possible Overtime */}
           <div className="space-y-4 pt-4 border-t">
-              {/* Mark as Urgent */}
-              <div className="flex items-start space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_urgent"
-                  checked={formData.is_urgent}
-                  onChange={(e) => setFormData({ ...formData, is_urgent: e.target.checked })}
-                  disabled={loading}
-                  className="h-4 w-4 mt-1 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <div className="flex-1">
-                  <Label htmlFor="is_urgent" className="cursor-pointer font-medium">
-                    Mark as Urgent / High Priority
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Highlight this shift to attract workers faster.
-                  </p>
-                </div>
-              </div>
-
-              {/* Possible Overtime */}
-              <div className="flex items-start space-x-2">
-                <input
-                  type="checkbox"
-                  id="possible_overtime"
-                  checked={formData.possible_overtime}
-                  onChange={(e) => setFormData({ ...formData, possible_overtime: e.target.checked })}
-                  disabled={loading}
-                  className="h-4 w-4 mt-1 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <div className="flex-1">
-                  <Label htmlFor="possible_overtime" className="cursor-pointer font-medium">
-                    {dict.possibleOvertime || 'Possible Overtime'}
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {dict.possibleOvertimeHint || 'Signal that extra hours might be available/required.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Save as Template */}
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="save-as-template"
-                  checked={saveAsTemplate}
-                  onChange={(e) => setSaveAsTemplate(e.target.checked)}
-                  disabled={loading}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <Label htmlFor="save-as-template" className="cursor-pointer">
-                  {dict.templates.saveAsTemplate}
+            <div className="flex items-start space-x-2">
+              <input
+                type="checkbox"
+                id="possible_overtime"
+                checked={formData.possible_overtime}
+                onChange={(e) => setFormData({ ...formData, possible_overtime: e.target.checked })}
+                disabled={loading}
+                className="h-4 w-4 mt-1 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <div className="flex-1">
+                <Label htmlFor="possible_overtime" className="cursor-pointer font-medium">
+                  {dict.possibleOvertime || 'Possible Overtime'}
                 </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {dict.possibleOvertimeHint || 'Signal that extra hours might be available/required.'}
+                </p>
               </div>
-              {saveAsTemplate && (
-                <div className="space-y-2 pl-6">
-                  <Label htmlFor="template-name">
-                    {dict.templates.templateName} <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="template-name"
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    placeholder={dict.templates.templateNamePlaceholder}
-                    required={saveAsTemplate}
-                    disabled={loading}
-                    className="w-full"
-                  />
-                </div>
-              )}
             </div>
+          </div>
 
             {/* Submit Button */}
             <div className="flex gap-4 pt-4">
@@ -1087,7 +716,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {dict.creating}
+                    {dict.saving}
                   </>
                 ) : (
                   dict.submit
@@ -1106,4 +735,3 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     </Card>
   );
 }
-

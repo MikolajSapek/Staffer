@@ -193,12 +193,6 @@ export default async function CompanyDashboardPage({
 
   const totalHires = shiftsData?.reduce((sum, shift) => sum + (shift.vacancies_taken || 0), 0) || 0;
 
-  // Query 4: Count shift templates for this company
-  const { count: templatesCount } = await supabase
-    .from('shift_templates')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', user.id);
-
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Welcome Section */}
@@ -227,7 +221,6 @@ export default async function CompanyDashboardPage({
               shifts: activeShiftsCount || 0,
               locations: locationsCount || 0,
               hires: totalHires,
-              templates: templatesCount || 0,
               managers: 0,
             }}
             dict={{

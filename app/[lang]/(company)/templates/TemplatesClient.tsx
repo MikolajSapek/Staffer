@@ -171,7 +171,7 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
           </p>
         </div>
         <Button asChild>
-          <Link href={`/${lang}/create-shift`}>
+          <Link href={`/${lang}/templates/create`}>
             <Plus className="mr-2 h-4 w-4" />
             Create New Template
           </Link>
@@ -186,7 +186,7 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
               No templates found. Create your first template to speed up shift creation.
             </p>
             <Button asChild>
-              <Link href={`/${lang}/create-shift`}>
+              <Link href={`/${lang}/templates/create`}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First Template
               </Link>

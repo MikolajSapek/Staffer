@@ -1176,8 +1176,8 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                     </div>
                   )}
 
-                  {/* Licenses */}
-                  {availableSkills.filter(s => s.category === 'license').length > 0 && (
+                  {/* Licenses - HIDDEN FOR NOW (business decision) */}
+                  {false && availableSkills.filter(s => s.category === 'license').length > 0 && (
                     <div className="space-y-2">
                       <Label className="text-sm font-semibold">Licenses</Label>
                       <div className="grid gap-3 md:grid-cols-2">

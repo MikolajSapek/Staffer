@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, MapPin, Briefcase, FileText, Users } from 'lucide-react';
+import { Calendar, MapPin, Briefcase, LayoutTemplate, Users } from 'lucide-react';
 import Link from 'next/link';
 
 interface StatsCardsProps {
@@ -9,7 +9,6 @@ interface StatsCardsProps {
     shifts: number;
     locations: number;
     hires: number;
-    templates: number;
     managers: number;
   };
   dict: {
@@ -73,18 +72,20 @@ export default function StatsCards({ stats, dict, lang }: StatsCardsProps) {
         </Card>
       </Link>
 
-      {/* Card 4: Templates - Clickable to go to Templates page */}
+      {/* Card 4: Templates - Navigate to Templates Library */}
       <Link href={`/${lang}/templates`} className="block">
         <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Total Templates
+              Your Templates
             </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <LayoutTemplate className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.templates}</div>
-            <p className="text-xs text-muted-foreground mt-1">{dict.clickToManage}</p>
+            <div className="flex items-center justify-center h-8">
+              <LayoutTemplate className="h-8 w-8 text-primary/60" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Create and manage shift templates</p>
           </CardContent>
         </Card>
       </Link>

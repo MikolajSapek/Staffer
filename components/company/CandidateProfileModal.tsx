@@ -338,7 +338,7 @@ export default function CandidateProfileModal({
           {/* Skills & Qualifications Section */}
           <div className="space-y-2">
             <div className="text-sm font-medium text-muted-foreground">
-              {dict.languages || 'Languages'} & {dict.licenses || 'Licenses'}
+              {dict.languages || 'Languages'}
             </div>
             {skillsLoading ? (
               <div className="pl-6 text-sm text-muted-foreground">
@@ -364,7 +364,8 @@ export default function CandidateProfileModal({
                     </div>
                   </div>
                 )}
-                {workerSkills.licenses.length > 0 && (
+                {/* Licenses - HIDDEN FOR NOW (business decision) */}
+                {false && workerSkills.licenses.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-muted-foreground mb-1">
                       {dict.licenses || 'Licenses'}

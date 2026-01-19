@@ -327,7 +327,7 @@ export default function ArchivedShiftsList({
             error: 'An error occurred',
             close: 'Close',
             languages: 'Languages',
-            licenses: 'Licenses & Certifications',
+            licenses: 'Licenses',
             noQualifications: 'No specific qualifications listed'
           }}
           lang={lang}

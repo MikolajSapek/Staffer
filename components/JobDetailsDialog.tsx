@@ -378,8 +378,8 @@ export function JobDetailsDialog({
                   </div>
                 ) : null}
 
-                {/* Licences */}
-                {requiredLicenses && requiredLicenses.length > 0 ? (
+                {/* Licences - HIDDEN FOR NOW (business decision) */}
+                {false && (requiredLicenses && requiredLicenses.length > 0 ? (
                   <div>
                     <p className="text-xs text-gray-600 mb-2">Licences:</p>
                     <div className="flex flex-wrap gap-2">
@@ -395,7 +395,7 @@ export function JobDetailsDialog({
                     <p className="text-xs text-gray-600 mb-1">Licences:</p>
                     <p className="text-xs text-muted-foreground">No licences required</p>
                   </div>
-                ) : null}
+                ) : null)}
               </div>
             )}
 

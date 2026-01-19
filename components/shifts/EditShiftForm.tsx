@@ -286,7 +286,7 @@ export default function EditShiftForm({
         possible_overtime: formData.possible_overtime,
         must_bring: formData.must_bring.trim() || null,
         required_language_ids: formData.required_language_ids,
-        required_licence_ids: formData.required_licence_ids,
+        required_licence_ids: [], // BUSINESS DECISION: Always send empty array (licenses hidden)
       };
 
       const result = await updateShiftAction(shiftId, payload);
@@ -567,7 +567,8 @@ export default function EditShiftForm({
               </p>
             </div>
 
-            {/* Required Licences */}
+            {/* Required Licences - HIDDEN FOR NOW (business decision) */}
+            {false && (
             <div className="space-y-2">
               <Label>Required Licences</Label>
               <div className="grid grid-cols-1 gap-3 p-4 border rounded-md bg-gray-50">
@@ -601,6 +602,7 @@ export default function EditShiftForm({
                 Leave unchecked if no licences required
               </p>
             </div>
+            )}
           </div>
 
           {/* Boolean Flags - Urgent and Possible Overtime */}

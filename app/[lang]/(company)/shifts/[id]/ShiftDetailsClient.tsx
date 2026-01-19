@@ -434,7 +434,7 @@ export default function ShiftDetailsClient({
           )}
 
           {/* Requirements Section */}
-          {shift.requirements && (shift.requirements.languages.length > 0 || shift.requirements.licenses.length > 0) && (
+          {shift.requirements && shift.requirements.languages.length > 0 && (
             <div className="mt-6 pt-6 border-t">
               <div className="text-sm font-medium text-muted-foreground mb-3">
                 Requirements
@@ -454,8 +454,8 @@ export default function ShiftDetailsClient({
                   </div>
                 )}
                 
-                {/* Licenses */}
-                {shift.requirements.licenses.length > 0 && (
+                {/* Licenses - HIDDEN FOR NOW (business decision) */}
+                {false && shift.requirements.licenses.length > 0 && (
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Licenses:</p>
                     <div className="flex flex-wrap gap-2">
@@ -682,7 +682,7 @@ export default function ShiftDetailsClient({
             error: 'An error occurred',
             close: 'Close',
             languages: 'Languages',
-            licenses: 'Licenses & Certifications',
+            licenses: 'Licenses',
             noQualifications: 'No specific qualifications listed'
           }}
           lang={lang}
