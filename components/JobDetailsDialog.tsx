@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { da } from 'date-fns/locale/da';
 import { formatInTimeZone } from 'date-fns-tz';
-import { MapPin, Clock, Building2, Calendar, Flame, X, Users, Briefcase } from 'lucide-react';
+import { MapPin, Clock, Building2, Calendar, Flame, X, Users, Briefcase, User, Mail, Phone as PhoneIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -37,12 +37,20 @@ interface Shift {
   company_id: string;
   is_urgent: boolean;
   must_bring: string | null;
+  manager_id?: string | null;
   locations: { name: string; address: string } | null;
   profiles: {
     company_details: {
       company_name: string;
       logo_url: string | null;
     } | null;
+  } | null;
+  managers?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string | null;
   } | null;
 }
 
@@ -396,6 +404,62 @@ export function JobDetailsDialog({
                     <p className="text-xs text-muted-foreground">No licences required</p>
                   </div>
                 ) : null)}
+              </div>
+            )}
+
+            {/* Shift Manager / Contact Person */}
+            {shift.managers && (
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Shift Manager / Contact Person
+                </h4>
+                <div className="rounded-lg bg-muted p-4 border border-gray-200">
+                  <div className="space-y-2">
+                    <p className="font-medium text-gray-900">
+                      {shift.managers.first_name} {shift.managers.last_name}
+                    </p>
+                    {/* Show contact details only if application is accepted/approved */}
+                    {(applicationStatus === 'accepted' || applicationStatus === 'approved') ? (
+                      <>
+                        {shift.managers.email && (
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <Mail className="h-4 w-4" />
+                            <a href={`mailto:${shift.managers.email}`} className="hover:underline">
+                              {shift.managers.email}
+                            </a>
+                          </div>
+                        )}
+                        {shift.managers.phone_number && (
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <PhoneIcon className="h-4 w-4" />
+                            <a href={`tel:${shift.managers.phone_number}`} className="hover:underline">
+                              {shift.managers.phone_number}
+                            </a>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-1">
+                        {shift.managers.email && (
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Mail className="h-4 w-4" />
+                            <span className="blur-sm select-none">contact@example.com</span>
+                          </div>
+                        )}
+                        {shift.managers.phone_number && (
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <PhoneIcon className="h-4 w-4" />
+                            <span className="blur-sm select-none">+45 12 34 56 78</span>
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground italic mt-2">
+                          Contact details visible after acceptance
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

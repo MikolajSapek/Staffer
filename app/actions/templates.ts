@@ -152,6 +152,7 @@ export async function createTemplate(formData: {
   description?: string | null;
   category: string;
   location_id?: string | null;
+  manager_id?: string | null;
   hourly_rate: number;
   vacancies_total: number;
   must_bring?: string | null;
@@ -203,6 +204,7 @@ export async function createTemplate(formData: {
       description: formData.description?.trim() || null,
       category: formData.category,
       location_id: formData.location_id || null,
+      manager_id: formData.manager_id || null,
       hourly_rate: Number(formData.hourly_rate),
       vacancies_total: Number(formData.vacancies_total),
       must_bring: formData.must_bring?.trim() || null,
@@ -282,6 +284,7 @@ export async function updateTemplate(
     description?: string | null;
     category?: string;
     location_id?: string | null;
+    manager_id?: string | null;
     hourly_rate?: number;
     vacancies_total?: number;
     must_bring?: string | null;
@@ -341,6 +344,9 @@ export async function updateTemplate(
     }
     if (formData.location_id !== undefined) {
       updatePayload.location_id = formData.location_id;
+    }
+    if (formData.manager_id !== undefined) {
+      updatePayload.manager_id = formData.manager_id;
     }
     if (formData.hourly_rate !== undefined) {
       updatePayload.hourly_rate = Number(formData.hourly_rate);

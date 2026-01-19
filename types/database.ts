@@ -190,6 +190,7 @@ export interface Database {
           id: string;
           company_id: string;
           location_id: string;
+          manager_id: string | null;
           title: string | null;
           description: string;
           category: string;
@@ -211,6 +212,7 @@ export interface Database {
           id?: string;
           company_id: string;
           location_id: string;
+          manager_id?: string | null;
           title?: string | null;
           description: string;
           category: string;
@@ -232,6 +234,7 @@ export interface Database {
           id?: string;
           company_id?: string;
           location_id?: string;
+          manager_id?: string | null;
           title?: string | null;
           description?: string;
           category?: string;
@@ -591,6 +594,38 @@ export interface Database {
           id?: string;
           shift_id?: string | null;
           skill_id?: string | null;
+        };
+      };
+      managers: {
+        Row: {
+          id: string;
+          company_id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone_number: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone_number?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          first_name?: string;
+          last_name?: string;
+          email?: string;
+          phone_number?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
       };
     };

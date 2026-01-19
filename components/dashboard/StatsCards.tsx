@@ -90,19 +90,21 @@ export default function StatsCards({ stats, dict, lang }: StatsCardsProps) {
         </Card>
       </Link>
 
-      {/* Card 5: Managers - Non-clickable (coming soon) */}
-      <Card className="transition-all opacity-75">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Managers
-          </CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.managers}</div>
-          <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
-        </CardContent>
-      </Card>
+      {/* Card 5: Managers - Navigate to Managers page */}
+      <Link href={`/${lang}/managers`} className="block">
+        <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Managers
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.managers}</div>
+            <p className="text-xs text-muted-foreground mt-1">{dict.clickToManage}</p>
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   );
 }

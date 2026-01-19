@@ -63,6 +63,13 @@ export default async function JobBoardPage({
           company_name,
           logo_url
         )
+      ),
+      managers!manager_id (
+        id,
+        first_name,
+        last_name,
+        email,
+        phone_number
       )
     `)
     .eq('status', 'published')

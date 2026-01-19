@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -205,12 +206,16 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
   // Skills state
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]); // Track selected skill IDs
+  
+  // Managers state
+  const [availableManagers, setAvailableManagers] = useState<Array<{ id: string; first_name: string; last_name: string }>>([]);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
     location_id: initialLocations.length > 0 ? initialLocations[0].id : '',
+    manager_id: '',
     start_time: '',
     end_time: '',
     hourly_rate: '',
@@ -221,9 +226,9 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     possible_overtime: false,
     must_bring: '',
   });
-  // Fetch skills on mount
+  // Fetch skills and managers on mount
   useEffect(() => {
-    async function fetchSkills() {
+    async function fetchSkillsAndManagers() {
       try {
         const supabase = createClient();
         
@@ -236,13 +241,27 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         if (!skillsError && skillsData) {
           setAvailableSkills(skillsData);
         }
+        
+        // Fetch available managers for this company
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: managersData, error: managersError } = await supabase
+            .from('managers')
+            .select('id, first_name, last_name')
+            .eq('company_id', user.id)
+            .order('first_name', { ascending: true });
+
+          if (!managersError && managersData) {
+            setAvailableManagers(managersData);
+          }
+        }
       } catch (err) {
-        // Error fetching skills - continue without them
-        console.error('Error fetching skills:', err);
+        // Error fetching data - continue without them
+        console.error('Error fetching skills and managers:', err);
       }
     }
 
-    fetchSkills();
+    fetchSkillsAndManagers();
   }, []);
 
   // Load template when selected
@@ -437,6 +456,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
       const payload = {
         company_id: user.id, // CRITICAL: Must match auth.uid() for RLS policy
         location_id: formData.location_id || null,
+        manager_id: formData.manager_id && formData.manager_id !== 'none' ? formData.manager_id : null,
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         category: formData.category,
@@ -711,6 +731,57 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Shift Manager */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="manager_id">
+                  Shift Manager / Contact Person
+                </Label>
+                <Link 
+                  href={`/${lang}/managers`}
+                  className="text-xs text-primary hover:underline"
+                  target="_blank"
+                >
+                  Manage managers
+                </Link>
+              </div>
+              {availableManagers.length > 0 ? (
+                <Select
+                  value={formData.manager_id}
+                  onValueChange={(value) => setFormData({ ...formData, manager_id: value })}
+                  disabled={loading}
+                >
+                  <SelectTrigger id="manager_id" className="w-full">
+                    <SelectValue placeholder="Select a manager (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No manager</SelectItem>
+                    {availableManagers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.first_name} {manager.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="rounded-md border border-dashed p-4 text-center">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    No managers found. Add managers to assign them to shifts.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/${lang}/managers`, '_blank')}
+                    disabled={loading}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Manager
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Date & Time */}
