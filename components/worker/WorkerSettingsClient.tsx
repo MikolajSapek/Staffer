@@ -109,15 +109,34 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
       const supabase = createClient();
 
       // Validate required fields
-      if (!bankRegNumber.trim() || !bankAccountNumber.trim()) {
-        setSubmitError(dict.profile?.validation?.bankRequired || 'Bank details are required');
+      if (!taxCardType) {
+        setSubmitError(dict.profile?.validation?.taxCardTypeRequired || 'Tax card type is required');
         setSubmitLoading(false);
         return;
       }
 
-      // Validate account number length (max 10 digits)
-      if (bankAccountNumber.trim().length > 10) {
-        setSubmitError('Account number cannot exceed 10 digits');
+      if (!bankRegNumber.trim()) {
+        setSubmitError(dict.profile?.validation?.bankRegNumberRequired || 'Bank registration number is required');
+        setSubmitLoading(false);
+        return;
+      }
+
+      // Validate registration number length (must be exactly 4 digits)
+      if (bankRegNumber.trim().length !== 4 || !/^\d{4}$/.test(bankRegNumber.trim())) {
+        setSubmitError(dict.profile?.validation?.bankRegNumberFormat || 'Bank registration number must be exactly 4 digits');
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (!bankAccountNumber.trim()) {
+        setSubmitError(dict.profile?.validation?.bankAccountNumberRequired || 'Bank account number is required');
+        setSubmitLoading(false);
+        return;
+      }
+
+      // Validate account number (max 10 digits, only numbers)
+      if (bankAccountNumber.trim().length > 10 || !/^\d+$/.test(bankAccountNumber.trim())) {
+        setSubmitError(dict.profile?.validation?.bankAccountNumberFormat || 'Bank account number must be digits only and cannot exceed 10 digits');
         setSubmitLoading(false);
         return;
       }
@@ -364,13 +383,23 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                     </Label>
                     <Input
                       id="bank_reg_number"
+                      type="text"
                       value={bankRegNumber}
-                      onChange={(e) => setBankRegNumber(e.target.value)}
+                      onChange={(e) => {
+                        // Only allow digits
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value.length <= 4) {
+                          setBankRegNumber(value);
+                        }
+                      }}
                       required
                       placeholder={dict.profile?.bankRegNumberPlaceholder || '1234'}
                       maxLength={4}
                       disabled={submitLoading}
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {dict.profile?.bankRegNumberHint || 'Must be exactly 4 digits'}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="bank_account_number">
@@ -378,13 +407,23 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                     </Label>
                     <Input
                       id="bank_account_number"
+                      type="text"
                       value={bankAccountNumber}
-                      onChange={(e) => setBankAccountNumber(e.target.value)}
+                      onChange={(e) => {
+                        // Only allow digits
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value.length <= 10) {
+                          setBankAccountNumber(value);
+                        }
+                      }}
                       required
                       placeholder={dict.profile?.bankAccountNumberPlaceholder || '1234567890'}
                       maxLength={10}
                       disabled={submitLoading}
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {dict.profile?.bankAccountNumberHint || 'Maximum 10 digits'}
+                    </p>
                   </div>
                 </div>
 

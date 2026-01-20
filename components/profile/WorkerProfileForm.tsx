@@ -430,6 +430,27 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         return;
       }
 
+      if (!formData.description.trim()) {
+        setSubmitError(dict.profile.validation.descriptionRequired || 'Description is required');
+        setSubmitLoading(false);
+        return;
+      }
+
+      if (!formData.experience.trim()) {
+        setSubmitError(dict.profile.validation.experienceRequired || 'Experience is required');
+        setSubmitLoading(false);
+        return;
+      }
+
+      // Validate avatar - check if avatar exists (either from file upload or existing URL)
+      const workerDetailsRecord = workerDetails as Record<string, unknown> | null;
+      const existingAvatarUrl = (workerDetailsRecord?.avatar_url as string) || '';
+      if (!avatarFile && !existingAvatarUrl && !avatarPreview) {
+        setSubmitError(dict.profile.validation.avatarRequired || 'Profile photo is required');
+        setSubmitLoading(false);
+        return;
+      }
+
       // Handle CPR - validate format if provided
       // Send plain text to RPC, database will handle encryption
       let cprNumber = '';
@@ -453,7 +474,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       }
 
       // Upload files if selected
-      const workerDetailsRecord = workerDetails as Record<string, unknown> | null;
       let avatarUrl = (workerDetailsRecord?.avatar_url as string) || '';
       if (avatarFile) {
         try {
@@ -936,7 +956,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
               
               {/* Avatar Upload */}
               <div className="space-y-2">
-                <Label>{dict.profile.avatar}</Label>
+                <Label>{dict.profile.avatar} *</Label>
                 <div className="flex items-center gap-4">
                   {avatarPreview && (
                     <div className="relative">
@@ -1064,26 +1084,28 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                   </div>
               
               <div className="space-y-2">
-                <Label htmlFor="description">{dict.profile.description}</Label>
+                <Label htmlFor="description">{dict.profile.description} *</Label>
                 <textarea
                   id="description"
                   value={formData.description || ''}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder={dict.profile.descriptionPlaceholder}
                   rows={4}
+                  required
                   disabled={submitLoading}
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="experience">{dict.profile.experience}</Label>
+                <Label htmlFor="experience">{dict.profile.experience} *</Label>
                 <textarea
                   id="experience"
                   value={formData.experience || ''}
                   onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
                   placeholder={dict.profile.experiencePlaceholder}
                   rows={6}
+                  required
                   disabled={submitLoading}
                   className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
