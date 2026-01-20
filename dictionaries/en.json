@@ -25,6 +25,7 @@
     "finances": "Finances",
     "settings": "Settings",
     "profile": "Profile",
+    "support": "Support",
     "logout": "Log out"
   },
   "auth": {
@@ -794,6 +795,21 @@
       "deleteSuccess": "Manager deleted successfully!",
       "fetchError": "Could not fetch managers"
     }
+  },
+  "support": {
+    "title": "Contact Support",
+    "subtitle": "We are here to help via phone or email.",
+    "contact_info": "Contact Info",
+    "phone": "Phone Support",
+    "hours": "Mon - Fri: 08:00 - 16:00",
+    "email": "Email Support",
+    "form_title": "Send us a message",
+    "form_email": "Your Email",
+    "form_subject": "Subject",
+    "form_message": "Message",
+    "submit_btn": "Send Message",
+    "success_title": "Message Sent",
+    "success_desc": "Thank you! We will get back to you shortly."
   }
 }
 

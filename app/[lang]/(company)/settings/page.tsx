@@ -3,13 +3,13 @@ import { redirect } from 'next/navigation';
 import CompanySettingsClient from '@/components/company/settings/CompanySettingsClient';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     lang: string;
-  };
+  }>;
 }
 
 export default async function CompanySettingsPage({ params }: PageProps) {
-  const { lang } = params;
+  const { lang } = await params;
   const supabase = await createClient();
 
   // Get authenticated user

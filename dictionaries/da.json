@@ -25,6 +25,7 @@
     "finances": "Økonomi",
     "settings": "Indstillinger",
     "profile": "Profil",
+    "support": "Support",
     "logout": "Log ud"
   },
   "auth": {
@@ -779,6 +780,21 @@
       "deleteSuccess": "Manager slettet!",
       "fetchError": "Kunne ikke hente managers"
     }
+  },
+  "support": {
+    "title": "Kontakt Support",
+    "subtitle": "Vi er her for at hjælpe via telefon eller email.",
+    "contact_info": "Kontaktoplysninger",
+    "phone": "Telefonsupport",
+    "hours": "Man - Fre: 08:00 - 16:00",
+    "email": "Email Support",
+    "form_title": "Send os en besked",
+    "form_email": "Din Email",
+    "form_subject": "Emne",
+    "form_message": "Besked",
+    "submit_btn": "Send Besked",
+    "success_title": "Besked Sendt",
+    "success_desc": "Tak! Vi vender tilbage til dig snart."
   }
 }
 

@@ -22,7 +22,8 @@ import {
   Clock,
   Globe,
   Wallet,
-  Settings
+  Settings,
+  LifeBuoy
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -52,6 +53,7 @@ interface NavbarProps {
       candidates: string;
       settings: string;
       profile: string;
+      support: string;
       logout: string;
     };
     common: {
@@ -409,6 +411,14 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                     >
                       <UserCircle className="mr-2 h-4 w-4" />
                       {dict.nav?.profile || dict.navigation.profile}
+                    </Link>
+                    <Link
+                      href={`/${lang}/support`}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <LifeBuoy className="mr-2 h-4 w-4" />
+                      {dict.nav?.support || 'Support'}
                     </Link>
                     {role === 'worker' && (
                       <Link
