@@ -3,10 +3,11 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Calendar, Clock, MapPin, Wallet, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Clock, MapPin, Wallet, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
-import { differenceInMinutes } from 'date-fns';
+import { differenceInMinutes, startOfMonth, endOfMonth, format } from 'date-fns';
 import { JobDetailsDialog } from '@/components/JobDetailsDialog';
 import { useParams } from 'next/navigation';
 
@@ -105,6 +106,7 @@ export default function WorkerApplicationsClient({
   verificationStatus,
 }: WorkerApplicationsClientProps) {
   const [now, setNow] = useState<Date | null>(null);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const params = useParams();
   const lang = params?.lang || 'en';
 
@@ -112,8 +114,29 @@ export default function WorkerApplicationsClient({
     setNow(new Date());
   }, []);
 
+  const handlePreviousMonth = () => {
+    setCurrentMonth(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() - 1);
+      return newDate;
+    });
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() + 1);
+      return newDate;
+    });
+  };
+
+  const monthLabel = format(currentMonth, 'MMMM yyyy');
+
   const { activeApps, archiveApps } = useMemo(() => {
     if (!now) return { activeApps: [], archiveApps: [] };
+
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
 
     const filteredApps = (applications || []).filter((app) => {
       const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
@@ -126,20 +149,39 @@ export default function WorkerApplicationsClient({
       return true;
     });
 
-    const active = filteredApps.filter((app) => {
+    // Filter by selected month
+    const appsInMonth = filteredApps.filter((app) => {
+      const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
+      if (!shift) return false;
+      
+      const shiftStart = new Date(shift.start_time);
+      return shiftStart >= monthStart && shiftStart <= monthEnd;
+    });
+
+    // Sort chronologically within the month (earliest first)
+    const sortedApps = appsInMonth.sort((a, b) => {
+      const shiftA = Array.isArray(a.shifts) ? a.shifts[0] : a.shifts;
+      const shiftB = Array.isArray(b.shifts) ? b.shifts[0] : b.shifts;
+      
+      if (!shiftA?.start_time || !shiftB?.start_time) return 0;
+      
+      return new Date(shiftA.start_time).getTime() - new Date(shiftB.start_time).getTime();
+    });
+
+    const active = sortedApps.filter((app) => {
       const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
       if (!shift) return false;
       return new Date(shift.end_time) >= now;
     });
 
-    const archive = filteredApps.filter((app) => {
+    const archive = sortedApps.filter((app) => {
       const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
       if (!shift) return false;
       return app.status === 'accepted' && new Date(shift.end_time) < now;
     });
 
     return { activeApps: active, archiveApps: archive };
-  }, [applications, now]);
+  }, [applications, now, currentMonth]);
 
   const getStatusBadge = useCallback((status: string, isArchive: boolean = false) => {
     if (isArchive) {
@@ -235,121 +277,103 @@ export default function WorkerApplicationsClient({
         applicationStatus={app.status}
         verificationStatus={verificationStatus}
       >
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow cursor-pointer">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0">
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
-              {companyLogo ? (
-                <img
-                  src={companyLogo}
-                  alt={companyName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-lg font-semibold text-gray-600">
-                  {companyInitials}
-                </span>
-              )}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow cursor-pointer">
+          {/* Mobile: Vertical layout, Desktop: Horizontal layout */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                {companyLogo ? (
+                  <img
+                    src={companyLogo}
+                    alt={companyName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-gray-600">
+                    {companyInitials}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <h3 className="text-lg font-bold text-gray-900 truncate">
+            {/* Middle: Title, Date & Info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold text-gray-900 truncate mb-1">
                 {shift.title}
               </h3>
+              <div className="text-sm text-gray-600">
+                <span suppressHydrationWarning>{formattedDate}</span>
+                <span className="mx-1.5">•</span>
+                <span suppressHydrationWarning>{formattedStartTime} - {formattedEndTime}</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5 truncate">
+                {shift.locations?.name || dict.workerApplications.locationNotSpecified}
+              </div>
+            </div>
+
+            {/* Right: Status Badge & Price */}
+            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-1">
               <div className="flex-shrink-0">
                 {getStatusBadge(app.status, isArchive)}
               </div>
+              <div className="text-base font-bold text-gray-900 whitespace-nowrap">
+                {totalEarnings} DKK
+              </div>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span suppressHydrationWarning>{formattedDate}</span>
-              </div>
+          {/* Worker Message - Compact */}
+          {app.worker_message && (
+            <div className="mt-3 pt-3 border-t border-gray-100 bg-gray-50 rounded p-2">
+              <p className="text-xs text-gray-600 whitespace-pre-wrap break-words">
+                <span className="font-medium text-gray-700">
+                  {dict.workerApplications.message || 'Your message'}:
+                </span>{' '}
+                {app.worker_message}
+              </p>
+            </div>
+          )}
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span suppressHydrationWarning>
-                  {formattedStartTime} - {formattedEndTime}
+          {/* Company Review - Compact */}
+          {app.review && (
+            <div className="mt-3 pt-3 border-t border-gray-100 bg-gray-50 rounded p-2 space-y-2">
+              <div className="font-medium text-xs text-gray-900">Company Feedback:</div>
+
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={cn(
+                      'h-3.5 w-3.5',
+                      star <= app.review!.rating
+                        ? 'fill-yellow-400 stroke-yellow-400'
+                        : 'fill-gray-300 stroke-gray-300'
+                    )}
+                  />
+                ))}
+                <span className="text-xs text-gray-600 ml-1">
+                  {app.review.rating}/5
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span className="truncate">
-                  {shift.locations?.name || dict.workerApplications.locationNotSpecified}
-                </span>
-              </div>
-              {shift.locations?.address && (
-                <div className="text-xs text-gray-500 ml-6">
-                  {shift.locations.address}
-                </div>
+              {app.review.comment && (
+                <p className="text-xs text-gray-700 whitespace-pre-wrap">
+                  {app.review.comment}
+                </p>
               )}
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Wallet className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <div className="flex flex-col">
-                  <span>{shift.hourly_rate} DKK/t</span>
-                  <span className="text-xs font-semibold text-gray-900">Total: ~{totalEarnings} DKK</span>
-                </div>
-              </div>
-            </div>
-
-            {app.worker_message && (
-              <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
-                  <span className="font-medium text-gray-700">
-                    {dict.workerApplications.message || 'Your message'}:
-                  </span>{' '}
-                  {app.worker_message}
-                </p>
-              </div>
-            )}
-
-            {app.review && (
-              <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 rounded-lg p-4 space-y-3">
-                <div className="font-medium text-sm text-gray-900">Company Feedback:</div>
-
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={cn(
-                        'h-4 w-4',
-                        star <= app.review!.rating
-                          ? 'fill-yellow-400 stroke-yellow-400'
-                          : 'fill-gray-300 stroke-gray-300'
-                      )}
-                    />
+              {app.review.tags && app.review.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {app.review.tags.map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-xs px-1.5 py-0">
+                      {tag}
+                    </Badge>
                   ))}
-                  <span className="text-xs text-gray-600 ml-1">
-                    {app.review.rating}/5
-                  </span>
                 </div>
-
-                {app.review.comment && (
-                  <div>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {app.review.comment}
-                    </p>
-                  </div>
-                )}
-
-                {app.review.tags && app.review.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {app.review.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          )}
         </div>
       </JobDetailsDialog>
     );
@@ -362,21 +386,48 @@ export default function WorkerApplicationsClient({
   );
 
   return (
-    <Tabs defaultValue="active" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="active">
-          {dict.workerApplications.activeTab || 'My Shifts'}
-        </TabsTrigger>
-        <TabsTrigger value="archive">
-          {dict.workerApplications.archiveTab || 'Archive Shifts'}
-        </TabsTrigger>
-      </TabsList>
+    <div className="w-full space-y-6">
+      {/* Month Navigation */}
+      <div className="flex items-center justify-center gap-4 bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handlePreviousMonth}
+          className="h-9 w-9"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        
+        <div className="text-lg font-bold text-gray-900 min-w-[180px] text-center">
+          {monthLabel}
+        </div>
+        
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleNextMonth}
+          className="h-9 w-9"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="active" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="active">
+            {dict.workerApplications.activeTab || 'My Shifts'}
+          </TabsTrigger>
+          <TabsTrigger value="archive">
+            {dict.workerApplications.archiveTab || 'Archive Shifts'}
+          </TabsTrigger>
+        </TabsList>
 
       <TabsContent value="active" className="mt-6">
         {activeApps.length === 0 ? (
           renderEmptyState()
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
             {activeApps.map((app) => renderApplicationCard(app, false))}
           </div>
         )}
@@ -386,11 +437,12 @@ export default function WorkerApplicationsClient({
         {archiveApps.length === 0 ? (
           renderEmptyState()
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
             {archiveApps.map((app) => renderApplicationCard(app, true))}
           </div>
         )}
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }

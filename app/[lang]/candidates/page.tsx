@@ -82,14 +82,7 @@ export default async function CandidatesPage({
     .order('applied_at', { ascending: false });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{dict.candidatesPage.title}</h1>
-        <p className="text-muted-foreground">
-          {dict.candidatesPage.subtitle}
-        </p>
-      </div>
-
+    <div className="container mx-auto px-4 py-6">
       {!allApplications || allApplications.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

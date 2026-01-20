@@ -180,18 +180,10 @@ export default async function CompanyDashboardPage({
     .eq('status', 'pending');
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Welcome Section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {dict.dashboard.welcomeTitle.replace('{name}', companyDetails.company_name || '')}
-            </h1>
-            <p className="text-muted-foreground">
-              {dict.dashboard.welcomeSubtitle}
-            </p>
-          </div>
+    <div className="container mx-auto px-4 py-6">
+      {/* Action Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-end mb-6">
           <Button asChild size="lg">
             <Link href={`/${lang}/create-shift`}>
               <Plus className="mr-2 h-4 w-4" />
@@ -201,7 +193,7 @@ export default async function CompanyDashboardPage({
         </div>
 
         {/* Action Buttons */}
-        <div className="mb-8">
+        <div className="mb-6">
           <DashboardActionButtons
             pendingCount={pendingCount || 0}
             lang={lang}

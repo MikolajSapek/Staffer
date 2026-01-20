@@ -70,17 +70,9 @@ export default async function FinancesPage({
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{dict.workerFinances.title}</h1>
-        <p className="text-muted-foreground">
-          {dict.workerFinances.subtitle}
-        </p>
-      </div>
-
+    <div className="container mx-auto px-4 py-6">
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 mb-6">
         {/* Earnings This Month */}
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

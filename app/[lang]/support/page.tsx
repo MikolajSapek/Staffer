@@ -12,15 +12,9 @@ export default async function SupportPage({
   const dict = await getDictionary(lang as 'en-US' | 'da');
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{dict.support.title}</h1>
-        <p className="text-gray-600">{dict.support.subtitle}</p>
-      </div>
-
+    <div className="container mx-auto px-4 py-6">
       {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Contact Information */}
         <div className="space-y-6">
           <Card>

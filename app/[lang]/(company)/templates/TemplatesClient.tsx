@@ -154,7 +154,7 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
@@ -166,14 +166,8 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Shift Templates</h1>
-          <p className="text-muted-foreground">
-            Manage your saved shift templates for quick shift creation
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-6">
+      <div className="mb-6 flex items-center justify-end">
         <Button asChild>
           <Link href={`/${lang}/templates/create`}>
             <Plus className="mr-2 h-4 w-4" />

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -71,6 +71,7 @@ interface NavbarProps {
 
 export default function Navbar({ dict, lang }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
@@ -78,6 +79,43 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState({ candidates: 0, finances: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get page title based on pathname
+  const getPageTitle = () => {
+    if (!pathname) return '';
+    
+    // Remove language prefix (e.g., /en-US or /da)
+    // If result is empty, default to '/' (home page)
+    const pathWithoutLang = pathname.replace(/^\/(en-US|da)/, '') || '/';
+    
+    const titleMap: Record<string, string> = {
+      // Worker pages
+      '/': 'Job Listing',
+      '/applications': 'My Shifts',
+      '/schedule': 'My Schedule',
+      '/finances': 'Financial Overview',
+      '/profile': 'My Profile',
+      '/support': 'Support',
+      '/worker/settings': 'Settings',
+      
+      // Company pages
+      '/dashboard': 'Dashboard',
+      '/create-shift': 'Create Shift',
+      '/shifts': 'Shifts',
+      '/candidates': 'Candidates',
+      '/applicants': 'Candidates',
+      '/managers': 'Managers',
+      '/templates': 'Shift Templates',
+      '/locations': 'Locations',
+      '/timesheets': 'Timesheets',
+      '/billing': 'Financial Overview',
+      '/settings': 'Company Settings',
+    };
+    
+    return titleMap[pathWithoutLang] || '';
+  };
+
+  const pageTitle = getPageTitle();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -237,7 +275,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
 
   if (loading) {
     return (
-      <nav className="border-b bg-background">
+      <nav className="border-b bg-background sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href={role === 'company' ? `/${lang}/dashboard` : '/'} className="italic font-bold text-2xl tracking-tight text-slate-900">
@@ -253,10 +291,19 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   return (
     <nav className="border-b bg-background sticky top-0 z-50" suppressHydrationWarning={true}>
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between relative">
           <Link href={role === 'company' ? `/${lang}/dashboard` : '/'} className="italic font-bold text-2xl tracking-tight text-slate-900">
             Staffer
           </Link>
+
+          {/* Page Title - Center */}
+          {pageTitle && (
+            <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
+              <h1 className="font-bold text-xl text-foreground">
+                {pageTitle}
+              </h1>
+            </div>
+          )}
 
           {!user ? (
             <div className="flex items-center gap-2">

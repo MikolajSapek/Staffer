@@ -64,14 +64,7 @@ export default async function SchedulePage({
     .map((app: any) => app.shifts);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{dict.workerCalendar.title}</h1>
-        <p className="text-muted-foreground">
-          {dict.workerCalendar.subtitle}
-        </p>
-      </div>
-
+    <div className="container mx-auto px-4 py-6">
       {!shifts || shifts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
