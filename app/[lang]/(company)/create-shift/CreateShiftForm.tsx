@@ -164,6 +164,7 @@ interface ShiftTemplate {
   hourly_rate: number;
   vacancies_total: number;
   location_id: string | null;
+  manager_id: string | null;
   must_bring: string | null;
   break_minutes: number;
   is_break_paid: boolean;
@@ -280,6 +281,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         description: template.description || '',
         category: template.category || '',
         location_id: template.location_id || (locations.length > 0 ? locations[0].id : ''),
+        manager_id: template.manager_id || '',
         hourly_rate: template.hourly_rate?.toString() || '',
         vacancies_total: template.vacancies_total?.toString() || '1',
         must_bring: template.must_bring || '',
@@ -533,6 +535,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
           description: formData.description.trim() || null,
           category: formData.category,
           location_id: formData.location_id || null,
+          manager_id: formData.manager_id && formData.manager_id !== 'none' ? formData.manager_id : null,
           hourly_rate: parseFloat(formData.hourly_rate),
           vacancies_total: parseInt(formData.vacancies_total),
           must_bring: formData.must_bring.trim() || null,

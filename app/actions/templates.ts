@@ -33,6 +33,7 @@ interface ShiftTemplate {
   id: string;
   company_id: string;
   location_id: string | null;
+  manager_id: string | null;
   template_name: string;
   title: string;
   description: string | null;

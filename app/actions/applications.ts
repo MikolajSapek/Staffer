@@ -241,3 +241,37 @@ export async function rejectAllPending(
 
   return { success: true, rejectedCount: rejectedApps?.length || 0 };
 }
+
+/**
+ * Get the count of successful hires for a company (social proof)
+ * Counts all shift_applications with status 'accepted' or 'completed'
+ * 
+ * Note: This counts total applications, not unique workers.
+ * If one person worked 20 shifts, that's 20 hires.
+ * 
+ * Uses direct company_id field in shift_applications table for efficiency.
+ */
+export async function getCompanyHiresCount(companyId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from('shift_applications')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .in('status', ['accepted', 'completed']);
+
+  if (error) {
+    console.error('Error fetching company hires count:', error);
+    return 0;
+  }
+
+  return count || 0;
+}
+
+/**
+ * Alias for getCompanyHiresCount with more descriptive name
+ * Returns total number of persons hired (counting each hire separately)
+ */
+export async function getCompanyPersonsHiredCount(companyId: string): Promise<number> {
+  return getCompanyHiresCount(companyId);
+}

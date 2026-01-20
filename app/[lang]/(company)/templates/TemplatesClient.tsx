@@ -17,6 +17,7 @@ import { createClient } from '@/utils/supabase/client';
 import { FileText, Loader2, Trash2, Pencil, Plus } from 'lucide-react';
 import { getTemplates, deleteTemplate } from '@/app/actions/templates';
 import Link from 'next/link';
+import EditTemplateDialog from './EditTemplateDialog';
 
 interface ShiftTemplateRequirement {
   id: string;
@@ -66,6 +67,7 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
   const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<ShiftTemplate | null>(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -144,8 +146,10 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
   };
 
   const handleEdit = (templateId: string) => {
-    // TODO: Open EditTemplateDialog
-    console.log('Edit template:', templateId);
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setEditingTemplate(template);
+    }
   };
 
   if (loading) {
@@ -273,6 +277,20 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
           </CardContent>
         </Card>
       )}
+
+      <EditTemplateDialog
+        template={editingTemplate}
+        open={!!editingTemplate}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingTemplate(null);
+          }
+        }}
+        onSuccess={() => {
+          fetchTemplates();
+        }}
+        lang={lang}
+      />
     </div>
   );
 }

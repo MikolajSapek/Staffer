@@ -12,10 +12,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Star, Building2, MapPin, Calendar, Loader2, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Star, Building2, MapPin, Calendar, Loader2, CheckCircle2, Clock, XCircle, Users } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
+import { getCompanyHiresCount } from '@/app/actions/applications';
 
 interface CompanyProfileDialogProps {
   companyId: string;
@@ -46,6 +46,7 @@ export default function CompanyProfileDialog({
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [activeShiftsCount, setActiveShiftsCount] = useState<number | null>(null);
+  const [hiresCount, setHiresCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,6 +106,10 @@ export default function CompanyProfileDialog({
       if (!shiftsError && count !== null) {
         setActiveShiftsCount(count);
       }
+
+      // Fetch company hires count (social proof)
+      const hires = await getCompanyHiresCount(companyId);
+      setHiresCount(hires);
     } catch (err) {
       setError('Failed to load company profile. Please try again.');
     } finally {
@@ -199,7 +204,7 @@ export default function CompanyProfileDialog({
               </div>
 
               <div className="flex-1 overflow-y-auto min-h-0 space-y-6 py-4">
-                {/* Trust Row: Star Rating + Member Since */}
+                {/* Trust Row: Star Rating + Member Since + Hires */}
                 <div className="flex items-center gap-6 flex-wrap">
                   {profile.average_rating !== null && profile.total_reviews > 0 ? (
                     <div className="flex items-center gap-2">
@@ -229,6 +234,12 @@ export default function CompanyProfileDialog({
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>Member since {memberSinceYear}</span>
+                    </div>
+                  )}
+                  {hiresCount !== null && hiresCount > 0 && (
+                    <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+                      <Users className="h-4 w-4" />
+                      <span>{hiresCount} Person{hiresCount === 1 ? '' : 's'} Hired</span>
                     </div>
                   )}
                   {activeShiftsCount !== null && activeShiftsCount > 0 && (
@@ -279,11 +290,6 @@ export default function CompanyProfileDialog({
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   Close
-                </Button>
-                <Button asChild>
-                  <Link href={`/${lang}`}>
-                    View all jobs
-                  </Link>
                 </Button>
               </DialogFooter>
             </>

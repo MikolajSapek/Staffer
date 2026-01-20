@@ -634,6 +634,94 @@ export interface Database {
           updated_at?: string;
         };
       };
+      shift_templates: {
+        Row: {
+          id: string;
+          company_id: string;
+          location_id: string | null;
+          manager_id: string | null;
+          template_name: string;
+          title: string;
+          description: string | null;
+          category: string;
+          start_time: string | null;
+          end_time: string | null;
+          hourly_rate: number;
+          vacancies_total: number;
+          requirements: Json | null; // DEPRECATED - use shift_template_requirements table
+          must_bring: string | null;
+          break_minutes: number;
+          is_break_paid: boolean;
+          recurrence_pattern: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          location_id?: string | null;
+          manager_id?: string | null;
+          template_name: string;
+          title: string;
+          description?: string | null;
+          category: string;
+          start_time?: string | null;
+          end_time?: string | null;
+          hourly_rate: number;
+          vacancies_total: number;
+          requirements?: Json | null;
+          must_bring?: string | null;
+          break_minutes?: number;
+          is_break_paid?: boolean;
+          recurrence_pattern?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          location_id?: string | null;
+          manager_id?: string | null;
+          template_name?: string;
+          title?: string;
+          description?: string | null;
+          category?: string;
+          start_time?: string | null;
+          end_time?: string | null;
+          hourly_rate?: number;
+          vacancies_total?: number;
+          requirements?: Json | null;
+          must_bring?: string | null;
+          break_minutes?: number;
+          is_break_paid?: boolean;
+          recurrence_pattern?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      shift_template_requirements: {
+        Row: {
+          id: string;
+          template_id: string;
+          skill_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          template_id: string;
+          skill_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          template_id?: string;
+          skill_id?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: {
       worker_skills_display: {
