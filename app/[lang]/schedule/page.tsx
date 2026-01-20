@@ -21,7 +21,7 @@ export default async function SchedulePage({
   // Get user profile to check role
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, verification_status')
     .eq('id', user.id)
     .single();
 
@@ -44,6 +44,13 @@ export default async function SchedulePage({
             company_name,
             logo_url
           )
+        ),
+        managers!manager_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone_number
         )
       )
     `)
@@ -51,28 +58,10 @@ export default async function SchedulePage({
     .in('status', ['approved', 'accepted']) // Support both for backward compatibility
     .order('shifts(start_time)', { ascending: true });
 
-  // Transform data for client component
-  interface ApplicationWithShift {
-    shifts: {
-      id: string;
-      title: string;
-      start_time: string;
-      end_time: string;
-      hourly_rate: number;
-      company_id: string;
-      locations: { name: string; address: string } | null;
-      profiles: {
-        company_details: {
-          company_name: string;
-          logo_url: string | null;
-        } | null;
-      } | null;
-    } | null;
-  }
-
-  const shifts = (applications as ApplicationWithShift[] | null)
-    ?.filter((app) => app.shifts)
-    .map((app) => app.shifts) || [];
+  // Transform data for client component - keep all shift fields
+  const shifts = (applications || [])
+    .filter((app: any) => app.shifts)
+    .map((app: any) => app.shifts);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -94,8 +83,11 @@ export default async function SchedulePage({
       ) : (
         <ScheduleCalendarClient
           shifts={shifts}
-          dict={dict.workerCalendar}
+          dict={dict}
           lang={lang}
+          user={user}
+          userRole={profile.role}
+          verificationStatus={profile.verification_status}
         />
       )}
     </div>

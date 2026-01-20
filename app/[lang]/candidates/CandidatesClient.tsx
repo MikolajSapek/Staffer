@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Star, Users, X, Clock, Wallet, MapPin, Calendar } from 'lucide-react';
+import { Star, Users, X, Clock, Wallet, MapPin, Calendar, Lock, Phone, Mail } from 'lucide-react';
 import CandidateProfileModal from '@/components/company/CandidateProfileModal';
 import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
 import { formatTime } from '@/lib/date-utils';
@@ -439,12 +439,24 @@ export default function CandidatesClient({
                                 {renderRating(profile.average_rating, profile.total_reviews, true)}
                               </WorkerReviewsDialog>
                             </div>
-                            <div className="text-sm text-slate-600">
-                              {profile.email || ''}
-                            </div>
-                            {phoneNumber && (
-                              <div className="text-sm text-slate-500">
-                                {phoneNumber}
+                            {/* Privacy Gate: Show contact info only if accepted/completed */}
+                            {app.status === 'accepted' || app.status === 'completed' ? (
+                              <>
+                                <div className="text-sm text-slate-600 flex items-center gap-1.5">
+                                  <Mail className="h-3 w-3 text-slate-400" />
+                                  {profile.email || ''}
+                                </div>
+                                {phoneNumber && (
+                                  <div className="text-sm text-slate-500 flex items-center gap-1.5">
+                                    <Phone className="h-3 w-3 text-slate-400" />
+                                    {phoneNumber}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-sm text-slate-500/60 italic flex items-center gap-1.5">
+                                <Lock className="h-3 w-3" />
+                                Accept to reveal contact
                               </div>
                             )}
                           </div>

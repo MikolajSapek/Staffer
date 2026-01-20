@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CorrectionBadge } from '@/components/ui/correction-badge';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { archiveShift, cancelWorkerAction } from '@/app/actions/shifts';
 import RateWorkerDialog from '@/components/RateWorkerDialog';
@@ -536,16 +536,32 @@ export default function ShiftDetailsClient({
                                 )}
                               </div>
                               <div className="space-y-1 text-sm text-muted-foreground">
-                                {profile.email && (
-                                  <div className="flex items-center gap-2 truncate">
-                                    <Mail className="h-3 w-3 flex-shrink-0" />
-                                    <span className="truncate">{profile.email}</span>
-                                  </div>
-                                )}
-                                {phoneNumber && (
-                                  <div className="flex items-center gap-2">
-                                    <Phone className="h-3 w-3 flex-shrink-0" />
-                                    <span>{phoneNumber}</span>
+                                {/* Privacy Gate: Show contact info only if accepted/completed */}
+                                {application.status === 'accepted' || application.status === 'completed' ? (
+                                  <>
+                                    {profile.email && (
+                                      <div className="flex items-center gap-2 truncate">
+                                        <Mail className="h-3 w-3 flex-shrink-0" />
+                                        <span className="truncate">{profile.email}</span>
+                                      </div>
+                                    )}
+                                    {phoneNumber && (
+                                      <div className="flex items-center gap-2">
+                                        <Phone className="h-3 w-3 flex-shrink-0" />
+                                        <span>{phoneNumber}</span>
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-muted-foreground/60">
+                                      <Lock className="h-3 w-3 flex-shrink-0" />
+                                      <span className="text-xs italic">Hire to reveal contact</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground/40">
+                                      <Phone className="h-3 w-3 flex-shrink-0" />
+                                      <span className="blur-sm select-none">+45 •• •• •• ••</span>
+                                    </div>
                                   </div>
                                 )}
                               </div>

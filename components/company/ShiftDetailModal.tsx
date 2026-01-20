@@ -10,7 +10,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatTime, formatDateLong } from '@/lib/date-utils';
-import { Users, Phone } from 'lucide-react';
+import { Users, Phone, Mail, Lock } from 'lucide-react';
 
 interface Worker {
   id: string;
@@ -159,8 +159,12 @@ export default function ShiftDetailModal({
                       </Avatar>
                       <div className="flex-1">
                         <div className="font-medium">{fullName}</div>
+                        {/* Privacy Note: This modal only shows acceptedWorkers, so contact info is always visible */}
                         <div className="text-sm text-muted-foreground space-y-1">
-                          <div>{worker.email}</div>
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {worker.email}
+                          </div>
                           {phoneNumber && (
                             <a
                               href={`tel:${phoneNumber}`}

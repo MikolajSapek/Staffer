@@ -132,6 +132,7 @@ export interface Database {
           subscription_status: 'active' | 'inactive' | 'cancelled';
           logo_url: string | null;
           cover_photo_url: string | null;
+          notification_settings: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -145,6 +146,7 @@ export interface Database {
           subscription_status?: 'active' | 'inactive' | 'cancelled';
           logo_url?: string | null;
           cover_photo_url?: string | null;
+          notification_settings?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -158,6 +160,7 @@ export interface Database {
           subscription_status?: 'active' | 'inactive' | 'cancelled';
           logo_url?: string | null;
           cover_photo_url?: string | null;
+          notification_settings?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

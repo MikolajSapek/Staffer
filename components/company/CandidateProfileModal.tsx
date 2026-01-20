@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { updateApplicationStatus } from '@/app/actions/applications';
-import { Loader2, Mail, Phone, User, Briefcase, Star } from 'lucide-react';
+import { Loader2, Mail, Phone, User, Briefcase, Star, Lock } from 'lucide-react';
 import { formatDateTime } from '@/lib/date-utils';
 import { createClient } from '@/utils/supabase/client';
 
@@ -276,15 +276,41 @@ export default function CandidateProfileModal({
                   )}
                 </div>
               </div>
+              {/* Privacy Gate: Show contact info only if accepted/completed */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{profile.email}</span>
-                </div>
-                {phoneNumber && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{phoneNumber}</span>
+                {application.status === 'accepted' || application.status === 'completed' ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">{profile.email}</span>
+                    </div>
+                    {phoneNumber && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">{phoneNumber}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Lock className="h-4 w-4 text-muted-foreground/60" />
+                      <span className="text-muted-foreground/60 italic text-sm">
+                        Accept application to reveal contact details
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground/40" />
+                      <span className="blur-sm select-none text-muted-foreground/40">
+                        contact@hidden.com
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground/40" />
+                      <span className="blur-sm select-none text-muted-foreground/40">
+                        +45 •• •• •• ••
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
