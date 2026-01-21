@@ -17,10 +17,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/utils/supabase/client';
 import { Loader2, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
 import CreateLocationModal from '@/components/CreateLocationModal';
+import CreateManagerModal from '@/components/CreateManagerModal';
 import { fromZonedTime } from 'date-fns-tz';
 import { z } from 'zod';
 import { createTemplate, deleteTemplate } from '@/app/actions/templates';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { type Manager } from '@/app/actions/managers';
+import { useToast } from '@/components/ui/use-toast';
 
 interface CreateShiftFormProps {
   companyId: string;
@@ -194,6 +197,7 @@ const formSchema = z.object({
 
 export default function CreateShiftForm({ companyId, locations: initialLocations, initialTemplates = [], locationFormDict, dict, shiftOptions, lang }: CreateShiftFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -203,6 +207,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
   const [templateName, setTemplateName] = useState('');
   const [locations, setLocations] = useState<Array<{ id: string; name: string; address: string }>>(initialLocations);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [managerModalOpen, setManagerModalOpen] = useState(false);
   
   // Skills state
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
@@ -301,6 +306,23 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     setLocations((prev) => [newLocation, ...prev]);
     // Auto-select the new location
     setFormData((prev) => ({ ...prev, location_id: newLocation.id }));
+  };
+
+  // Handle manager creation success
+  const handleManagerCreated = (newManager: Manager) => {
+    // Add the new manager to the list
+    setAvailableManagers((prev) => [
+      { id: newManager.id, first_name: newManager.first_name, last_name: newManager.last_name },
+      ...prev,
+    ]);
+    // Auto-select the new manager
+    setFormData((prev) => ({ ...prev, manager_id: newManager.id }));
+    // Show toast notification
+    toast({
+      title: 'Manager created',
+      description: 'The new manager has been successfully added to your list.',
+      variant: 'default',
+    });
   };
 
   // Handle template deletion
@@ -751,38 +773,53 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                 </Link>
               </div>
               {availableManagers.length > 0 ? (
-                <Select
-                  value={formData.manager_id}
-                  onValueChange={(value) => setFormData({ ...formData, manager_id: value })}
-                  disabled={loading}
-                >
-                  <SelectTrigger id="manager_id" className="w-full">
-                    <SelectValue placeholder="Select a manager (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No manager</SelectItem>
-                    {availableManagers.map((manager) => (
-                      <SelectItem key={manager.id} value={manager.id}>
-                        {manager.first_name} {manager.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="rounded-md border border-dashed p-4 text-center">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    No managers found. Add managers to assign them to shifts.
-                  </p>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.manager_id}
+                    onValueChange={(value) => setFormData({ ...formData, manager_id: value })}
+                    disabled={loading}
+                  >
+                    <SelectTrigger id="manager_id" className="flex-1">
+                      <SelectValue placeholder="Select a manager (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No manager</SelectItem>
+                      {availableManagers.map((manager) => (
+                        <SelectItem key={manager.id} value={manager.id}>
+                          {manager.first_name} {manager.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`/${lang}/managers`, '_blank')}
+                    size="icon"
+                    onClick={() => setManagerModalOpen(true)}
                     disabled={loading}
+                    className="flex-shrink-0"
+                    title="Add new manager"
                   >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Manager
+                    <Plus className="h-4 w-4" />
                   </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="rounded-md border border-dashed p-4 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      No managers found. Add managers to assign them to shifts.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setManagerModalOpen(true)}
+                      disabled={loading}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Manager
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1176,6 +1213,11 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         onOpenChange={setLocationModalOpen}
         dict={locationFormDict}
         onSuccess={handleLocationCreated}
+      />
+      <CreateManagerModal
+        open={managerModalOpen}
+        onOpenChange={setManagerModalOpen}
+        onSuccess={handleManagerCreated}
       />
     </Card>
   );

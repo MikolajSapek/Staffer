@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CorrectionBadge } from '@/components/ui/correction-badge';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil, Lock } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil, Lock, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { archiveShift, cancelWorkerAction } from '@/app/actions/shifts';
 import RateWorkerDialog from '@/components/RateWorkerDialog';
@@ -80,6 +80,17 @@ interface Shift {
   company_id: string;
   must_bring?: string | null;
   locations: Location | null;
+  managers?: {
+    first_name: string;
+    last_name: string;
+    phone_number: string | null;
+    email: string;
+  } | Array<{
+    first_name: string;
+    last_name: string;
+    phone_number: string | null;
+    email: string;
+  }> | null;
   shift_applications?: Application[];
   requirements?: {
     languages: Array<{ id: string; name: string }>;
@@ -374,6 +385,7 @@ export default function ShiftDetailsClient({
           )}
         </CardHeader>
         <CardContent>
+          {/* Top Stats Grid - Date, Time, Rate, Booked */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-1">
@@ -405,71 +417,143 @@ export default function ShiftDetailsClient({
             </div>
           </div>
 
-          {shift.description && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="text-sm font-medium text-muted-foreground mb-2">
-                Description
-              </div>
-              <p className="text-sm whitespace-pre-wrap">{shift.description}</p>
-            </div>
-          )}
-
-          {shift.locations?.address && (
-            <div className="mt-4">
-              <div className="text-sm font-medium text-muted-foreground mb-1">
-                Address
-              </div>
-              <p className="text-sm">{shift.locations.address}</p>
-            </div>
-          )}
-
-          {/* Must Bring Section */}
-          {shift.must_bring && (
-            <div className="mt-4">
-              <div className="text-sm font-medium text-muted-foreground mb-1">
-                Must Bring
-              </div>
-              <p className="text-sm">{shift.must_bring}</p>
-            </div>
-          )}
-
-          {/* Requirements Section */}
-          {shift.requirements && shift.requirements.languages.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="text-sm font-medium text-muted-foreground mb-3">
-                Requirements
-              </div>
-              <div className="space-y-3">
-                {/* Languages */}
-                {shift.requirements.languages.length > 0 && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Languages:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {shift.requirements.languages.map((lang) => (
-                        <Badge key={lang.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          {lang.name}
-                        </Badge>
-                      ))}
-                    </div>
+          {/* Two Column Layout: Content + Manager Sidebar */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+            {/* Left Column - Main Content */}
+            <div className="md:col-span-2 space-y-6">
+              {shift.description && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-2">
+                    Description
                   </div>
-                )}
-                
-                {/* Licenses - HIDDEN FOR NOW (business decision) */}
-                {false && shift.requirements.licenses.length > 0 && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Licenses:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {shift.requirements.licenses.map((license) => (
-                        <Badge key={license.id} variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
-                          {license.name}
-                        </Badge>
-                      ))}
-                    </div>
+                  <p className="text-sm whitespace-pre-wrap">{shift.description}</p>
+                </div>
+              )}
+
+              {shift.locations?.address && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">
+                    Address
                   </div>
-                )}
+                  <p className="text-sm">{shift.locations.address}</p>
+                </div>
+              )}
+
+              {/* Must Bring Section */}
+              {shift.must_bring && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-1">
+                    Must Bring
+                  </div>
+                  <p className="text-sm">{shift.must_bring}</p>
+                </div>
+              )}
+
+              {/* Requirements Section */}
+              {shift.requirements && shift.requirements.languages.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground mb-3">
+                    Requirements
+                  </div>
+                  <div className="space-y-3">
+                    {/* Languages */}
+                    {shift.requirements.languages.length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">Languages:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {shift.requirements.languages.map((lang) => (
+                            <Badge key={lang.id} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                              {lang.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Licenses - HIDDEN FOR NOW (business decision) */}
+                    {false && shift.requirements.licenses.length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">Licenses:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {shift.requirements.licenses.map((license) => (
+                            <Badge key={license.id} variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+                              {license.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Manager Card */}
+            <div className="md:col-span-1">
+              <div className="border rounded-lg p-6 bg-card">
+                <div className="text-sm font-medium text-muted-foreground mb-4">
+                  Shift Manager
+                </div>
+                {(() => {
+                  // Handle both object and array cases from Supabase
+                  const manager = shift.managers 
+                    ? (Array.isArray(shift.managers) ? shift.managers[0] : shift.managers)
+                    : null;
+                  
+                  if (manager) {
+                    const initials = manager.first_name && manager.last_name
+                      ? `${manager.first_name.charAt(0)}${manager.last_name.charAt(0)}`.toUpperCase()
+                      : manager.first_name?.charAt(0).toUpperCase() || 'M';
+                    
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-12 w-12">
+                            <AvatarFallback className="text-base">{initials}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-base font-semibold">
+                              {manager.first_name} {manager.last_name}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 pt-2 border-t">
+                          {manager.phone_number && (
+                            <a
+                              href={`tel:${manager.phone_number}`}
+                              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Phone className="h-4 w-4" />
+                              <span>{manager.phone_number}</span>
+                            </a>
+                          )}
+                          {manager.email && (
+                            <a
+                              href={`mailto:${manager.email}`}
+                              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Mail className="h-4 w-4" />
+                              <span className="break-all">{manager.email}</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="text-center py-8">
+                      <UserCircle className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                      <p className="text-sm text-muted-foreground">
+                        No manager assigned
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 

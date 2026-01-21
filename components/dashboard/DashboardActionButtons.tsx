@@ -14,6 +14,8 @@ interface DashboardActionButtonsProps {
     archiveShifts: string;
     locations: string;
     templates: string;
+    managers?: string;
+    managersDesc?: string;
     pending: string;
   };
 }
@@ -24,9 +26,9 @@ export default function DashboardActionButtons({
   dict 
 }: DashboardActionButtonsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Applicants - Full Width */}
-      <Link href={`/${lang}/candidates`} className="col-span-2 block">
+      <Link href={`/${lang}/candidates`} className="md:col-span-3 block">
         <Card className={`
           transition-all hover:shadow-lg cursor-pointer h-full
           ${pendingCount > 0 ? 'border-primary border-2 hover:border-primary/70' : 'hover:border-primary/50'}
@@ -53,7 +55,7 @@ export default function DashboardActionButtons({
       </Link>
 
       {/* Archive Shifts - Full Width */}
-      <Link href={`/${lang}/shifts?status=completed`} className="col-span-2 block">
+      <Link href={`/${lang}/shifts?status=completed`} className="md:col-span-3 block">
         <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-3">
@@ -95,6 +97,23 @@ export default function DashboardActionButtons({
           <CardContent>
             <div className="flex items-center justify-center h-6">
               <LayoutTemplate className="h-6 w-6 text-primary/60" />
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+
+      {/* Managers - 50% Width */}
+      <Link href={`/${lang}/managers`} className="block">
+        <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer h-full">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {dict.managers || 'Managers'}
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center h-6">
+              <Users className="h-6 w-6 text-primary/60" />
             </div>
           </CardContent>
         </Card>

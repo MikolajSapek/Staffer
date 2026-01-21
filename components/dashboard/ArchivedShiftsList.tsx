@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useRouter } from 'next/navigation';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Phone, User } from 'lucide-react';
+import { Phone, User, UserCircle } from 'lucide-react';
 import CandidateProfileModal from '@/components/company/CandidateProfileModal';
 
 interface WorkerDetails {
@@ -59,6 +59,15 @@ interface Shift {
     name: string;
     address: string;
   } | null;
+  managers?: {
+    first_name: string;
+    last_name: string;
+    phone_number: string | null;
+  } | Array<{
+    first_name: string;
+    last_name: string;
+    phone_number: string | null;
+  }> | null;
   shift_applications?: Array<{
     id: string;
     status: string;
@@ -168,6 +177,14 @@ export default function ArchivedShiftsList({
       (app) => app.status === 'hired' || app.status === 'accepted'
     );
     
+    // Helper to get manager - handle both object and array cases
+    const getManager = () => {
+      if (!shift.managers) return null;
+      // Handle case where Supabase might return array
+      const manager = Array.isArray(shift.managers) ? shift.managers[0] : shift.managers;
+      return manager || null;
+    };
+    
     // Helper to get worker details from application
     const getWorkerDetails = (app: any) => {
       const profile = app?.profiles;
@@ -193,6 +210,8 @@ export default function ArchivedShiftsList({
         phoneNumber: profile?.phone_number || null,
       };
     };
+    
+    const manager = getManager();
 
     return (
       <div
@@ -228,6 +247,13 @@ export default function ArchivedShiftsList({
                 {shift.vacancies_taken || 0} / {shift.vacancies_total}
               </div>
             </div>
+            {/* Manager Section */}
+            {manager && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                <UserCircle className="w-4 h-4" />
+                <span className="font-medium">Mgr: {manager.first_name}</span>
+              </div>
+            )}
             {/* Hired Personnel Section */}
             {hiredApplications.length > 0 && (
               <div className="mt-4 pt-4 border-t">

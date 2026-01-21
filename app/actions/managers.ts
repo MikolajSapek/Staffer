@@ -9,6 +9,7 @@ type ManagerResult = {
   message: string;
   error?: string;
   managerId?: string;
+  manager?: Manager;
 };
 
 export interface Manager {
@@ -119,11 +120,11 @@ export async function createManager(formData: {
       phone_number: formData.phone_number?.trim() || null,
     };
 
-    // Insert the manager
+    // Insert the manager and return full object
     const { data: newManager, error: managerError } = await supabase
       .from('managers')
       .insert([managerPayload]) // Wrap in array for explicit typing
-      .select('id')
+      .select('*')
       .single();
 
     if (managerError || !newManager) {
@@ -143,6 +144,7 @@ export async function createManager(formData: {
       success: true,
       message: 'Manager created successfully',
       managerId: newManager.id,
+      manager: newManager as Manager,
     };
   } catch (err: any) {
     console.error('Unexpected error creating manager:', err);

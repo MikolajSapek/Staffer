@@ -47,7 +47,12 @@ export default async function ShiftsPage({
     .from('shifts')
     .select(`
       *,
-      location:locations!shifts_location_id_fkey(*), 
+      location:locations!shifts_location_id_fkey(*),
+      managers!manager_id(
+        first_name,
+        last_name,
+        phone_number
+      ),
       shift_applications(
         id,
         status,

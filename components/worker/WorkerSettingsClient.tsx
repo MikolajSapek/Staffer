@@ -34,6 +34,8 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
   const [cprNumber, setCprNumber] = useState('');
 
   // Notifications state
+  const [notifyEmail, setNotifyEmail] = useState(true);
+  const [notifySms, setNotifySms] = useState(false);
   const [notifyOnHired, setNotifyOnHired] = useState(true); // Always true and disabled
   const [notifyAdditionalMail, setNotifyAdditionalMail] = useState(true);
   const [notifyJobMatches, setNotifyJobMatches] = useState(false);
@@ -74,6 +76,8 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
           setCprNumber((data.cpr_number as string) || '');
 
           // Set Notifications data
+          setNotifyEmail((data.notify_email as boolean) ?? true);
+          setNotifySms((data.notify_sms as boolean) ?? false);
           setNotifyOnHired(true); // Always true
           setNotifyAdditionalMail((data.notify_additional_mail as boolean) ?? true);
           setNotifyJobMatches((data.notify_job_matches as boolean) ?? false);
@@ -187,6 +191,8 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
       const { error: updateError } = await supabase
         .from('worker_details')
         .update({
+          notify_email: notifyEmail,
+          notify_sms: notifySms,
           notify_on_hired: notifyOnHired,
           notify_additional_mail: notifyAdditionalMail,
           notify_job_matches: notifyJobMatches,
@@ -461,22 +467,68 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                   </div>
                 )}
 
+                {/* Notification Channels Section */}
                 <div className="space-y-4">
-                  {/* Notify on Hired - ALWAYS TRUE AND DISABLED */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-1">
+                      {dict.settings?.notificationChannelsTitle || 'Notification Channels'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {dict.settings?.notificationChannelsDesc || 'Choose how you want to receive notifications'}
+                    </p>
+                  </div>
+
+                  {/* Email Notifications */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
-                      <Label htmlFor="notify_on_hired" className="font-semibold cursor-not-allowed">
-                        {dict.settings?.notifyOnHired || 'Notify me when I get a job'}
+                      <Label htmlFor="notify_email" className="font-semibold cursor-pointer">
+                        {dict.settings?.notifyEmail || 'Email Notifications'}
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {dict.settings?.notifyOnHiredDesc || 'This notification is required and cannot be disabled'}
+                        {dict.settings?.notifyEmailDesc || 'Receive notifications via email'}
                       </p>
                     </div>
                     <Switch
-                      id="notify_on_hired"
-                      checked={notifyOnHired}
-                      disabled={true}
-                      className="opacity-60"
+                      id="notify_email"
+                      checked={notifyEmail}
+                      onCheckedChange={setNotifyEmail}
+                      disabled={submitLoading}
+                    />
+                  </div>
+
+                  {/* SMS Notifications */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <Label htmlFor="notify_sms" className="font-semibold cursor-pointer">
+                        {dict.settings?.notifySms || 'SMS Notifications'}
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {dict.settings?.notifySmsDesc || 'Receive notifications via SMS'}
+                      </p>
+                    </div>
+                    <Switch
+                      id="notify_sms"
+                      checked={notifySms}
+                      onCheckedChange={setNotifySms}
+                      disabled={submitLoading}
+                    />
+                  </div>
+
+                  {/* Newsletter */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <Label htmlFor="newsletter_subscription" className="font-semibold cursor-pointer">
+                        {dict.settings?.newsletterSubscription || 'Newsletter'}
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {dict.settings?.newsletterSubscriptionDesc || 'Subscribe to our newsletter'}
+                      </p>
+                    </div>
+                    <Switch
+                      id="newsletter_subscription"
+                      checked={newsletterSubscription}
+                      onCheckedChange={setNewsletterSubscription}
+                      disabled={submitLoading}
                     />
                   </div>
 
@@ -497,15 +549,29 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                       disabled={submitLoading}
                     />
                   </div>
+                </div>
+
+                <div className="border-t my-6" />
+
+                {/* Notification Settings Section */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-1">
+                      {dict.settings?.notificationSettingsTitle || 'Notification Settings'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {dict.settings?.notificationSettingsDesc || 'Choose which events you want to be notified about'}
+                    </p>
+                  </div>
 
                   {/* Job Matches */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <Label htmlFor="notify_job_matches" className="font-semibold cursor-pointer">
-                        {dict.settings?.notifyJobMatches || 'Notify me about jobs I match'}
+                        {dict.settings?.notifyJobMatches || 'Job Matches'}
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {dict.settings?.notifyJobMatchesDesc || 'Get notified about jobs matching your skills'}
+                        {dict.settings?.notifyJobMatchesDesc || 'Notify me about jobs I match'}
                       </p>
                     </div>
                     <Switch
@@ -520,10 +586,10 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <Label htmlFor="notify_urgent_jobs" className="font-semibold cursor-pointer">
-                        {dict.settings?.notifyUrgentJobs || 'Notify me about urgent jobs'}
+                        {dict.settings?.notifyUrgentJobs || 'Urgent Jobs'}
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {dict.settings?.notifyUrgentJobsDesc || 'Get notified about urgent job opportunities'}
+                        {dict.settings?.notifyUrgentJobsDesc || 'Notify me about urgent job opportunities'}
                       </p>
                     </div>
                     <Switch
@@ -534,14 +600,14 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                     />
                   </div>
 
-                  {/* All Jobs */}
+                  {/* All New Jobs */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <Label htmlFor="notify_all_jobs" className="font-semibold cursor-pointer">
-                        {dict.settings?.notifyAllJobs || 'Notify me about all new job opportunities'}
+                        {dict.settings?.notifyAllJobs || 'All New Jobs'}
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {dict.settings?.notifyAllJobsDesc || 'Get notified about all new jobs'}
+                        {dict.settings?.notifyAllJobsDesc || 'Notify me about all new job opportunities'}
                       </p>
                     </div>
                     <Switch
@@ -552,21 +618,21 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
                     />
                   </div>
 
-                  {/* Newsletter */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                  {/* Hired Status - ALWAYS TRUE AND DISABLED */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
                     <div className="flex-1">
-                      <Label htmlFor="newsletter_subscription" className="font-semibold cursor-pointer">
-                        {dict.settings?.newsletterSubscription || 'Receive newsletters'}
+                      <Label htmlFor="notify_on_hired" className="font-semibold cursor-not-allowed">
+                        {dict.settings?.notifyOnHired || 'Hired Status'}
                       </Label>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {dict.settings?.newsletterSubscriptionDesc || 'Subscribe to our newsletter'}
+                        {dict.settings?.notifyOnHiredDesc || 'Notify me when I get a job (required)'}
                       </p>
                     </div>
                     <Switch
-                      id="newsletter_subscription"
-                      checked={newsletterSubscription}
-                      onCheckedChange={setNewsletterSubscription}
-                      disabled={submitLoading}
+                      id="notify_on_hired"
+                      checked={notifyOnHired}
+                      disabled={true}
+                      className="opacity-60"
                     />
                   </div>
                 </div>

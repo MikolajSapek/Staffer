@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { submitSupportForm, type SupportFormState } from '@/app/actions/support';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ export default function SupportForm({ dict }: SupportFormProps) {
     submitSupportForm,
     initialState
   );
+  const [charCount, setCharCount] = useState(0);
 
   // Reset form on success
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function SupportForm({ dict }: SupportFormProps) {
       const form = document.getElementById('support-form') as HTMLFormElement;
       if (form) {
         form.reset();
+        setCharCount(0);
       }
     }
   }, [state.success]);
@@ -120,8 +122,20 @@ export default function SupportForm({ dict }: SupportFormProps) {
               required
               disabled={isPending}
               rows={6}
-              maxLength={2000}
+              maxLength={1000}
+              onChange={(e) => setCharCount(e.target.value.length)}
             />
+            <div className="flex justify-end">
+              <span
+                className={`text-xs ${
+                  charCount > 900
+                    ? 'text-orange-500'
+                    : 'text-gray-500'
+                }`}
+              >
+                {charCount}/1000
+              </span>
+            </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={isPending}>

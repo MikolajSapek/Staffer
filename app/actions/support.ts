@@ -1,12 +1,32 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { z } from 'zod';
 
 export interface SupportFormState {
   success?: boolean;
   error?: string;
   message?: string;
 }
+
+const supportFormSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Invalid email format'),
+  subject: z
+    .string()
+    .trim()
+    .min(1, 'Subject is required')
+    .min(3, 'Subject must be at least 3 characters long'),
+  message: z
+    .string()
+    .trim()
+    .min(1, 'Message is required')
+    .min(10, 'Message must be at least 10 characters long')
+    .max(1000, { message: 'Message cannot exceed 1000 characters' }),
+});
 
 export async function submitSupportForm(
   prevState: SupportFormState,
@@ -17,38 +37,22 @@ export async function submitSupportForm(
     const subject = formData.get('subject')?.toString().trim();
     const message = formData.get('message')?.toString().trim();
 
-    // Validation
-    if (!email || !subject || !message) {
+    // Validation using Zod
+    const validationResult = supportFormSchema.safeParse({
+      email,
+      subject,
+      message,
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
       return {
         success: false,
-        error: 'All fields are required',
+        error: firstError.message,
       };
     }
 
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return {
-        success: false,
-        error: 'Invalid email format',
-      };
-    }
-
-    // Subject length validation
-    if (subject.length < 3) {
-      return {
-        success: false,
-        error: 'Subject must be at least 3 characters long',
-      };
-    }
-
-    // Message length validation
-    if (message.length < 10) {
-      return {
-        success: false,
-        error: 'Message must be at least 10 characters long',
-      };
-    }
+    const { email: validatedEmail, subject: validatedSubject, message: validatedMessage } = validationResult.data;
 
     const supabase = await createClient();
 
@@ -59,9 +63,9 @@ export async function submitSupportForm(
     const { error: insertError } = await supabase
       .from('support_messages')
       .insert({
-        email,
-        subject,
-        message,
+        email: validatedEmail,
+        subject: validatedSubject,
+        message: validatedMessage,
         user_id: user?.id || null, // Optional - link to user if logged in
         status: 'pending',
       });

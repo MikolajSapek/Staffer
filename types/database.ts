@@ -60,6 +60,8 @@ export interface Database {
           strike_count: number;
           is_banned: boolean;
           notify_on_hired: boolean;
+          notify_email: boolean;
+          notify_sms: boolean;
           notify_additional_mail: boolean;
           notify_job_matches: boolean;
           notify_urgent_jobs: boolean;
@@ -86,6 +88,8 @@ export interface Database {
           strike_count?: number;
           is_banned?: boolean;
           notify_on_hired?: boolean;
+          notify_email?: boolean;
+          notify_sms?: boolean;
           notify_additional_mail?: boolean;
           notify_job_matches?: boolean;
           notify_urgent_jobs?: boolean;
@@ -112,6 +116,8 @@ export interface Database {
           strike_count?: number;
           is_banned?: boolean;
           notify_on_hired?: boolean;
+          notify_email?: boolean;
+          notify_sms?: boolean;
           notify_additional_mail?: boolean;
           notify_job_matches?: boolean;
           notify_urgent_jobs?: boolean;

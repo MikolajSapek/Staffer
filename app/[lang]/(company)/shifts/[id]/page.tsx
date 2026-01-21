@@ -56,6 +56,12 @@ export default async function ShiftDetailsPage({
         name,
         address
       ),
+      managers!manager_id (
+        first_name,
+        last_name,
+        phone_number,
+        email
+      ),
       shift_applications (
         id,
         status,

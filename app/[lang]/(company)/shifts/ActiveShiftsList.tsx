@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { Calendar, Users, Phone, MapPin, ChevronDown, Trash2, Pencil, Eye } from 'lucide-react';
+import { Calendar, Users, Phone, MapPin, ChevronDown, Trash2, Pencil, Eye, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import CancelWorkerDialog from '@/components/shifts/CancelWorkerDialog';
@@ -82,6 +82,15 @@ interface Shift {
   vacancies_taken: number;
   status: string;
   locations: Location | null;
+  managers?: {
+    first_name: string;
+    last_name: string;
+    phone_number: string | null;
+  } | Array<{
+    first_name: string;
+    last_name: string;
+    phone_number: string | null;
+  }> | null;
   // Fields needed for editing (present on the shift rows fetched in page.tsx)
   description: string | null;
   category: string;
@@ -327,6 +336,14 @@ export default function ActiveShiftsList({
           const capacityText = `${hiredTeam.length}/${shift.vacancies_total} Hired`;
           const isExpanded = expandedShift === shift.id;
           const isEditable = shift.status !== 'completed' && shift.status !== 'cancelled';
+          
+          // Helper to get manager - handle both object and array cases
+          const getManager = () => {
+            if (!shift.managers) return null;
+            return Array.isArray(shift.managers) ? shift.managers[0] : shift.managers;
+          };
+          
+          const manager = getManager();
 
           const handleCardClick = () => {
             toggleShift(shift.id);
@@ -470,6 +487,12 @@ export default function ActiveShiftsList({
                       <div className="col-span-2">
                         <div className="font-medium text-muted-foreground mb-1">Address</div>
                         <div>{shift.locations.address}</div>
+                      </div>
+                    )}
+                    {manager && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <UserCircle className="w-4 h-4" />
+                        <span className="font-medium">Mgr: {manager.first_name}</span>
                       </div>
                     )}
                   </div>

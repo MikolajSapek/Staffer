@@ -57,7 +57,12 @@ export default async function CompanyDashboardPage({
     .from('shifts')
     .select(`
       *,
-      location:locations!shifts_location_id_fkey(*), 
+      location:locations!shifts_location_id_fkey(*),
+      managers!manager_id(
+        first_name,
+        last_name,
+        phone_number
+      ),
       shift_applications(
         id,
         status,
@@ -203,6 +208,8 @@ export default async function CompanyDashboardPage({
               archiveShifts: dict.companyShifts.archiveShifts,
               locations: dict.dashboard.locations,
               templates: dict.dashboard.templates,
+              managers: dict.dashboard.managers || 'Managers',
+              managersDesc: dict.dashboard.managersDesc || 'Add and manage shift managers.',
               pending: dict.dashboard.pending,
             }}
           />
