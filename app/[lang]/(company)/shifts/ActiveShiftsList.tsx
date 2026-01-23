@@ -560,7 +560,7 @@ export default function ActiveShiftsList({
                                 >
                                   {fullName}
                                 </button>
-                                {phoneNumber && (
+                                {(application.status === 'accepted' || application.status === 'hired' || application.status === 'completed') && phoneNumber ? (
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -572,6 +572,8 @@ export default function ActiveShiftsList({
                                     <Phone className="h-3 w-3" />
                                     <span>{phoneNumber}</span>
                                   </button>
+                                ) : (
+                                  <span className="text-xs text-gray-400 blur-[2px] select-none mt-1 inline-block">Hidden</span>
                                 )}
                               </div>
 

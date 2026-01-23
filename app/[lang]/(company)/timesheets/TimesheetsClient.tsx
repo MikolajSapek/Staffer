@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { formatDateShort, formatTime } from '@/lib/date-utils';
 import { createClient } from '@/utils/supabase/client';
+import { approveTimesheet } from '@/app/actions/timesheets';
 import { Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
@@ -111,13 +112,10 @@ export default function TimesheetsClient({
 
     startTransition(async () => {
       try {
-        const supabase = createClient();
-        const { error: rpcError } = await supabase.rpc('approve_timesheet', {
-          timesheet_id_input: timesheetId,
-        } as any);
+        const result = await approveTimesheet(timesheetId);
 
-        if (rpcError) {
-          setError(rpcError.message || 'Failed to approve timesheet');
+        if (!result.success) {
+          setError(result.error || 'Failed to approve timesheet');
           setProcessingId(null);
           setIsUpdating(false);
         } else {

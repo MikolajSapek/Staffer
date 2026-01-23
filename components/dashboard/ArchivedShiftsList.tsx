@@ -292,7 +292,7 @@ export default function ArchivedShiftsList({
                           >
                             {worker.fullName}
                           </button>
-                          {worker.phoneNumber && (
+                          {(app.status === 'accepted' || app.status === 'hired' || app.status === 'completed') && worker.phoneNumber ? (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -304,6 +304,8 @@ export default function ArchivedShiftsList({
                               <Phone className="h-3 w-3" />
                               {worker.phoneNumber}
                             </button>
+                          ) : (
+                            <span className="text-xs text-gray-400 blur-[2px] select-none inline-block">Hidden</span>
                           )}
                         </div>
                       </div>

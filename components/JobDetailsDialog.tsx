@@ -202,7 +202,7 @@ export function JobDetailsDialog({
     }
   };
 
-  const handleApplySuccess = () => {
+  const handleApplySuccess = (appliedShift: { id: string; title: string; company_id: string }) => {
     setIsApplyModalOpen(false);
     setOpen(false);
     if (onApplySuccess) {
@@ -407,75 +407,46 @@ export function JobDetailsDialog({
               </div>
             )}
 
-            {/* Shift Manager / Contact Person */}
-            {shift.managers && (
+            {/* Shift Manager / Contact Person - Only visible if application status is 'accepted' or 'approved' */}
+            {/* Note: 'approved' is mapped from 'accepted' in some places for display purposes */}
+            {shift.managers && user && (applicationStatus === 'accepted' || applicationStatus === 'approved') && (
               <div className="space-y-2 pt-2 border-t border-gray-100">
                 <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Shift Manager / Contact Person
+                  Shift Manager
                 </h4>
                 <div className="rounded-lg bg-muted p-4 border border-gray-200">
-                  {!user ? (
-                    // User not logged in - show placeholder with message
-                    <div className="flex items-center gap-3 opacity-60">
-                      <div className="h-10 w-10 bg-gray-300 rounded-full flex items-center justify-center shrink-0">
-                        <User className="h-5 w-5 text-gray-500" />
+                  <div className="space-y-2">
+                    <p className="font-medium text-gray-900">
+                      {shift.managers.first_name}
+                    </p>
+                    {shift.managers.phone_number && (
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <PhoneIcon className="h-4 w-4" />
+                        <a 
+                          href={`tel:${shift.managers.phone_number}`} 
+                          className="hover:underline hover:text-primary transition-colors"
+                        >
+                          {shift.managers.phone_number}
+                        </a>
                       </div>
-                      <p className="text-sm text-gray-600 italic">
-                        Log in to see contact person
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {/* Show contact details only if application is accepted/approved */}
-                      {(applicationStatus === 'accepted' || applicationStatus === 'approved') ? (
-                        <>
-                          <p className="font-medium text-gray-900">
-                            {shift.managers.first_name} {shift.managers.last_name}
-                          </p>
-                          {shift.managers.email && (
-                            <div className="flex items-center gap-2 text-sm text-gray-700">
-                              <Mail className="h-4 w-4" />
-                              <a href={`mailto:${shift.managers.email}`} className="hover:underline">
-                                {shift.managers.email}
-                              </a>
-                            </div>
-                          )}
-                          {shift.managers.phone_number && (
-                            <div className="flex items-center gap-2 text-sm text-gray-700">
-                              <PhoneIcon className="h-4 w-4" />
-                              <a href={`tel:${shift.managers.phone_number}`} className="hover:underline">
-                                {shift.managers.phone_number}
-                              </a>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="font-medium text-gray-900">
-                            {shift.managers.first_name}
-                          </p>
-                          <div className="space-y-1">
-                            {shift.managers.email && (
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <Mail className="h-4 w-4" />
-                                <span className="blur-sm select-none">contact@example.com</span>
-                              </div>
-                            )}
-                            {shift.managers.phone_number && (
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <PhoneIcon className="h-4 w-4" />
-                                <span className="blur-sm select-none">+45 12 34 56 78</span>
-                              </div>
-                            )}
-                            <p className="text-xs text-muted-foreground italic mt-2">
-                              Contact details visible after acceptance
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Show message if manager exists but application not accepted */}
+            {shift.managers && user && applicationStatus !== 'accepted' && applicationStatus !== 'approved' && (
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Shift Manager
+                </h4>
+                <div className="rounded-lg bg-muted p-4 border border-gray-200">
+                  <p className="text-sm text-muted-foreground italic">
+                    Manager contact details will be visible after acceptance
+                  </p>
                 </div>
               </div>
             )}

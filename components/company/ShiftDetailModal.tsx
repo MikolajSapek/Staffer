@@ -19,6 +19,7 @@ interface Worker {
   email: string;
   avatar_url: string | null;
   phone_number: string | null;
+  applicationStatus?: 'pending' | 'accepted' | 'rejected' | 'waitlist' | 'hired' | 'completed';
 }
 
 interface Shift {
@@ -159,21 +160,38 @@ export default function ShiftDetailModal({
                       </Avatar>
                       <div className="flex-1">
                         <div className="font-medium">{fullName}</div>
-                        {/* Privacy Note: This modal only shows acceptedWorkers, so contact info is always visible */}
+                        {/* Privacy Shield: Only show contact info if application status is accepted/hired/completed */}
                         <div className="text-sm text-muted-foreground space-y-1">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {worker.email}
-                          </div>
-                          {phoneNumber && (
-                            <a
-                              href={`tel:${phoneNumber}`}
-                              className="flex items-center gap-1 hover:text-primary transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Phone className="h-3 w-3" />
-                              {phoneNumber}
-                            </a>
+                          {(worker.applicationStatus === 'accepted' || worker.applicationStatus === 'hired' || worker.applicationStatus === 'completed' || !worker.applicationStatus) ? (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {worker.email}
+                              </div>
+                              {phoneNumber && (
+                                <a
+                                  href={`tel:${phoneNumber}`}
+                                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  {phoneNumber}
+                                </a>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                <span className="text-xs text-gray-400 blur-[2px] select-none">Hidden</span>
+                              </div>
+                              {phoneNumber && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  <span className="text-xs text-gray-400 blur-[2px] select-none">Hidden</span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>

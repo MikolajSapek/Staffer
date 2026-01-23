@@ -4,6 +4,15 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { JobCard } from '@/components/JobCard';
 import ApplyModal from '@/components/worker/ApplyModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface Shift {
@@ -73,14 +82,18 @@ export default function JobBoardClient({
   shifts,
   userRole,
   user,
-  appliedShiftIds,
-  applicationStatusMap,
+  appliedShiftIds: initialAppliedShiftIds,
+  applicationStatusMap: initialApplicationStatusMap,
   verificationStatus,
   dict,
   lang,
 }: JobBoardClientProps) {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successShift, setSuccessShift] = useState<Shift | null>(null);
+  const [appliedShiftIds, setAppliedShiftIds] = useState<string[]>(initialAppliedShiftIds);
+  const [applicationStatusMap, setApplicationStatusMap] = useState<Record<string, string>>(initialApplicationStatusMap);
 
   const handleApply = (shift: Shift) => {
     if (!user) {
@@ -95,8 +108,17 @@ export default function JobBoardClient({
     setIsApplyModalOpen(true);
   };
 
-  const handleApplySuccess = () => {
-    window.location.reload();
+  const handleApplySuccess = (shift: { id: string; title: string; company_id: string }) => {
+    // Find the full shift data
+    const fullShift = shifts.find(s => s.id === shift.id);
+    if (fullShift) {
+      // Update local state to reflect the application
+      setAppliedShiftIds(prev => [...prev, shift.id]);
+      setApplicationStatusMap(prev => ({ ...prev, [shift.id]: 'pending' }));
+      
+      setSuccessShift(fullShift);
+      setShowSuccessModal(true);
+    }
   };
 
   const getStatusBadge = (shiftId: string) => {
@@ -182,6 +204,37 @@ export default function JobBoardClient({
           onSuccess={handleApplySuccess}
         />
       )}
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-green-100 p-4">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+            </div>
+            <DialogTitle className="text-2xl font-bold text-center text-gray-900">
+              Application Sent! 🚀
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              {successShift && (
+                <span className="block text-base text-gray-700 leading-relaxed">
+                  You have successfully applied for the <strong className="font-semibold text-gray-900">{successShift.title}</strong> position at <strong className="font-semibold text-gray-900">{successShift.profiles?.company_details?.company_name || 'Company'}</strong>.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center pt-6 pb-2">
+            <Button
+              onClick={() => setShowSuccessModal(false)}
+              className="bg-black text-white hover:bg-gray-800 font-semibold px-8"
+            >
+              Keep looking
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

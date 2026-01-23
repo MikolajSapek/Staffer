@@ -39,7 +39,7 @@ interface ApplyModalProps {
     error: string;
   };
   lang: string;
-  onSuccess?: () => void;
+  onSuccess?: (shift: Shift) => void;
 }
 
 export default function ApplyModal({
@@ -105,7 +105,7 @@ export default function ApplyModal({
       setLoading(false);
       
       if (onSuccess) {
-        onSuccess();
+        onSuccess(shift);
       }
     } catch (err: unknown) {
       setError(dict.error);
