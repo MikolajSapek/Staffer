@@ -7,7 +7,7 @@
     "schedule": "Tidsplan",
     "timesheets": "Tidsregistreringer",
     "applications": "Ansøgninger",
-    "candidates": "Kandidater",
+    "candidates": "Ansøgere",
     "finances": "Finansiering",
     "myCalendar": "Min Kalender",
     "createShift": "Opret vagt",
@@ -21,7 +21,7 @@
     "shifts": "Vagter",
     "locations": "Lokationer",
     "timesheets": "Timesedler",
-    "candidates": "Kandidater",
+    "candidates": "Ansøgere",
     "finances": "Økonomi",
     "settings": "Indstillinger",
     "profile": "Profil",
@@ -274,7 +274,7 @@
     }
   },
   "candidates": {
-    "title": "Kandidater",
+    "title": "Ansøgere",
     "applicant": "Ansøger",
     "status": "Status",
     "actions": "Handlinger",
@@ -566,10 +566,10 @@
     }
   },
   "candidatesPage": {
-    "title": "Ansøgere & Kandidater",
+    "title": "Ansøgere",
     "subtitle": "Administrer ansøgninger til dine vagter.",
     "table": {
-      "candidate": "Kandidat",
+      "candidate": "Ansøger",
       "job": "Job / Vagt",
       "appliedDate": "Ansøgningsdato",
       "status": "Status",
@@ -587,11 +587,11 @@
       "accept": "Accepter",
       "reject": "Afvis"
     },
-    "empty": "Ingen kandidater fundet endnu.",
+    "empty": "Ingen ansøgere fundet endnu.",
     "applied": "Ansøgt",
-    "candidateId": "Kandidat ID",
+    "candidateId": "Ansøger ID",
     "modal": {
-      "title": "Kandidatprofil",
+      "title": "Ansøgerprofil",
       "about": "Om",
       "aboutPlaceholder": "Ingen yderligere oplysninger angivet.",
       "contact": "Kontaktoplysninger",
@@ -603,8 +603,8 @@
       "reject": "Afvis",
       "accepting": "Accepterer...",
       "rejecting": "Afviser...",
-      "acceptSuccess": "Kandidat accepteret!",
-      "rejectSuccess": "Kandidat afvist.",
+      "acceptSuccess": "Ansøger accepteret!",
+      "rejectSuccess": "Ansøger afvist.",
       "error": "Der opstod en fejl. Prøv venligst igen.",
       "close": "Luk",
       "languages": "Sprog",
@@ -795,6 +795,13 @@
     "submit_btn": "Send Besked",
     "success_title": "Besked Sendt",
     "success_desc": "Tak! Vi vender tilbage til dig snart."
+  },
+  "languageNames": {
+    "Swedish": "Svensk",
+    "Norwegian": "Norsk",
+    "French": "Fransk",
+    "Finnish": "Finsk",
+    "Russian": "Russisk"
   }
 }
 

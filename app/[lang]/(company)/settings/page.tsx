@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { getDictionary } from '@/app/[lang]/dictionaries';
 import CompanySettingsClient from '@/components/company/settings/CompanySettingsClient';
 
 interface PageProps {
@@ -30,11 +31,14 @@ export default async function CompanySettingsPage({ params }: PageProps) {
     redirect(`/${lang}/dashboard`);
   }
 
+  const dict = await getDictionary(lang as 'en-US' | 'da');
+
   return (
     <CompanySettingsClient 
       userId={user.id} 
       userEmail={user.email || ''} 
-      lang={lang} 
+      lang={lang}
+      dict={dict}
     />
   );
 }

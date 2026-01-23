@@ -11,20 +11,22 @@ interface CompanySettingsClientProps {
   userId: string;
   userEmail: string;
   lang: string;
+  dict: any;
 }
 
 export default function CompanySettingsClient({ 
   userId, 
   userEmail, 
-  lang 
+  lang,
+  dict
 }: CompanySettingsClientProps) {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold mb-2">{dict.settings.title}</h1>
         <p className="text-muted-foreground">
-          Manage your account settings and preferences
+          {dict.settings.subtitle}
         </p>
       </div>
 
@@ -40,8 +42,8 @@ export default function CompanySettingsClient({
           <TabsTrigger value="notifications">
             Notifications
           </TabsTrigger>
-          <TabsTrigger value="security">
-            Security
+          <TabsTrigger value="password">
+            {dict.settings.tabPassword}
           </TabsTrigger>
           <TabsTrigger value="legal">
             Legal
@@ -63,8 +65,8 @@ export default function CompanySettingsClient({
           <NotificationSettings userId={userId} />
         </TabsContent>
 
-        {/* Tab: Security */}
-        <TabsContent value="security">
+        {/* Tab: Password */}
+        <TabsContent value="password">
           <SecuritySettings userEmail={userEmail} lang={lang} />
         </TabsContent>
 

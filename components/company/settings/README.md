@@ -83,7 +83,7 @@ B. **Notification Types** (Typy):
    - New Worker Applied
    - Offer Accepted by Worker
    - Pending Workdays to Approve
-   - Pick Candidates
+   - Pick Applicants
    - Rate Worker
 
 **Props:**

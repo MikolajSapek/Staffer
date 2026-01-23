@@ -47,14 +47,29 @@ export async function updateApplicationStatus(
   // Map 'approved' to 'accepted' for database (database uses 'accepted')
   const dbStatus = status === 'approved' ? 'accepted' : status;
 
-  // Update the application status
-  const { error: updateError } = await supabase
-    .from('shift_applications')
-    .update({ status: dbStatus })
-    .eq('id', applicationId);
+  // If approving, use RPC to safely accept with double booking prevention
+  if (status === 'approved') {
+    const { error: rpcError } = await supabase.rpc('accept_application_safely', {
+      p_application_id: applicationId
+    });
 
-  if (updateError) {
-    return { error: updateError.message };
+    if (rpcError) {
+      // If error contains "conflict", return a readable message for frontend
+      if (rpcError.message.includes('conflict')) {
+        return { error: 'This worker is already booked for another shift at this time (+/- 1h).' };
+      }
+      return { error: rpcError.message };
+    }
+  } else {
+    // For rejection, use standard update
+    const { error: updateError } = await supabase
+      .from('shift_applications')
+      .update({ status: dbStatus })
+      .eq('id', applicationId);
+
+    if (updateError) {
+      return { error: updateError.message };
+    }
   }
 
   // If approving, auto-reject overlapping pending applications from the same worker
@@ -172,15 +187,40 @@ export async function fillVacancies(
     return { error: 'No valid pending applications found' };
   }
 
-  // Accept all valid applications
+  // Accept all valid applications using RPC for double booking prevention
   const validIds = applications.map(app => app.id);
-  const { error: updateError } = await supabase
-    .from('shift_applications')
-    .update({ status: 'accepted' })
-    .in('id', validIds);
+  const acceptedIds: string[] = [];
+  const errors: string[] = [];
 
-  if (updateError) {
-    return { error: updateError.message };
+  for (const appId of validIds) {
+    const { error: rpcError } = await supabase.rpc('accept_application_safely', {
+      p_application_id: appId
+    });
+
+    if (rpcError) {
+      // If error contains "conflict", add a readable message
+      if (rpcError.message.includes('conflict')) {
+        errors.push(`Application ${appId}: This worker is already booked for another shift at this time (+/- 1h).`);
+      } else {
+        errors.push(`Application ${appId}: ${rpcError.message}`);
+      }
+    } else {
+      acceptedIds.push(appId);
+    }
+  }
+
+  // If some applications failed, return partial success with errors
+  if (errors.length > 0 && acceptedIds.length === 0) {
+    return { error: errors.join(' ') };
+  }
+
+  // If some succeeded but some failed, return success with warning
+  if (errors.length > 0) {
+    return { 
+      success: true, 
+      acceptedCount: acceptedIds.length,
+      warning: `Some applications could not be accepted: ${errors.join(' ')}`
+    };
   }
 
   // Revalidate paths
@@ -189,7 +229,7 @@ export async function fillVacancies(
   revalidatePath(`/${lang}/shifts/${shiftId}`, 'page');
   revalidatePath(`/${lang}/dashboard`, 'page');
 
-  return { success: true, acceptedCount: validIds.length };
+  return { success: true, acceptedCount: acceptedIds.length };
 }
 
 /**

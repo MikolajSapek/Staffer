@@ -297,10 +297,10 @@ export default function NotificationSettings({ userId }: NotificationSettingsPro
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="flex-1">
                 <Label htmlFor="type_pick_candidates" className="font-semibold cursor-pointer">
-                  Pick Candidates
+                  Pick Applicants
                 </Label>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Reminders to review and select candidates for shifts
+                  Reminders to review and select applicants for shifts
                 </p>
               </div>
               <Switch
