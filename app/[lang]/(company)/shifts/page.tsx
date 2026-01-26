@@ -102,6 +102,36 @@ export default async function ShiftsPage({
     console.error('Error fetching locations for shifts page:', locationsError);
   }
 
+  // Fetch shift requirements for all shifts
+  const shiftIds = (shifts || []).map((s: any) => s.id);
+  let shiftRequirementsMap: Record<string, { language_ids: string[]; licence_ids: string[] }> = {};
+  
+  if (shiftIds.length > 0) {
+    const { data: shiftRequirements } = await supabase
+      .from('shift_requirements')
+      .select(`
+        shift_id,
+        skill_id,
+        skills!inner (
+          id,
+          category
+        )
+      `)
+      .in('shift_id', shiftIds);
+
+    // Group requirements by shift_id and category
+    shiftRequirements?.forEach((req: any) => {
+      if (!shiftRequirementsMap[req.shift_id]) {
+        shiftRequirementsMap[req.shift_id] = { language_ids: [], licence_ids: [] };
+      }
+      if (req.skills?.category === 'language') {
+        shiftRequirementsMap[req.shift_id].language_ids.push(req.skills.id);
+      } else if (req.skills?.category === 'license') {
+        shiftRequirementsMap[req.shift_id].licence_ids.push(req.skills.id);
+      }
+    });
+  }
+
   // Map worker_details data to profile level and rename shift_applications to applications
   const mappedShifts = (shifts || []).map((shift: any) => {
     const applications = (shift.shift_applications || []).map((app: any) => {
@@ -118,10 +148,13 @@ export default async function ShiftsPage({
         } : null
       };
     });
+    const requirements = shiftRequirementsMap[shift.id] || { language_ids: [], licence_ids: [] };
     return {
       ...shift,
       locations: shift.location, // Map location alias to locations for backward compatibility
       applications,
+      required_language_ids: requirements.language_ids,
+      required_licence_ids: requirements.licence_ids,
     };
   });
 

@@ -13,13 +13,12 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, AlertCircle } from 'lucide-react';
-import { fromZonedTime } from 'date-fns-tz';
 import { z } from 'zod';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { updateShiftAction } from '@/app/actions/shifts';
 import { useToast } from '@/components/ui/use-toast';
 import { createClient } from '@/utils/supabase/client';
-import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { toLocalISO } from '@/lib/date-utils';
 
 interface Skill {
   id: string;
@@ -113,7 +112,7 @@ interface EditShiftFormProps {
   className?: string;
 }
 
-// Reuse the validation schema logic for start_time (must be in the future)
+// Validation schema
 const formSchema = z
   .object({
     start_time: z.string(),
@@ -146,28 +145,30 @@ export default function EditShiftForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  
-  // Skills state
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
 
+  // Initialize form state with clean data mapping
   const [formData, setFormData] = useState({
     title: initialData.title || '',
     description: initialData.description || '',
     category: initialData.category || '',
     location_id: initialData.location_id || (locations[0]?.id ?? ''),
-    start_time: initialData.start_time || '',
-    end_time: initialData.end_time || '',
+    start_time: toLocalISO(initialData.start_time),
+    end_time: toLocalISO(initialData.end_time),
     hourly_rate: initialData.hourly_rate.toString(),
     break_minutes: initialData.break_minutes.toString(),
     is_break_paid: initialData.is_break_paid,
     vacancies_total: initialData.vacancies_total.toString(),
     is_urgent: initialData.is_urgent,
     possible_overtime: initialData.possible_overtime,
-    must_bring: initialData.must_bring || '',
+    // Fix data loss: Map must_bring explicitly to mustBring (form field name)
+    // Never initialize as undefined - always use empty string to avoid React warnings
+    mustBring: initialData?.must_bring || '',
+    // Skills are already mapped as arrays of UUIDs from shift_requirements
     required_language_ids: initialData.required_language_ids || [],
     required_licence_ids: initialData.required_licence_ids || [],
   });
-  
+
   // Fetch available skills on mount
   useEffect(() => {
     async function fetchSkills() {
@@ -235,17 +236,16 @@ export default function EditShiftForm({
     return null;
   };
 
+  // Format min datetime as YYYY-MM-DDTHH:mm for datetime-local input
   const minStartDateTime = new Date().toISOString().slice(0, 16);
-  const minEndDateTime = formData.start_time ? formData.start_time.slice(0, 16) : minStartDateTime;
+  const minEndDateTime = formData.start_time || minStartDateTime;
 
   const handleStartDateTimeChange = (value: string) => {
-    const valueWithSeconds = value ? `${value}:00` : '';
-    setFormData({ ...formData, start_time: valueWithSeconds });
+    setFormData({ ...formData, start_time: value });
   };
 
   const handleEndDateTimeChange = (value: string) => {
-    const valueWithSeconds = value ? `${value}:00` : '';
-    setFormData({ ...formData, end_time: valueWithSeconds });
+    setFormData({ ...formData, end_time: value });
   };
 
   const handleCancel = () => {
@@ -266,25 +266,35 @@ export default function EditShiftForm({
     setLoading(true);
 
     try {
-      const timeZone = 'Europe/Copenhagen';
+      // Convert form's local time strings back to ISO string for Supabase
+      // datetime-local inputs return values in format YYYY-MM-DDTHH:mm in local timezone
+      const convertLocalToISO = (localDateTimeStr: string): string => {
+        if (!localDateTimeStr) return '';
+        // Create Date object from local datetime string
+        // JavaScript Date constructor interprets YYYY-MM-DDTHH:mm as local time
+        const localDate = new Date(localDateTimeStr);
+        // Convert to ISO string (UTC)
+        return localDate.toISOString();
+      };
 
-      const startUtc = fromZonedTime(formData.start_time, timeZone);
-      const endUtc = fromZonedTime(formData.end_time, timeZone);
+      const startTimeISO = convertLocalToISO(formData.start_time);
+      const endTimeISO = convertLocalToISO(formData.end_time);
 
       const payload = {
         location_id: formData.location_id || null,
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         category: formData.category,
-        start_time: startUtc.toISOString(),
-        end_time: endUtc.toISOString(),
+        start_time: startTimeISO,
+        end_time: endTimeISO,
         hourly_rate: parseFloat(formData.hourly_rate),
         break_minutes: parseInt(formData.break_minutes) || 0,
         is_break_paid: parseInt(formData.break_minutes) > 0 ? formData.is_break_paid : false,
         vacancies_total: parseInt(formData.vacancies_total),
         is_urgent: formData.is_urgent,
         possible_overtime: formData.possible_overtime,
-        must_bring: formData.must_bring.trim() || null,
+        // Map mustBring back to must_bring for database
+        must_bring: formData.mustBring.trim() || null,
         required_language_ids: formData.required_language_ids,
         required_licence_ids: [], // BUSINESS DECISION: Always send empty array (licenses hidden)
       };
@@ -295,7 +305,6 @@ export default function EditShiftForm({
         const errorMessage = result.error || result.message || 'Failed to update shift';
         setError(errorMessage);
         
-        // Show toast with the specific error message from database
         toast({
           variant: 'destructive',
           title: 'Error updating shift',
@@ -306,7 +315,6 @@ export default function EditShiftForm({
         return;
       }
 
-      // Show success toast
       toast({
         variant: 'default',
         title: 'Success',
@@ -420,8 +428,8 @@ export default function EditShiftForm({
                 <Input
                   id="start_time"
                   type="datetime-local"
-                  step={600}
-                  value={formData.start_time ? formData.start_time.slice(0, 16) : ''}
+                  step="60"
+                  value={formData.start_time}
                   onChange={(e) => handleStartDateTimeChange(e.target.value)}
                   min={minStartDateTime}
                   required
@@ -438,8 +446,8 @@ export default function EditShiftForm({
                 <Input
                   id="end_time"
                   type="datetime-local"
-                  step={600}
-                  value={formData.end_time ? formData.end_time.slice(0, 16) : ''}
+                  step="60"
+                  value={formData.end_time}
                   onChange={(e) => handleEndDateTimeChange(e.target.value)}
                   min={minEndDateTime}
                   required
@@ -517,8 +525,8 @@ export default function EditShiftForm({
             <Label htmlFor="must_bring">Must Bring</Label>
             <Input
               id="must_bring"
-              value={formData.must_bring}
-              onChange={(e) => setFormData({ ...formData, must_bring: e.target.value })}
+              value={formData.mustBring}
+              onChange={(e) => setFormData({ ...formData, mustBring: e.target.value })}
               placeholder="e.g., Black shoes, Work uniform, Safety vest"
               disabled={loading}
               className="w-full"
@@ -678,4 +686,3 @@ export default function EditShiftForm({
     </Card>
   );
 }
-

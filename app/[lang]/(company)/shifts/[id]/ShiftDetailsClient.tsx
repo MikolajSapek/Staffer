@@ -750,6 +750,9 @@ export default function ShiftDetailsClient({
           vacancies_taken: shift.vacancies_taken,
           is_urgent: shift.is_urgent,
           possible_overtime: shift.possible_overtime,
+          must_bring: shift.must_bring || null,
+          required_language_ids: shift.requirements?.languages?.map((l: any) => l.id) || [],
+          required_licence_ids: shift.requirements?.licenses?.map((l: any) => l.id) || [],
           company_id: shift.company_id,
           locations: shift.locations,
         }}

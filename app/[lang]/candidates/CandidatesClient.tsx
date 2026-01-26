@@ -12,6 +12,8 @@ import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
 import { formatTime } from '@/lib/date-utils';
 import { format } from 'date-fns';
 import { fillVacancies, rejectAllPending } from '@/app/actions/applications';
+import { useToast } from '@/components/ui/use-toast';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 
 interface WorkerDetails {
   avatar_url: string | null;
@@ -108,9 +110,13 @@ export default function CandidatesClient({
   lang,
 }: CandidatesClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [loadingShiftId, setLoadingShiftId] = useState<string | null>(null);
+  const [confirmRejectAllOpen, setConfirmRejectAllOpen] = useState(false);
+  const [pendingRejectShiftId, setPendingRejectShiftId] = useState<string | null>(null);
+  const [pendingRejectCount, setPendingRejectCount] = useState<number>(0);
 
   const getWorkerDetails = useCallback((profile: Profile | null): WorkerDetails | null => {
     if (!profile?.worker_details) return null;
@@ -215,40 +221,60 @@ export default function CandidatesClient({
     try {
       const result = await fillVacancies(shift.id, applicationIds, lang);
       if (result.error) {
-        alert(result.error);
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
       } else {
         router.refresh();
       }
     } catch (error) {
-      alert('An error occurred while filling vacancies');
+      toast({
+        title: 'Error',
+        description: 'An error occurred while filling vacancies',
+        variant: 'destructive',
+      });
     } finally {
       setLoadingShiftId(null);
     }
   }, [loadingShiftId, lang, router]);
 
-  const handleRejectAllPending = useCallback(async (shiftId: string, pendingCount: number) => {
+  const handleRejectAllPendingClick = useCallback((shiftId: string, pendingCount: number) => {
     if (pendingCount === 0 || loadingShiftId) return;
+    setPendingRejectShiftId(shiftId);
+    setPendingRejectCount(pendingCount);
+    setConfirmRejectAllOpen(true);
+  }, [loadingShiftId]);
 
-    const confirmed = window.confirm(
-      'Czy na pewno chcesz odrzucić wszystkich pozostałych kandydatów?'
-    );
+  const handleRejectAllPending = useCallback(async () => {
+    if (!pendingRejectShiftId || pendingRejectCount === 0) return;
 
-    if (!confirmed) return;
-
-    setLoadingShiftId(shiftId);
+    setConfirmRejectAllOpen(false);
+    setLoadingShiftId(pendingRejectShiftId);
     try {
-      const result = await rejectAllPending(shiftId, lang);
+      const result = await rejectAllPending(pendingRejectShiftId, lang);
       if (result.error) {
-        alert(result.error);
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
       } else {
         router.refresh();
       }
     } catch (error) {
-      alert('An error occurred while rejecting applications');
+      toast({
+        title: 'Error',
+        description: 'An error occurred while rejecting applications',
+        variant: 'destructive',
+      });
     } finally {
       setLoadingShiftId(null);
+      setPendingRejectShiftId(null);
+      setPendingRejectCount(0);
     }
-  }, [loadingShiftId, lang, router]);
+  }, [pendingRejectShiftId, pendingRejectCount, lang, router, toast]);
 
   const groupedByShift = useMemo(() => {
     return applications.reduce((acc, app) => {
@@ -326,7 +352,7 @@ export default function CandidatesClient({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRejectAllPending(group.shift!.id, group.pendingCount)}
+                    onClick={() => handleRejectAllPendingClick(group.shift!.id, group.pendingCount)}
                     disabled={isLoading}
                     className="flex items-center gap-2 border-red-300 text-red-600 hover:bg-red-50"
                   >
@@ -497,6 +523,18 @@ export default function CandidatesClient({
           onSuccess={handleModalSuccess}
         />
       )}
+
+      <ConfirmationDialog
+        open={confirmRejectAllOpen}
+        onOpenChange={setConfirmRejectAllOpen}
+        onConfirm={handleRejectAllPending}
+        title="Confirm Mass Rejection"
+        description="This will reject all remaining candidates. This action cannot be undone."
+        confirmText="Reject All"
+        cancelText="Cancel"
+        variant="destructive"
+        loading={loadingShiftId === pendingRejectShiftId}
+      />
     </>
   );
 }

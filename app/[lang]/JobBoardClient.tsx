@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Shift {
   id: string;
@@ -88,6 +89,7 @@ export default function JobBoardClient({
   dict,
   lang,
 }: JobBoardClientProps) {
+  const { toast } = useToast();
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -101,7 +103,11 @@ export default function JobBoardClient({
       return;
     }
     if (userRole === 'worker' && verificationStatus !== 'verified') {
-      window.alert('You must verify your identity first.');
+      toast({
+        title: 'Verification Required',
+        description: 'You must verify your identity first.',
+        variant: 'destructive',
+      });
       return;
     }
     setSelectedShift(shift);

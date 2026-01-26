@@ -2,8 +2,11 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, ExternalLink } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function LegalSection() {
+  const { toast } = useToast();
+  
   return (
     <Card>
       <CardHeader>
@@ -22,7 +25,11 @@ export default function LegalSection() {
               onClick={(e) => {
                 e.preventDefault();
                 // Placeholder - link to terms when available
-                alert('Terms of Service will be available soon');
+                toast({
+                  title: 'Coming Soon',
+                  description: 'Terms of Service will be available soon',
+                  variant: 'default',
+                });
               }}
             >
               <div className="flex items-center gap-3">
@@ -48,7 +55,11 @@ export default function LegalSection() {
               onClick={(e) => {
                 e.preventDefault();
                 // Placeholder - link to privacy policy when available
-                alert('Privacy Policy will be available soon');
+                toast({
+                  title: 'Coming Soon',
+                  description: 'Privacy Policy will be available soon',
+                  variant: 'default',
+                });
               }}
             >
               <div className="flex items-center gap-3">
@@ -74,7 +85,11 @@ export default function LegalSection() {
               onClick={(e) => {
                 e.preventDefault();
                 // Placeholder - link to cookie policy when available
-                alert('Cookie Policy will be available soon');
+                toast({
+                  title: 'Coming Soon',
+                  description: 'Cookie Policy will be available soon',
+                  variant: 'default',
+                });
               }}
             >
               <div className="flex items-center gap-3">

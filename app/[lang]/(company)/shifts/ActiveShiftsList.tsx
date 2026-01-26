@@ -100,6 +100,9 @@ interface Shift {
   is_urgent: boolean;
   possible_overtime: boolean;
   company_id: string;
+  must_bring?: string | null;
+  required_language_ids?: string[];
+  required_licence_ids?: string[];
   applications?: Application[];
 }
 

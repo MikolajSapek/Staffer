@@ -20,6 +20,7 @@ import CompanyProfileDialog from '@/components/CompanyProfileDialog';
 import { cn, getMapsLink } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Shift {
   id: string;
@@ -106,6 +107,7 @@ export function JobDetailsDialog({
   verificationStatus,
 }: JobDetailsDialogProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   
@@ -189,7 +191,11 @@ export function JobDetailsDialog({
       return;
     }
     if (verificationStatus !== 'verified') {
-      window.alert('You must verify your identity first.');
+      toast({
+        title: 'Verification Required',
+        description: 'You must verify your identity first.',
+        variant: 'destructive',
+      });
       return;
     }
     

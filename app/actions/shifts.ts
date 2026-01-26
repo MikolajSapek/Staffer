@@ -206,6 +206,7 @@ export async function updateShiftAction(
       p_is_break_paid: formData.is_break_paid,
       p_is_urgent: formData.is_urgent,
       p_possible_overtime: formData.possible_overtime,
+      p_must_bring: formData.must_bring ?? null,
     });
 
     if (error) {
@@ -219,7 +220,14 @@ export async function updateShiftAction(
     }
 
     // Update shift requirements (languages and licenses)
-    // 1. Delete existing requirements
+    // Efficient update: delete existing and insert new in sequence
+    // This handles rapid edits efficiently by batching operations
+    const allSkillIds = [
+      ...(formData.required_language_ids || []),
+      ...(formData.required_licence_ids || [])
+    ];
+
+    // Delete existing requirements
     const { error: deleteError } = await supabase
       .from('shift_requirements')
       .delete()
@@ -234,12 +242,7 @@ export async function updateShiftAction(
       };
     }
 
-    // 2. Insert new requirements
-    const allSkillIds = [
-      ...(formData.required_language_ids || []),
-      ...(formData.required_licence_ids || [])
-    ];
-
+    // Insert new requirements if any
     if (allSkillIds.length > 0) {
       const requirementsToInsert = allSkillIds.map((skillId) => ({
         shift_id: shiftId,

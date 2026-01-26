@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/utils/supabase/client';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useToast } from '@/components/ui/use-toast';
 
 interface LoginFormProps {
   dict: {
@@ -32,20 +33,9 @@ interface LoginFormProps {
   lang: string;
 }
 
-// Minimal toast-like helper to satisfy UX requirement.
-// This can be replaced with a proper toast library (e.g. sonner) later.
-const toast = {
-  success: (message: string) => {
-    if (typeof window !== 'undefined') {
-      // For now use a simple, non-intrusive browser alert.
-      // Replace with real toast UI when available.
-      alert(message);
-    }
-  },
-};
-
 export default function LoginForm({ dict, lang }: LoginFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +47,11 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
   useEffect(() => {
     const verified = searchParams?.get('verified');
     if (verified === 'true') {
-      toast.success('Email verified successfully! Please login.');
+      toast({
+        title: 'Email Verified',
+        description: 'Email verified successfully! Please login.',
+        variant: 'default',
+      });
 
       // Optionally clean up URL so the message doesn't reappear on refresh
       if (typeof window !== 'undefined') {

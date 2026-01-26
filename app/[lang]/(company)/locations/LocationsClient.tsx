@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { createClient } from '@/utils/supabase/client';
 import { Plus, MapPin, Loader2, Trash2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Location {
   id: string;
@@ -57,6 +58,7 @@ interface LocationsClientProps {
 
 export default function LocationsClient({ dict, lang }: LocationsClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -164,7 +166,11 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
       await fetchLocations();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : dict.form.deleteError;
-      alert(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     }
   };
 

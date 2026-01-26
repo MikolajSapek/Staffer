@@ -34,6 +34,9 @@ interface ShiftForEdit {
   is_urgent: boolean;
   possible_overtime: boolean;
   company_id: string;
+  must_bring?: string | null;
+  required_language_ids?: string[];
+  required_licence_ids?: string[];
   locations: Location | null;
 }
 
@@ -99,6 +102,9 @@ export default function EditShiftDialog({
               vacancies_total: shift.vacancies_total,
               is_urgent: shift.is_urgent,
               possible_overtime: shift.possible_overtime,
+              must_bring: shift.must_bring ?? null,
+              required_language_ids: shift.required_language_ids || [],
+              required_licence_ids: shift.required_licence_ids || [],
               company_id: shift.company_id,
               locations: shift.locations,
             }}

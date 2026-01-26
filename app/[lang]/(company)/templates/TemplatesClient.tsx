@@ -18,6 +18,7 @@ import { FileText, Loader2, Trash2, Pencil, Plus } from 'lucide-react';
 import { getTemplates, deleteTemplate } from '@/app/actions/templates';
 import Link from 'next/link';
 import EditTemplateDialog from './EditTemplateDialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ShiftTemplateRequirement {
   id: string;
@@ -64,6 +65,7 @@ interface TemplatesClientProps {
 
 export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -135,11 +137,19 @@ export default function TemplatesClient({ dict, lang }: TemplatesClientProps) {
         // Refresh templates list
         await fetchTemplates();
       } else {
-        alert(result.message || 'Failed to delete template');
+        toast({
+          title: 'Error',
+          description: result.message || 'Failed to delete template',
+          variant: 'destructive',
+        });
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error deleting template';
-      alert(errorMessage);
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setDeleting(null);
     }

@@ -24,6 +24,8 @@ import { createTemplate, deleteTemplate } from '@/app/actions/templates';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 import { type Manager } from '@/app/actions/managers';
 import { useToast } from '@/components/ui/use-toast';
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface CreateShiftFormProps {
   companyId: string;
@@ -208,6 +210,9 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
   const [locations, setLocations] = useState<Array<{ id: string; name: string; address: string }>>(initialLocations);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
   const [managerModalOpen, setManagerModalOpen] = useState(false);
+  const [confirmDeleteTemplateOpen, setConfirmDeleteTemplateOpen] = useState(false);
+  const [pendingDeleteTemplateId, setPendingDeleteTemplateId] = useState<string | null>(null);
+  const [requirementsError, setRequirementsError] = useState<string | null>(null);
   
   // Skills state
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
@@ -325,18 +330,22 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
     });
   };
 
-  // Handle template deletion
-  const handleDeleteTemplate = async (templateId: string, e: React.MouseEvent) => {
+  // Handle template deletion click
+  const handleDeleteTemplateClick = (templateId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
     const template = templates.find(t => t.id === templateId);
     if (!template) return;
+    setPendingDeleteTemplateId(templateId);
+    setConfirmDeleteTemplateOpen(true);
+  };
+
+  // Handle template deletion confirmation
+  const handleDeleteTemplate = async () => {
+    if (!pendingDeleteTemplateId) return;
+    const templateId = pendingDeleteTemplateId;
+    const template = templates.find(t => t.id === templateId);
     
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the template "${template.template_name}"? This action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
+    setConfirmDeleteTemplateOpen(false);
     
     try {
       const result = await deleteTemplate(templateId);
@@ -350,13 +359,27 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
           setSelectedTemplateId('');
         }
         
-        alert('Template deleted successfully');
+        toast({
+          title: 'Success',
+          description: 'Template deleted successfully',
+          variant: 'default',
+        });
       } else {
-        alert(`Failed to delete template: ${result.error || result.message}`);
+        toast({
+          title: 'Error',
+          description: `Failed to delete template: ${result.error || result.message}`,
+          variant: 'destructive',
+        });
       }
     } catch (err) {
       console.error('Error deleting template:', err);
-      alert('An unexpected error occurred while deleting the template');
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred while deleting the template',
+        variant: 'destructive',
+      });
+    } finally {
+      setPendingDeleteTemplateId(null);
     }
   };
 
@@ -535,9 +558,10 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
             ? `Database error: ${requirementsError.message}` 
             : 'Unknown database error. The shift_requirements table may not exist.';
 
-          alert(`⚠️ CRITICAL ERROR\n\nShift created successfully, but failed to save requirements.\n\n${errorMessage}\n\nPlease edit the shift to add requirements, or contact support.`);
-
-          setError(`Shift created, but failed to save requirements. ${errorMessage} Please edit the shift to add requirements.`);
+          const fullErrorMessage = `Shift created successfully, but failed to save requirements. ${errorMessage} Please edit the shift to add requirements, or contact support.`;
+          
+          setRequirementsError(fullErrorMessage);
+          setError(null); // Clear form error, show requirements error instead
           setLoading(false);
           return;
         }
@@ -615,6 +639,13 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {requirementsError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Critical Error</AlertTitle>
+                <AlertDescription>{requirementsError}</AlertDescription>
+              </Alert>
+            )}
             {error && (
               <div className="p-4 text-sm text-red-600 bg-red-50 rounded-md border border-red-200 flex items-start gap-2">
                 <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
@@ -650,7 +681,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={(e) => handleDeleteTemplate(selectedTemplateId, e)}
+                      onClick={(e) => handleDeleteTemplateClick(selectedTemplateId, e)}
                       disabled={loading}
                       className="flex-shrink-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                       title="Delete template"
@@ -1219,6 +1250,19 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
         onOpenChange={setManagerModalOpen}
         onSuccess={handleManagerCreated}
       />
+      {pendingDeleteTemplateId && (
+        <ConfirmationDialog
+          open={confirmDeleteTemplateOpen}
+          onOpenChange={setConfirmDeleteTemplateOpen}
+          onConfirm={handleDeleteTemplate}
+          title="Delete Template"
+          description={`Are you sure you want to delete the template "${templates.find(t => t.id === pendingDeleteTemplateId)?.template_name}"? This action cannot be undone.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="destructive"
+          loading={loading}
+        />
+      )}
     </Card>
   );
 }
