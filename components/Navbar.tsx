@@ -102,7 +102,6 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       '/dashboard': 'Dashboard',
       '/create-shift': 'Create Shift',
       '/shifts': 'Shifts',
-      '/candidates': 'Applicants',
       '/applicants': 'Applicants',
       '/managers': 'Managers',
       '/templates': 'Shift Templates',
@@ -136,44 +135,84 @@ export default function Navbar({ dict, lang }: NavbarProps) {
 
   // Fetch user and role
   useEffect(() => {
-    const supabase = createClient();
+    let mounted = true;
+    
+    async function fetchUser() {
+      try {
+        const supabase = createClient();
 
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
-      // Handle AuthSessionMissingError gracefully - this is normal for logged out users
-      if (error) {
+        // Get initial user with error handling for network failures
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (!mounted) return;
+
+        // Handle AuthSessionMissingError gracefully - this is normal for logged out users
+        if (error) {
+          // Check if it's a network/fetch error
+          if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+            console.error('Supabase connection error:', error.message);
+            // Don't crash - just show as logged out
+            setUser(null);
+            setRole(null);
+            setAvatarUrl(null);
+            setLoading(false);
+            return;
+          }
+          
+          // Other auth errors (session missing, etc.) are normal for logged out users
+          setUser(null);
+          setRole(null);
+          setAvatarUrl(null);
+          setLoading(false);
+          return;
+        }
+
+        setUser(user);
+        if (user) {
+          fetchUserRole(user.id);
+        } else {
+          setAvatarUrl(null);
+          setLoading(false);
+        }
+      } catch (err: unknown) {
+        // Catch any unexpected errors (e.g., Supabase client creation failures)
+        console.error('Error fetching user:', err);
+        if (!mounted) return;
         setUser(null);
         setRole(null);
         setAvatarUrl(null);
         setLoading(false);
-        return;
       }
+    }
 
-      setUser(user);
-      if (user) {
-        fetchUserRole(user.id);
-      } else {
-        setAvatarUrl(null);
-        setLoading(false);
-      }
-    });
+    fetchUser();
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      } else {
-        setRole(null);
-        setAvatarUrl(null);
-        setLoading(false);
-      }
-    });
+    let subscription: { unsubscribe: () => void } | null = null;
+    
+    try {
+      const supabase = createClient();
+      const {
+        data: { subscription: authSubscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!mounted) return;
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserRole(session.user.id);
+        } else {
+          setRole(null);
+          setAvatarUrl(null);
+          setLoading(false);
+        }
+      });
+      subscription = authSubscription;
+    } catch (err: unknown) {
+      console.error('Error setting up auth listener:', err);
+    }
 
     async function fetchUserRole(userId: string) {
       try {
+        const supabase = createClient();
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('role')
@@ -181,11 +220,20 @@ export default function Navbar({ dict, lang }: NavbarProps) {
           .maybeSingle();
 
         if (error) {
+          // Log error for debugging
+          console.error('[Navbar] Error fetching user role:', {
+            error: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            userId
+          });
           // Handle RLS/permission errors gracefully
           setRole(null);
           setAvatarUrl(null);
         } else if (profile && 'role' in profile) {
           const profileData = profile as { role: 'worker' | 'company' | 'admin' };
+          console.log('[Navbar] User role fetched successfully:', profileData.role);
           setRole(profileData.role);
           
           // Fetch avatar_url based on role
@@ -209,12 +257,18 @@ export default function Navbar({ dict, lang }: NavbarProps) {
             setAvatarUrl(null);
           }
         } else {
+          // Profile doesn't exist or doesn't have role
+          console.warn('[Navbar] Profile not found or missing role:', {
+            profile,
+            userId
+          });
           setRole(null);
           setAvatarUrl(null);
         }
       } catch (err: unknown) {
         // Handle AuthSessionMissingError and other errors gracefully
         const error = err as { message?: string };
+        console.error('[Navbar] Exception fetching user role:', error);
         if (error?.message?.includes('session') || error?.message?.includes('JWT')) {
           // Session error - user might be logged out
           setUser(null);
@@ -229,7 +283,10 @@ export default function Navbar({ dict, lang }: NavbarProps) {
     }
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
@@ -401,7 +458,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         {dict.nav?.locations || 'Locations'}
                       </Link>
                       <Link
-                        href={`/${lang}/candidates`}
+                        href={`/${lang}/applicants`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
@@ -485,6 +542,16 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                       >
                         <Settings className="mr-2 h-4 w-4" />
                         {dict.nav?.settings || 'Settings'}
+                      </Link>
+                    )}
+                    {!role && (
+                      <Link
+                        href={`/${lang}/profile`}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors"
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        {dict.nav?.settings || 'Settings'} <span className="ml-1 text-xs">(Setup Required)</span>
                       </Link>
                     )}
                   <button

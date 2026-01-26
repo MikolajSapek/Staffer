@@ -57,7 +57,7 @@ export default function StatsCards({ stats, dict, lang }: StatsCardsProps) {
       </Link>
 
       {/* Card 3: Total Hires - Clickable to go to Applicants page */}
-      <Link href={`/${lang}/candidates`} className="block">
+      <Link href={`/${lang}/applicants`} className="block">
         <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">

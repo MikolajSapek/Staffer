@@ -14,7 +14,7 @@ import { archiveShift, cancelWorkerAction } from '@/app/actions/shifts';
 import RateWorkerDialog from '@/components/RateWorkerDialog';
 import CancelWorkerDialog from '@/components/shifts/CancelWorkerDialog';
 import EditShiftDialog from '@/components/shifts/EditShiftDialog';
-import CandidateProfileModal from '@/components/company/CandidateProfileModal';
+import ApplicantProfileModal from '@/components/company/ApplicantProfileModal';
 import { useToast } from '@/components/ui/use-toast';
 
 interface WorkerDetails {
@@ -254,7 +254,7 @@ export default function ShiftDetailsClient({
     const profile = application.profiles;
     const workerDetails = profile ? getWorkerDetails(profile) : null;
     
-    // Enrich application with required fields for CandidateProfileModal
+    // Enrich application with required fields for ApplicantProfileModal
     const enrichedApplication: Application = {
       ...application,
       shift_id: shift.id,
@@ -764,7 +764,7 @@ export default function ShiftDetailsClient({
 
       {/* Worker Profile Modal */}
       {selectedApplication && (
-        <CandidateProfileModal
+        <ApplicantProfileModal
           open={profileModalOpen}
           onOpenChange={handleProfileModalClose}
           application={selectedApplication}

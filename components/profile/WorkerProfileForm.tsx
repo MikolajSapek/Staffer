@@ -7,25 +7,41 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Upload, X, User, CheckCircle2, Star, Clock, XCircle } from 'lucide-react';
+import { Upload, X, User, CheckCircle2, Clock } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { formatDateTime } from '@/lib/date-utils';
-import { cn } from '@/lib/utils';
 import { ImageCropperModal } from '@/components/ImageCropperModal';
 import VerificationWizard from '@/components/verification/VerificationWizard';
+import WorkerProfilePreview from './WorkerProfilePreview';
+import PersonalInfoSection from './PersonalInfoSection';
+import BioExperienceSection from './BioExperienceSection';
+import AdditionalInfoSection from './AdditionalInfoSection';
+import SkillsSelector from './SkillsSelector';
+import ReviewsSection from './ReviewsSection';
+import PublicProfileView from './PublicProfileView';
 
 interface WorkerProfileFormProps {
   dict: {
     profile: {
       authError: string;
       notLoggedIn: string;
+      goToLogin: string;
+      loading: string;
       validation: {
         firstNameRequired: string;
         phoneRequired: string;
         avatarError: string;
         avatarSize: string;
       };
+    };
+    navigation: {
+      login: string;
+    };
+    Verification?: {
+      status_rejected?: string;
+      pending_tooltip?: string;
+      try_again_btn?: string;
+      start_btn?: string;
     };
   };
   lang: string;
@@ -105,7 +121,13 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
-          setAuthError(dict.profile.authError);
+          // Handle network/fetch errors gracefully
+          if (userError.message?.includes('Failed to fetch') || userError.message?.includes('NetworkError')) {
+            console.error('Supabase connection error in WorkerProfileForm:', userError.message);
+            setAuthError('Connection error. Please check your internet connection and try again.');
+          } else {
+            setAuthError(dict.profile.authError);
+          }
           setIsLoading(false);
           setSkillsLoading(false);
           return;
@@ -660,17 +682,6 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
     );
   }
 
-  // Helper function to mask CPR (Privacy Mode: show first 6 digits, mask last 4)
-  const maskCPR = (cpr: string) => {
-    if (!cpr) return '******-****';
-    // Remove any existing dashes for processing
-    const cleanCPR = cpr.replace(/-/g, '');
-    if (cleanCPR.length < 10) return '******-****';
-    // Get first 6 digits (birth date)
-    const first6 = cleanCPR.slice(0, 6);
-    // Mask last 4 digits
-    return `${first6}-****`;
-  };
 
   // Check if profile is complete (has required fields)
   const isProfileComplete = formData.first_name && formData.last_name && formData.phone_number && 
@@ -683,89 +694,12 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
 
   // Public (non-owner) view: hide sensitive sections (CPR, bank) and show only public info.
   if (!isOwner) {
-    const displayName = [
-      (workerDetails as Record<string, unknown> | null)?.first_name as string | undefined,
-      (workerDetails as Record<string, unknown> | null)?.last_name as string | undefined,
-    ].filter(Boolean).join(' ') || dict.profile.preview.worker;
-    const avatarUrl = (workerDetails as Record<string, unknown> | null)?.avatar_url as string | undefined;
-    const description = (workerDetails as Record<string, unknown> | null)?.description as string | undefined;
-    const experience = (workerDetails as Record<string, unknown> | null)?.experience as string | undefined;
-
     return (
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{dict.profile.title}</h1>
-          <p className="text-muted-foreground">
-            {dict.profile.subtitle}
-          </p>
-        </div>
-
-        <Card className="shadow-lg">
-          <CardContent className="p-6 space-y-6">
-            <div className="flex flex-col sm:flex-row gap-6 items-start">
-              <div className="flex-shrink-0">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName}
-                    className="w-32 h-32 rounded-full object-cover border-2 border-gray-200"
-                  />
-                ) : (
-                  <div className="w-32 h-32 rounded-full bg-gray-200 border-2 border-gray-200 flex items-center justify-center">
-                    <User className="w-12 h-12 text-gray-400" />
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-bold text-gray-900">{displayName}</h2>
-                  {profile?.verification_status === 'verified' && (
-                    <Badge className="bg-green-600 hover:bg-green-700 gap-1 text-white">
-                      <CheckCircle2 className="h-3 w-3" />
-                      <span className="text-xs">{dict.Verification?.status_verified || 'Account Verified'}</span>
-                    </Badge>
-                  )}
-                  {profile?.verification_status === 'pending' && (
-                    <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span className="text-xs">{dict.Verification?.status_pending || 'Verification Pending'}</span>
-                    </Badge>
-                  )}
-                </div>
-
-                {description && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-800">{dict.profile.description}</h3>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{description}</p>
-                  </div>
-                )}
-
-                {experience && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-800">{dict.profile.experience}</h3>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{experience}</p>
-                  </div>
-                )}
-
-                {!description && !experience && (
-                  <p className="text-sm text-muted-foreground">
-                    {dict.profile.preview.fillFormToActivate}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <Card className="bg-muted">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">
-                  Bank, tax and CPR details are hidden for privacy.
-                </p>
-              </CardContent>
-            </Card>
-          </CardContent>
-        </Card>
-      </div>
+      <PublicProfileView
+        workerDetails={workerDetails}
+        profile={profile}
+        dict={dict}
+      />
     );
   }
 
@@ -810,120 +744,17 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Live Preview Card (Sticky) */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-6">
-            <Card className="shadow-lg border-2 border-gray-200">
-              <CardContent className="p-6">
-                {/* Worker ID Card Preview */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
-                  {/* Header */}
-                  <div className="mb-6">
-                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Staffer
-                    </h3>
-                    <p className="text-xs text-gray-500">{dict.profile.preview.workerIdCard}</p>
-                  </div>
-
-                  {/* Avatar */}
-                  <div className="flex justify-center mb-6">
-                    {avatarPreview && !avatarError ? (
-                      <img
-                        src={avatarPreview}
-                        alt="Profile"
-                        className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-                        onError={() => {
-                          setAvatarError(true);
-                        }}
-                      />
-                    ) : (
-                      <div className="w-32 h-32 rounded-full bg-gray-200 border-4 border-white shadow-lg flex items-center justify-center">
-                        <User className="w-16 h-16 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Name */}
-                  <div className="text-center mb-4">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        {formData.first_name && formData.last_name
-                          ? `${formData.first_name} ${formData.last_name}`
-                          : formData.first_name
-                          ? formData.first_name
-                          : formData.last_name
-                          ? formData.last_name
-                          : `${dict.profile.firstName} ${dict.profile.lastName}`}
-                      </h2>
-                      {/* Verification Status Badge */}
-                      {profile?.verification_status === 'verified' && (
-                        <Badge className="bg-green-600 hover:bg-green-700 gap-1 text-white">
-                          <CheckCircle2 className="h-3 w-3" />
-                          <span className="text-xs">{dict.Verification?.status_verified || 'Account Verified'}</span>
-                        </Badge>
-                      )}
-                      {profile?.verification_status === 'pending' && (
-                        <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span className="text-xs">{dict.Verification?.status_pending || 'Verification Pending'}</span>
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{dict.profile.preview.worker}</p>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="border-t border-gray-300 my-4"></div>
-
-                  {/* Details */}
-                  <div className="space-y-3">
-                    {/* CPR (Masked) */}
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                        CPR
-                      </p>
-                      <p className="text-sm font-mono font-semibold text-gray-900">
-                        {formData.cpr_number || workerDetails?.cpr_number
-                          ? maskCPR(formData.cpr_number || workerDetails?.cpr_number || '')
-                          : '******-****'}
-                      </p>
-                    </div>
-
-                    {/* Phone */}
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                        {dict.profile.phoneNumber}
-                      </p>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {formData.phone_number || `${dict.profile.phoneNumber}...`}
-                      </p>
-                    </div>
-
-                    {/* Email */}
-                    {user && (
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-                          Email
-                        </p>
-                        <p className="text-sm font-semibold text-gray-900 break-all">
-                          {user.email || 'Email...'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Footer */}
-                  <div className="mt-6 pt-4 border-t border-gray-300">
-                    <p className="text-xs text-center text-gray-500">
-                      {isProfileComplete 
-                        ? dict.profile.preview.profileComplete
-                        : dict.profile.preview.fillFormToActivate}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <WorkerProfilePreview
+          formData={formData}
+          workerDetails={workerDetails}
+          user={user}
+          avatarPreview={avatarPreview}
+          avatarError={avatarError}
+          profile={profile}
+          isProfileComplete={isProfileComplete}
+          dict={dict}
+          onAvatarError={() => setAvatarError(true)}
+        />
 
         {/* Right Column: Form */}
         <div className="lg:col-span-2">
@@ -948,280 +779,54 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
                 )}
 
                 {/* Personal Information Section */}
-                <div className="space-y-4">
-                  <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">{dict.profile.personalInfo}</h3>
-                    <p className="text-sm text-muted-foreground">{dict.profile.personalInfoDescription}</p>
-                  </div>
-              
-              {/* Avatar Upload */}
-              <div className="space-y-2">
-                <Label>{dict.profile.avatar} *</Label>
-                <div className="flex items-center gap-4">
-                  {avatarPreview && (
-                    <div className="relative">
-                      <img
-                        src={avatarPreview}
-                        alt="Avatar preview"
-                        className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
-                        onError={() => {
-                          // Clear preview on error
-                          setAvatarPreview('');
-                          setAvatarFile(null);
-                          setAvatarError(true);
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAvatarPreview('');
-                          setAvatarFile(null);
-                          setAvatarError(false);
-                          if (avatarInputRef.current) avatarInputRef.current.value = '';
-                        }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <input
-                      ref={avatarInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      disabled={submitLoading || uploadingAvatar}
-                      className="hidden"
-                      id="avatar-upload"
-                    />
-                    <label
-                      htmlFor="avatar-upload"
-                      className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Upload className="w-4 h-4" />
-                      {avatarFile ? avatarFile.name : dict.profile.selectAvatar}
-                    </label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {dict.profile.avatarHint}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="first_name">{dict.profile.firstName} *</Label>
-                  <Input
-                    id="first_name"
-                    value={formData.first_name || ''}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    required
-                    placeholder={dict.profile.firstNamePlaceholder}
-                    disabled={submitLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="last_name">{dict.profile.lastName} *</Label>
-                  <Input
-                    id="last_name"
-                    value={formData.last_name || ''}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    required
-                    placeholder={dict.profile.lastNamePlaceholder}
-                    disabled={submitLoading}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone_number">{dict.profile.phoneNumber} *</Label>
-                <Input
-                  id="phone_number"
-                  type="tel"
-                  value={formData.phone_number || ''}
-                  onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                  required
-                  placeholder={dict.profile.phoneNumberPlaceholder}
-                  disabled={submitLoading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cpr_number">
-                  {dict.profile.cprNumber} {!workerDetails?.cpr_number && '*'}
-                </Label>
-                <Input
-                  id="cpr_number"
-                  type="text"
-                  placeholder={workerDetails?.cpr_number ? dict.profile.cprNumberUpdate : dict.profile.cprNumberPlaceholder}
-                  value={formData.cpr_number || ''}
-                  onChange={(e) => {
-                    // Remove any non-digit characters immediately
-                    const value = e.target.value.replace(/\D/g, '');
-                    // Only update state if length is <= 10
-                    if (value.length <= 10) {
-                      setFormData({ ...formData, cpr_number: value });
-                    }
+                <PersonalInfoSection
+                  formData={formData}
+                  workerDetails={workerDetails}
+                  avatarPreview={avatarPreview}
+                  avatarFile={avatarFile}
+                  avatarInputRef={avatarInputRef}
+                  submitLoading={submitLoading}
+                  dict={dict}
+                  onFormDataChange={(data) => setFormData({ ...formData, ...data })}
+                  onAvatarChange={handleAvatarChange}
+                  onAvatarRemove={() => {
+                    setAvatarPreview('');
+                    setAvatarFile(null);
+                    setAvatarError(false);
+                    if (avatarInputRef.current) avatarInputRef.current.value = '';
                   }}
-                  required={!workerDetails?.cpr_number}
-                  maxLength={10}
-                  disabled={submitLoading}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {workerDetails?.cpr_number 
-                    ? dict.profile.cprNumberHint
-                    : dict.profile.cprNumberRequired}
-                </p>
-              </div>
-            </div>
 
                 {/* Bio and Experience Section */}
-                <div className="space-y-4">
-                  <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">{dict.profile.bioAndExperience}</h3>
-                    <p className="text-sm text-muted-foreground">{dict.profile.bioAndExperienceDescription}</p>
-                  </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">{dict.profile.description} *</Label>
-                <textarea
-                  id="description"
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={dict.profile.descriptionPlaceholder}
-                  rows={4}
-                  required
-                  disabled={submitLoading}
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                <BioExperienceSection
+                  formData={formData}
+                  submitLoading={submitLoading}
+                  dict={dict}
+                  onFormDataChange={(data) => setFormData({ ...formData, ...data })}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="experience">{dict.profile.experience} *</Label>
-                <textarea
-                  id="experience"
-                  value={formData.experience || ''}
-                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                  placeholder={dict.profile.experiencePlaceholder}
-                  rows={6}
-                  required
-                  disabled={submitLoading}
-                  className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-            </div>
 
                 {/* Additional Information Section */}
-                <div className="space-y-4">
-                  <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">{dict.profile.additionalInfo}</h3>
-                    <p className="text-sm text-muted-foreground">{dict.profile.additionalInfoDescription}</p>
-                  </div>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="shirt_size">{dict.profile.shirtSize}</Label>
-                  <Input
-                    id="shirt_size"
-                    value={formData.shirt_size || ''}
-                    onChange={(e) => setFormData({ ...formData, shirt_size: e.target.value })}
-                    placeholder={dict.profile.shirtSizePlaceholder}
-                    disabled={submitLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="shoe_size">{dict.profile.shoeSize}</Label>
-                  <Input
-                    id="shoe_size"
-                    value={formData.shoe_size || ''}
-                    onChange={(e) => setFormData({ ...formData, shoe_size: e.target.value })}
-                    placeholder={dict.profile.shoeSizePlaceholder}
-                    disabled={submitLoading}
-                  />
-                </div>
-              </div>
-            </div>
+                <AdditionalInfoSection
+                  formData={formData}
+                  submitLoading={submitLoading}
+                  dict={dict}
+                  onFormDataChange={(data) => setFormData({ ...formData, ...data })}
+                />
 
                 {/* Skills Section */}
-                <div className="space-y-4">
-                  <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold">Skills & Qualifications</h3>
-                    <p className="text-sm text-muted-foreground">Select your languages and licenses</p>
-                  </div>
-              
-              {skillsLoading ? (
-                <div className="py-4 text-center text-muted-foreground">
-                  <p>Loading skills...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Languages */}
-                  {availableSkills.filter(s => s.category === 'language').length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Languages</Label>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {availableSkills
-                          .filter((skill) => skill.category === 'language')
-                          .map((skill) => (
-                            <label
-                              key={skill.id}
-                              className="flex items-center space-x-2 cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedSkillIds.includes(skill.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedSkillIds([...selectedSkillIds, skill.id]);
-                                  } else {
-                                    setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skill.id));
-                                  }
-                                }}
-                                disabled={submitLoading}
-                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                              />
-                              <span className="text-sm">{skill.name}</span>
-                            </label>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Licenses - HIDDEN FOR NOW (business decision) */}
-                  {false && availableSkills.filter(s => s.category === 'license').length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Licenses</Label>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {availableSkills
-                          .filter((skill) => skill.category === 'license')
-                          .map((skill) => (
-                            <label
-                              key={skill.id}
-                              className="flex items-center space-x-2 cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedSkillIds.includes(skill.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedSkillIds([...selectedSkillIds, skill.id]);
-                                  } else {
-                                    setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skill.id));
-                                  }
-                                }}
-                                disabled={submitLoading}
-                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                              />
-                              <span className="text-sm">{skill.name}</span>
-                            </label>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                <SkillsSelector
+                  availableSkills={availableSkills}
+                  selectedSkillIds={selectedSkillIds}
+                  skillsLoading={skillsLoading}
+                  submitLoading={submitLoading}
+                  onSkillToggle={(skillId) => {
+                    if (selectedSkillIds.includes(skillId)) {
+                      setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skillId));
+                    } else {
+                      setSelectedSkillIds([...selectedSkillIds, skillId]);
+                    }
+                  }}
+                />
 
                 <div className="flex justify-end pt-6 border-t">
                   <Button 
@@ -1242,108 +847,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       </div>
 
       {/* Reviews & Feedback Section */}
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Reviews & Feedback</CardTitle>
-            <CardDescription>
-              Feedback from companies you've worked with
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {reviewsLoading ? (
-              <div className="py-12 text-center text-muted-foreground">
-                Loading reviews...
-              </div>
-            ) : reviews.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground">
-                <p>No reviews yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {reviews.map((review) => {
-                  const companyName = review.reviewer?.company_details?.company_name || 'Company';
-                  const companyLogo = review.reviewer?.company_details?.logo_url || null;
-                  const companyInitials = companyName
-                    .split(' ')
-                    .map((word: string) => word.charAt(0))
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2) || 'CO';
-
-                  return (
-                    <div
-                      key={review.id}
-                      className="rounded-lg border bg-card p-4 space-y-3"
-                    >
-                      {/* Header: Reviewer Name (Company) + Date */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage
-                              src={companyLogo || undefined}
-                              alt={companyName}
-                            />
-                            <AvatarFallback className="text-xs">
-                              {companyInitials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-sm">
-                              {companyName}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDateTime(review.created_at)}
-                        </div>
-                      </div>
-
-                      {/* Rating: Star component */}
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={cn(
-                              'h-4 w-4',
-                              star <= review.rating
-                                ? 'fill-yellow-400 stroke-yellow-400'
-                                : 'fill-muted stroke-muted'
-                            )}
-                          />
-                        ))}
-                        <span className="text-xs text-muted-foreground ml-1">
-                          {review.rating}/5
-                        </span>
-                      </div>
-
-                      {/* Body: The comment text */}
-                      {review.comment && (
-                        <div>
-                          <p className="text-sm text-foreground whitespace-pre-wrap">
-                            {review.comment}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Tags: Render tags as badges if they exist */}
-                      {review.tags && review.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {review.tags.map((tag: string, index: number) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <ReviewsSection reviews={reviews} reviewsLoading={reviewsLoading} />
 
       {/* Image Cropper Modal */}
       <ImageCropperModal

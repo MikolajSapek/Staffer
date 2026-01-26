@@ -27,9 +27,9 @@ A comprehensive B2B staffing platform connecting companies with temporary worker
 - **SEO Ready:** Zmiany są publicznie dostępne pod stałymi linkami.
 
 ### 2.3 Nowy Dashboard Firmy
-- **Priorytetyzacja:** Główny widok skupia się na **Active Shifts** (nadchodzące) oraz **Applicants** (kandydaci wymagający akcji).
+- **Priorytetyzacja:** Główny widok skupia się na **Active Shifts** (nadchodzące) oraz **Applicants** (aplikujący wymagający akcji).
 - **Archiwum:** Historia zmian przeniesiona do osobnego widoku (`Archive Shifts`).
-- **Liczniki:** Dodano powiadomienia (Badges) przy kandydatach oczekujących na akceptację (`Pending`).
+- **Liczniki:** Dodano powiadomienia (Badges) przy aplikujących oczekujących na akceptację (`Pending`).
 - **UX:** Zmieniono układ przycisków akcji (Locations/Templates obok siebie).
 
 ### 2.4 Usprawnienia UX/UI
@@ -144,18 +144,18 @@ The system uses a **fully normalized** skills architecture:
 ### Database Views (Optimized Queries)
 | View | Purpose | Returns |
 |------|---------|---------|
-| `candidate_skills_view` ✅ | **Preferred** for displaying worker skills in UI | Single row per worker with `languages` and `licenses` as JSONB arrays of `{ id, name }` objects |
+| `applicant_skills_view` ✅ | **Preferred** for displaying worker skills in UI | Single row per worker with `languages` and `licenses` as JSONB arrays of `{ id, name }` objects |
 | `worker_skills_display` | Individual skill rows with metadata | Multiple rows per worker (one per skill) |
 
 **Usage:**
-- Use `candidate_skills_view` when **displaying** worker skills (modals, cards, lists)
+- Use `applicant_skills_view` when **displaying** worker skills (modals, cards, lists)
   - Pre-aggregated data, no client-side parsing needed
   - Type-safe: `Array<{ id: string; name: string }>`
   - Better performance (fewer rows, smaller payload)
 - Use `worker_skills_display` for detailed skill analysis
 - Use `worker_skills` table directly when **modifying** skills (add/delete)
 
-See [OPTIMIZATION_CANDIDATE_SKILLS_VIEW.md](./OPTIMIZATION_CANDIDATE_SKILLS_VIEW.md) for details.
+See [OPTIMIZATION_APPLICANT_SKILLS_VIEW.md](./OPTIMIZATION_APPLICANT_SKILLS_VIEW.md) for details.
 
 ### Security & RLS (Row Level Security)
 **Public Read Access for Guest Users:**
@@ -206,12 +206,12 @@ See [OPTIMIZATION_CANDIDATE_SKILLS_VIEW.md](./OPTIMIZATION_CANDIDATE_SKILLS_VIEW
 - **Managers** (`/managers`) - Add and manage contact persons for shifts
 - **Create Shift** (`/create-shift`) - Multi-step form with location, time, skills, pay rate, and manager assignment
 - **Shifts Management** (`/shifts`) - Edit shifts, manage applications, cancel workers
-- **Candidates** (`/candidates`) - Review applicants with profile modals, accept/reject in bulk
+- **Applicants** (`/applicants`) - Review applicants with profile modals, accept/reject in bulk
 - **Timesheets** (`/timesheets`) - Approve worker hours, add overtime, resolve disputes
 - **Billing** (`/billing`) - View penalties, invoices, payment history
 
 **Company Workflows:**
-1. Post shift → Workers apply → Accept/reject candidates
+1. Post shift → Workers apply → Accept/reject applicants
 2. Shift occurs → Workers clock in/out → Approve timesheets → Process payment
 3. Late cancellation → System auto-generates penalty → Reflected in billing
 
@@ -229,7 +229,7 @@ See [OPTIMIZATION_CANDIDATE_SKILLS_VIEW.md](./OPTIMIZATION_CANDIDATE_SKILLS_VIEW
 ```
 /app
   /[lang]               - Internationalized routes (en/da)
-    /(company)          - Company portal (shifts, candidates, billing)
+    /(company)          - Company portal (shifts, applicants, billing)
     /worker             - Worker private area (settings)
     /profile            - Worker public profile
     /schedule           - Calendar view
@@ -280,7 +280,7 @@ npm run dev
 - ✅ **Manager System:** Company contact persons with privacy-protected details
 - ✅ **Public Job Board:** Guest access to shifts with SEO-friendly URLs
 - ✅ **Enhanced Dashboard:** Active shifts prioritization with pending applicants badges
-- ✅ **Worker Profile Modals:** Quick view of candidate details from shift lists
+- ✅ **Worker Profile Modals:** Quick view of applicant details from shift lists
 - ✅ Multilingual support (English/Danish)
 - ✅ Real-time application status updates
 - ✅ PostGIS-based location search and distance calculation

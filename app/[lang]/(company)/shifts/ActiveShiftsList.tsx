@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import CancelWorkerDialog from '@/components/shifts/CancelWorkerDialog';
 import EditShiftDialog from '@/components/shifts/EditShiftDialog';
-import CandidateProfileModal from '@/components/company/CandidateProfileModal';
+import ApplicantProfileModal from '@/components/company/ApplicantProfileModal';
 import { cancelWorkerAction } from '@/app/actions/shifts';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -259,7 +259,7 @@ export default function ActiveShiftsList({
     const profile = application.profiles;
     if (!profile) return;
 
-    // Create ModalApplication object for CandidateProfileModal
+    // Create ModalApplication object for ApplicantProfileModal
     const modalApplication: ModalApplication = {
       id: application.id,
       status: application.status.toLowerCase() as any || 'hired',
@@ -637,7 +637,7 @@ export default function ActiveShiftsList({
       
       {/* Worker Profile Modal */}
       {selectedWorkerApplication && (
-        <CandidateProfileModal
+        <ApplicantProfileModal
           open={workerModalOpen}
           onOpenChange={handleWorkerModalClose}
           application={selectedWorkerApplication}

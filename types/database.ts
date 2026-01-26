@@ -744,7 +744,7 @@ export interface Database {
           created_at: string;
         };
       };
-      candidate_skills_view: {
+      applicant_skills_view: {
         Row: {
           worker_id: string;
           languages: Array<{ id: string; name: string }>;

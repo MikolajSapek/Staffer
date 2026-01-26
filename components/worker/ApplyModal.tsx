@@ -63,7 +63,19 @@ export default function ApplyModal({
 
     try {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      // Handle network/auth errors
+      if (authError) {
+        if (authError.message?.includes('Failed to fetch') || authError.message?.includes('NetworkError')) {
+          console.error('Supabase connection error in ApplyModal:', authError.message);
+          setError('Connection error. Please check your internet connection and try again.');
+          setLoading(false);
+          return;
+        }
+        router.push(`/${lang}/login`);
+        return;
+      }
 
       if (!user) {
         router.push(`/${lang}/login`);

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, User, UserCircle } from 'lucide-react';
-import CandidateProfileModal from '@/components/company/CandidateProfileModal';
+import ApplicantProfileModal from '@/components/company/ApplicantProfileModal';
 
 interface WorkerDetails {
   avatar_url: string | null;
@@ -340,7 +340,7 @@ export default function ArchivedShiftsList({
 
       {/* Worker Profile Modal */}
       {selectedApplication && (
-        <CandidateProfileModal
+        <ApplicantProfileModal
           open={modalOpen}
           onOpenChange={handleModalClose}
           application={selectedApplication}

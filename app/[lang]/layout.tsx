@@ -28,7 +28,7 @@ const Navbar = dynamic(() => import('@/components/Navbar'), {
 });
 
 export const metadata: Metadata = {
-  title: 'Vikar System - Danish Staffing Platform',
+  title: 'Staffer Systems - Danish Staffing Platform',
   description: 'B2B staffing platform connecting companies with temporary workers',
 };
 

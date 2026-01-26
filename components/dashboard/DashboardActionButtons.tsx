@@ -28,7 +28,7 @@ export default function DashboardActionButtons({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Applicants - Full Width */}
-      <Link href={`/${lang}/candidates`} className="md:col-span-3 block">
+      <Link href={`/${lang}/applicants`} className="md:col-span-3 block">
         <Card className={`
           transition-all hover:shadow-lg cursor-pointer h-full
           ${pendingCount > 0 ? 'border-primary border-2 hover:border-primary/70' : 'hover:border-primary/50'}

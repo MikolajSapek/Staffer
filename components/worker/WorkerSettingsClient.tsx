@@ -56,7 +56,17 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
         
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
         
-        if (userError || !authUser) {
+        if (userError) {
+          // Handle network/fetch errors gracefully
+          if (userError.message?.includes('Failed to fetch') || userError.message?.includes('NetworkError')) {
+            console.error('Supabase connection error in WorkerSettingsClient:', userError.message);
+            // Don't crash - just show empty state
+          }
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!authUser) {
           setIsLoading(false);
           return;
         }

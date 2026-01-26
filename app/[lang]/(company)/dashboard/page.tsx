@@ -127,7 +127,7 @@ export default async function CompanyDashboardPage({
     })
   }));
 
-  // Fetch worker skills for active shifts using the optimized candidate_skills_view
+  // Fetch worker skills for active shifts using the optimized applicant_skills_view
   let mappedActiveShiftsWithSkills = mappedActiveShifts;
   
   if (mappedActiveShifts && mappedActiveShifts.length > 0) {
@@ -139,17 +139,17 @@ export default async function CompanyDashboardPage({
     const uniqueWorkerIds = [...new Set(allWorkerIds)];
     
     if (uniqueWorkerIds.length > 0) {
-      // Type definition for candidate_skills_view
-      type CandidateSkills = {
+      // Type definition for applicant_skills_view
+      type ApplicantSkills = {
         worker_id: string;
         languages: Array<{ id: string; name: string }>;
         licenses: Array<{ id: string; name: string }>;
       };
       
       const { data: workerSkills } = await supabase
-        .from('candidate_skills_view')
+        .from('applicant_skills_view')
         .select('*')
-        .in('worker_id', uniqueWorkerIds) as { data: CandidateSkills[] | null; error: any };
+        .in('worker_id', uniqueWorkerIds) as { data: ApplicantSkills[] | null; error: any };
 
       // Create a map of worker_id to skills
       // The view returns arrays of { id, name } objects directly - no parsing needed

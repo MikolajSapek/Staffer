@@ -51,7 +51,7 @@ interface Application {
   shifts: Shift | null;
 }
 
-interface CandidateProfileModalProps {
+interface ApplicantProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   application: Application;
@@ -80,14 +80,14 @@ interface CandidateProfileModalProps {
   onSuccess?: () => void;
 }
 
-export default function CandidateProfileModal({
+export default function ApplicantProfileModal({
   open,
   onOpenChange,
   application,
   dict,
   lang,
   onSuccess,
-}: CandidateProfileModalProps) {
+}: ApplicantProfileModalProps) {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +100,7 @@ export default function CandidateProfileModal({
   const profile = application.profiles;
   const shift = application.shifts;
 
-  // Fetch worker skills from candidate_skills_view when modal opens
+  // Fetch worker skills from applicant_skills_view when modal opens
   useEffect(() => {
     if (!open || !application.worker_id) {
       return;
@@ -109,22 +109,22 @@ export default function CandidateProfileModal({
     setSkillsLoading(true);
     const supabase = createClient();
     
-    // Type assertion for candidate_skills_view
-    type CandidateSkills = {
+    // Type assertion for applicant_skills_view
+    type ApplicantSkills = {
       worker_id: string;
       languages: Array<{ id: string; name: string }>;
       licenses: Array<{ id: string; name: string }>;
     };
     
     supabase
-      .from('candidate_skills_view')
+      .from('applicant_skills_view')
       .select('*')
       .eq('worker_id', application.worker_id)
       .limit(1)
       .maybeSingle()
-      .then(({ data, error }: { data: CandidateSkills | null; error: any }) => {
+      .then(({ data, error }: { data: ApplicantSkills | null; error: any }) => {
         if (error) {
-          console.error('Error fetching candidate skills:', error);
+          console.error('Error fetching applicant skills:', error);
           setWorkerSkills({ languages: [], licenses: [] });
           setSkillsLoading(false);
           return;

@@ -126,8 +126,8 @@ export async function updateApplicationStatus(
   // Shift Details page - shows hired team for specific shift
   revalidatePath(`/${lang}/shifts/${shiftId}`, 'page');
   
-  // Candidates page - shows application status
-  revalidatePath(`/${lang}/candidates`, 'page');
+  // Applicants page - shows application status
+  revalidatePath(`/${lang}/applicants`, 'page');
   
   // Job board - remove full shifts (workers see updated availability)
   revalidatePath(`/${lang}`, 'page');
@@ -224,7 +224,7 @@ export async function fillVacancies(
   }
 
   // Revalidate paths
-  revalidatePath(`/${lang}/candidates`, 'page');
+  revalidatePath(`/${lang}/applicants`, 'page');
   revalidatePath(`/${lang}/shifts`, 'page');
   revalidatePath(`/${lang}/shifts/${shiftId}`, 'page');
   revalidatePath(`/${lang}/dashboard`, 'page');
@@ -274,7 +274,7 @@ export async function rejectAllPending(
   }
 
   // Revalidate paths
-  revalidatePath(`/${lang}/candidates`, 'page');
+  revalidatePath(`/${lang}/applicants`, 'page');
   revalidatePath(`/${lang}/shifts`, 'page');
   revalidatePath(`/${lang}/shifts/${shiftId}`, 'page');
   revalidatePath(`/${lang}/dashboard`, 'page');

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Star, Users, X, Clock, Wallet, MapPin, Calendar, Lock, Phone, Mail } from 'lucide-react';
-import CandidateProfileModal from '@/components/company/CandidateProfileModal';
+import ApplicantProfileModal from '@/components/company/ApplicantProfileModal';
 import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
 import { formatTime } from '@/lib/date-utils';
 import { format } from 'date-fns';
@@ -62,7 +62,7 @@ interface Application {
   shifts: Shift | null;
 }
 
-interface CandidatesClientProps {
+interface ApplicantsClientProps {
   applications: Application[];
   dict: {
     candidatesPage: {
@@ -104,11 +104,11 @@ interface CandidatesClientProps {
   lang: string;
 }
 
-export default function CandidatesClient({
+export default function ApplicantsClient({
   applications,
   dict,
   lang,
-}: CandidatesClientProps) {
+}: ApplicantsClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -514,7 +514,7 @@ export default function CandidatesClient({
       </div>
 
       {selectedApplication && (
-        <CandidateProfileModal
+        <ApplicantProfileModal
           open={modalOpen}
           onOpenChange={handleModalClose}
           application={selectedApplication}
@@ -529,7 +529,7 @@ export default function CandidatesClient({
         onOpenChange={setConfirmRejectAllOpen}
         onConfirm={handleRejectAllPending}
         title="Confirm Mass Rejection"
-        description="This will reject all remaining candidates. This action cannot be undone."
+        description="This will reject all remaining applicants. This action cannot be undone."
         confirmText="Reject All"
         cancelText="Cancel"
         variant="destructive"

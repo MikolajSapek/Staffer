@@ -112,7 +112,7 @@ Powinno zwrócić:
     new_worker_applied: boolean;   // New Worker Applied
     offer_accepted: boolean;       // Offer Accepted by Worker
     pending_workdays: boolean;     // Pending Workdays to Approve
-    pick_candidates: boolean;      // Pick Candidates
+    pick_candidates: boolean;      // Pick Applicants
     rate_worker: boolean;          // Rate Worker
   }
 }
