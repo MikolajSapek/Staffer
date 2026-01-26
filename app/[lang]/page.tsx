@@ -60,23 +60,35 @@ export default async function JobBoardPage({
   console.log('👤 Użytkownik:', user ? `${user.id} (${userRole})` : '❌ NIEZALOGOWANY (GUEST)');
   console.log('📅 Czas zapytania:', new Date().toISOString());
   
+  // Fetch only essential shift data for public job board (no manager data)
   const { data: shiftsData, error: shiftsError } = await supabase
     .from('shifts')
     .select(`
-      *,
-      locations!location_id (*),
+      id,
+      title,
+      description,
+      category,
+      hourly_rate,
+      start_time,
+      end_time,
+      break_minutes,
+      is_break_paid,
+      possible_overtime,
+      vacancies_total,
+      vacancies_taken,
+      status,
+      is_urgent,
+      must_bring,
+      company_id,
+      locations!location_id (
+        name,
+        address
+      ),
       profiles!company_id (
         company_details!profile_id (
           company_name,
           logo_url
         )
-      ),
-      managers!manager_id (
-        id,
-        first_name,
-        last_name,
-        email,
-        phone_number
       )
     `)
     .eq('status', 'published')
@@ -105,7 +117,6 @@ export default async function JobBoardPage({
       console.log('  - Wolne miejsca:', `${firstShift.vacancies_taken}/${firstShift.vacancies_total}`);
       console.log('  - Ma lokalizację?', !!firstShift.locations);
       console.log('  - Ma profil firmy?', !!firstShift.profiles);
-      console.log('  - Ma managera?', !!firstShift.managers);
     } else {
       console.warn('⚠️ PUSTA LISTA OFERT!');
       console.warn('   Możliwe przyczyny:');

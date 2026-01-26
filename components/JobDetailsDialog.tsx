@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { format, differenceInMinutes } from 'date-fns';
 import { da } from 'date-fns/locale/da';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -104,6 +105,7 @@ export function JobDetailsDialog({
   onApplySuccess,
   verificationStatus,
 }: JobDetailsDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   
@@ -208,7 +210,8 @@ export function JobDetailsDialog({
     if (onApplySuccess) {
       onApplySuccess();
     } else {
-      window.location.reload();
+      // Refresh to update application status and show manager contact if accepted
+      router.refresh();
     }
   };
 
@@ -407,9 +410,10 @@ export function JobDetailsDialog({
               </div>
             )}
 
-            {/* Shift Manager / Contact Person - Only visible if application status is 'accepted' or 'approved' */}
-            {/* Note: 'approved' is mapped from 'accepted' in some places for display purposes */}
-            {shift.managers && user && (applicationStatus === 'accepted' || applicationStatus === 'approved') && (
+            {/* Shift Manager / Contact Person - ONLY visible for approved/accepted applications */}
+            {/* Privacy First: Manager section is completely hidden for guests and pending applications */}
+            {shift.managers && user && userRole === 'worker' && applicationStatus && 
+             (applicationStatus === 'accepted' || applicationStatus === 'approved') && (
               <div className="space-y-2 pt-2 border-t border-gray-100">
                 <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -418,7 +422,7 @@ export function JobDetailsDialog({
                 <div className="rounded-lg bg-muted p-4 border border-gray-200">
                   <div className="space-y-2">
                     <p className="font-medium text-gray-900">
-                      {shift.managers.first_name}
+                      {shift.managers.first_name} {shift.managers.last_name}
                     </p>
                     {shift.managers.phone_number && (
                       <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -431,22 +435,18 @@ export function JobDetailsDialog({
                         </a>
                       </div>
                     )}
+                    {shift.managers.email && (
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <Mail className="h-4 w-4" />
+                        <a 
+                          href={`mailto:${shift.managers.email}`} 
+                          className="hover:underline hover:text-primary transition-colors"
+                        >
+                          {shift.managers.email}
+                        </a>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Show message if manager exists but application not accepted */}
-            {shift.managers && user && applicationStatus !== 'accepted' && applicationStatus !== 'approved' && (
-              <div className="space-y-2 pt-2 border-t border-gray-100">
-                <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Shift Manager
-                </h4>
-                <div className="rounded-lg bg-muted p-4 border border-gray-200">
-                  <p className="text-sm text-muted-foreground italic">
-                    Manager contact details will be visible after acceptance
-                  </p>
                 </div>
               </div>
             )}

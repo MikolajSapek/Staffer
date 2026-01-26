@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,12 @@ interface Application {
         company_name: string;
         logo_url: string | null;
       } | null;
+    } | null;
+    managers?: {
+      first_name: string;
+      last_name: string;
+      phone_number: string | null;
+      email: string;
     } | null;
   };
   review: {
@@ -105,6 +112,7 @@ export default function WorkerApplicationsClient({
   userRole,
   verificationStatus,
 }: WorkerApplicationsClientProps) {
+  const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const params = useParams();
@@ -263,6 +271,7 @@ export default function WorkerApplicationsClient({
       vacancies_total: shift.vacancies_total || 1,
       vacancies_taken: shift.vacancies_taken || 0,
       requirements: null,
+      managers: shift.managers || null, // Include manager contact data
     };
 
     return (
@@ -276,6 +285,10 @@ export default function WorkerApplicationsClient({
         lang={lang as string}
         applicationStatus={app.status}
         verificationStatus={verificationStatus}
+        onApplySuccess={() => {
+          // Refresh to update application status and show manager contact if accepted
+          router.refresh();
+        }}
       >
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow cursor-pointer">
           {/* Mobile: Vertical layout, Desktop: Horizontal layout */}

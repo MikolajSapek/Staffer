@@ -183,12 +183,16 @@ export default function ShiftDetailModal({
                             <>
                               <div className="flex items-center gap-1">
                                 <Mail className="h-3 w-3" />
-                                <span className="text-xs text-gray-400 blur-[2px] select-none">Hidden</span>
+                                <span className="text-xs text-muted-foreground/60 blur-sm select-none">
+                                  contact@hidden.com
+                                </span>
                               </div>
                               {phoneNumber && (
                                 <div className="flex items-center gap-1">
                                   <Phone className="h-3 w-3" />
-                                  <span className="text-xs text-gray-400 blur-[2px] select-none">Hidden</span>
+                                  <span className="text-xs text-muted-foreground/60 blur-sm select-none">
+                                    +45 •• •• •• ••
+                                  </span>
                                 </div>
                               )}
                             </>

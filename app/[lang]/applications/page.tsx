@@ -28,43 +28,24 @@ export default async function ApplicationsPage({
     redirect(`/${lang}`);
   }
 
-  // Step 1: Fetch user's applications with company details
+  // Step 1: Fetch user's applications with company details and manager contact
   const { data: applicationsRaw } = await supabase
     .from('shift_applications')
     .select(`
-      id,
-      status,
-      applied_at,
-      worker_message,
-      shift_id,
+      *,
       shifts (
-        id,
-        title,
-        start_time,
-        end_time,
-        hourly_rate,
-        company_id,
-        category,
-        description,
-        status,
-        is_urgent,
-        possible_overtime,
-        break_minutes,
-        is_break_paid,
-        vacancies_total,
-        vacancies_taken,
-        must_bring,
-        locations!location_id (
-          name,
-          address
+        *,
+        locations (*),
+        profiles (
+          *,
+          company_details (*)
         ),
-        profiles!company_id (
+        managers!manager_id (
+          id,
           first_name,
-          avatar_url,
-          company_details!profile_id (
-            company_name,
-            logo_url
-          )
+          last_name,
+          phone_number,
+          email
         )
       )
     `)
