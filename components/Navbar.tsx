@@ -36,7 +36,7 @@ interface NavbarProps {
       schedule: string;
       timesheets: string;
       applications: string;
-      candidates: string;
+      applicants: string;
       finances: string;
       myCalendar: string;
       createShift: string;
@@ -50,7 +50,7 @@ interface NavbarProps {
       shifts: string;
       locations: string;
       timesheets: string;
-      candidates: string;
+      applicants: string;
       settings: string;
       profile: string;
       support: string;
@@ -77,7 +77,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [counts, setCounts] = useState({ candidates: 0, finances: 0 });
+  const [counts, setCounts] = useState({ applicants: 0, finances: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Get page title based on pathname
@@ -295,10 +295,10 @@ export default function Navbar({ dict, lang }: NavbarProps) {
     if (role === 'company' && user) {
       getCompanyNotificationCounts().then(setCounts).catch(() => {
         // Silently fail if there's an error
-        setCounts({ candidates: 0, finances: 0 });
+        setCounts({ applicants: 0, finances: 0 });
       });
     } else {
-      setCounts({ candidates: 0, finances: 0 });
+      setCounts({ applicants: 0, finances: 0 });
     }
   }, [role, user]);
 
@@ -464,10 +464,10 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                       >
                         <Users className="mr-2 h-4 w-4" />
                         <span className="flex items-center">
-                          {dict.nav?.candidates || dict.navigation.candidates}
-                          {counts.candidates > 0 && (
+                          {dict.nav?.applicants || dict.navigation.applicants}
+                          {counts.applicants > 0 && (
                             <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
-                              {counts.candidates}
+                              {counts.applicants}
                             </span>
                           )}
                         </span>

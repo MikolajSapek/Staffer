@@ -99,7 +99,7 @@ export default async function ApplicantsPage({
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">
-                {dict.candidatesPage.empty || 'Unable to load applications. Please try again later.'}
+                {dict.applicantsPage.empty || 'Unable to load applications. Please try again later.'}
               </p>
             </CardContent>
           </Card>
@@ -113,7 +113,7 @@ export default async function ApplicantsPage({
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              {dict.candidatesPage.empty}
+              {dict.applicantsPage.empty}
             </p>
           </CardContent>
         </Card>

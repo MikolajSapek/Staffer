@@ -50,3 +50,33 @@ export function toLocalISO(dateStr: string | null | undefined): string {
   }
 }
 
+/**
+ * Convert local datetime-local format (YYYY-MM-DDTHH:mm) to UTC ISO string
+ * Used for converting form input values back to UTC for database storage
+ * @param localDateTimeStr - Local datetime string from datetime-local input (YYYY-MM-DDTHH:mm)
+ * @returns ISO string in UTC format
+ */
+export function fromLocalISO(localDateTimeStr: string): string {
+  if (!localDateTimeStr) return '';
+  try {
+    // Create Date object from local datetime string
+    // JavaScript Date constructor interprets YYYY-MM-DDTHH:mm as local time
+    const localDate = new Date(localDateTimeStr);
+    if (isNaN(localDate.getTime())) return '';
+    // Convert to ISO string (UTC)
+    return localDate.toISOString();
+  } catch (err) {
+    console.error('Error converting local datetime to UTC ISO:', err);
+    return '';
+  }
+}
+
+/**
+ * Get current time in local datetime-local format (YYYY-MM-DDTHH:mm)
+ * Used for min/max attributes in datetime-local input fields
+ * @returns Formatted string in YYYY-MM-DDTHH:mm format (local time)
+ */
+export function getCurrentLocalISO(): string {
+  return toLocalISO(new Date().toISOString());
+}
+

@@ -65,7 +65,7 @@ interface Application {
 interface ApplicantsClientProps {
   applications: Application[];
   dict: {
-    candidatesPage: {
+    applicantsPage: {
       status: {
         accepted: string;
         pending: string;
@@ -73,7 +73,7 @@ interface ApplicantsClientProps {
         waitlist: string;
       };
       table: {
-        candidate: string;
+        applicant: string;
         rating: string;
         status: string;
         actions: string;
@@ -131,17 +131,17 @@ export default function ApplicantsClient({
       waitlist: 'outline',
     };
     const statusLabels: Record<string, string> = {
-      accepted: dict.candidatesPage.status.accepted,
-      pending: dict.candidatesPage.status.pending,
-      rejected: dict.candidatesPage.status.rejected,
-      waitlist: dict.candidatesPage.status.waitlist,
+      accepted: dict.applicantsPage.status.accepted,
+      pending: dict.applicantsPage.status.pending,
+      rejected: dict.applicantsPage.status.rejected,
+      waitlist: dict.applicantsPage.status.waitlist,
     };
     return (
       <Badge variant={variants[status] || 'secondary'}>
         {statusLabels[status] || status}
       </Badge>
     );
-  }, [dict.candidatesPage.status]);
+  }, [dict.applicantsPage.status]);
 
   const getInitials = useCallback((firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
@@ -410,7 +410,7 @@ export default function ApplicantsClient({
                   )}
                   {group.pendingCount > 0 && (
                     <Badge variant="secondary" className="text-xs">
-                      {group.pendingCount} {dict.candidatesPage.status.pending.toLowerCase()}
+                      {group.pendingCount} {dict.applicantsPage.status.pending.toLowerCase()}
                     </Badge>
                   )}
                   {group.isFull && (
@@ -499,7 +499,7 @@ export default function ApplicantsClient({
                             }}
                             className="text-xs"
                           >
-                            {dict.candidatesPage.actions.viewProfile}
+                            {dict.applicantsPage.actions.viewProfile}
                           </Button>
                         </div>
                       </div>
@@ -518,7 +518,7 @@ export default function ApplicantsClient({
           open={modalOpen}
           onOpenChange={handleModalClose}
           application={selectedApplication}
-          dict={dict.candidatesPage.modal}
+          dict={dict.applicantsPage.modal}
           lang={lang}
           onSuccess={handleModalSuccess}
         />

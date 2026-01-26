@@ -7,7 +7,7 @@
     "schedule": "Schedule",
     "timesheets": "Timesheets",
     "applications": "Applications",
-    "candidates": "Applicants",
+    "applicants": "Applicants",
     "finances": "Finances",
     "myCalendar": "My Calendar",
     "createShift": "Create Shift",
@@ -21,7 +21,7 @@
     "shifts": "Shifts",
     "locations": "Locations",
     "timesheets": "Timesheets",
-    "candidates": "Applicants",
+    "applicants": "Applicants",
     "finances": "Finances",
     "settings": "Settings",
     "profile": "Profile",
@@ -283,7 +283,7 @@
       "minShiftDuration": "Template must define at least 2 hours of work"
     }
   },
-  "candidates": {
+  "applicants": {
     "title": "Applicants",
     "applicant": "Applicant",
     "status": "Status",
@@ -580,11 +580,11 @@
       "other": "Other"
     }
   },
-  "candidatesPage": {
+  "applicantsPage": {
     "title": "Applicants",
     "subtitle": "Manage applications for your shifts.",
     "table": {
-      "candidate": "Applicant",
+      "applicant": "Applicant",
       "job": "Job / Shift",
       "appliedDate": "Applied Date",
       "status": "Status",
@@ -604,7 +604,7 @@
     },
     "empty": "No applicants found yet.",
     "applied": "Applied",
-    "candidateId": "Applicant ID",
+    "applicantId": "Applicant ID",
     "modal": {
       "title": "Applicant Profile",
       "about": "About",

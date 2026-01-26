@@ -7,7 +7,7 @@
     "schedule": "Tidsplan",
     "timesheets": "Tidsregistreringer",
     "applications": "Ansøgninger",
-    "candidates": "Ansøgere",
+    "applicants": "Ansøgere",
     "finances": "Finansiering",
     "myCalendar": "Min Kalender",
     "createShift": "Opret vagt",
@@ -21,7 +21,7 @@
     "shifts": "Vagter",
     "locations": "Lokationer",
     "timesheets": "Timesedler",
-    "candidates": "Ansøgere",
+    "applicants": "Ansøgere",
     "finances": "Økonomi",
     "settings": "Indstillinger",
     "profile": "Profil",
@@ -48,9 +48,9 @@
     "forgotPassword": "Glemt adgangskode?",
     "roleLabel": "Jeg er",
     "roleWorker": "Pracownik",
-    "roleWorkerDescription": "Jeg søger vikarjobs",
+    "roleWorkerDescription": "Jeg søger midlertidige jobs",
     "roleCompany": "Firma",
-    "roleCompanyDescription": "Jeg søger vikarer",
+    "roleCompanyDescription": "Jeg søger midlertidige medarbejdere",
     "or": "ELLER",
     "error": "Fejl",
     "validation": {
@@ -102,7 +102,7 @@
   },
   "jobBoard": {
     "title": "Jobopslag",
-    "subtitle": "Find din næste vikarvagt her",
+    "subtitle": "Find din næste vagt her",
     "noJobs": "Der er ingen aktive jobopslag i øjeblikket.",
     "apply": "Ansøg nu",
     "loginToApply": "Log ind for at ansøge",
@@ -155,7 +155,7 @@
   },
   "createShift": {
     "title": "Opret jobopslag",
-    "subtitle": "Opret et nyt jobopslag for vikarer",
+    "subtitle": "Opret et nyt jobopslag",
     "formTitle": "Jobopslag detaljer",
     "formDescription": "Udfyld oplysningerne for dit jobopslag",
     "templateName": "Skabelonnavn",
@@ -200,7 +200,7 @@
     "creating": "Opretter...",
     "cancel": "Annuller",
     "successTitle": "Jobopslag oprettet!",
-    "successMessage": "Dit jobopslag er nu offentliggjort og synligt for vikarer.",
+      "successMessage": "Dit jobopslag er nu offentliggjort og synligt for arbejdere.",
     "redirecting": "Omdirigerer til dashboard...",
     "validation": {
       "templateNameRequired": "Skabelonnavn er påkrævet",
@@ -273,7 +273,7 @@
       "minShiftDuration": "Skabelon skal definere mindst 2 timers arbejde"
     }
   },
-  "candidates": {
+  "applicants": {
     "title": "Ansøgere",
     "applicant": "Ansøger",
     "status": "Status",
@@ -565,11 +565,11 @@
       "other": "Andet"
     }
   },
-  "candidatesPage": {
+  "applicantsPage": {
     "title": "Ansøgere",
     "subtitle": "Administrer ansøgninger til dine vagter.",
     "table": {
-      "candidate": "Ansøger",
+      "applicant": "Ansøger",
       "job": "Job / Vagt",
       "appliedDate": "Ansøgningsdato",
       "status": "Status",
@@ -589,7 +589,7 @@
     },
     "empty": "Ingen ansøgere fundet endnu.",
     "applied": "Ansøgt",
-    "candidateId": "Ansøger ID",
+    "applicantId": "Ansøger ID",
     "modal": {
       "title": "Ansøgerprofil",
       "about": "Om",

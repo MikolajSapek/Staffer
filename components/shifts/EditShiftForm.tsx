@@ -18,7 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { updateShiftAction } from '@/app/actions/shifts';
 import { useToast } from '@/components/ui/use-toast';
 import { createClient } from '@/utils/supabase/client';
-import { toLocalISO } from '@/lib/date-utils';
+import { toLocalISO, fromLocalISO, getCurrentLocalISO } from '@/lib/date-utils';
 
 interface Skill {
   id: string;
@@ -237,7 +237,7 @@ export default function EditShiftForm({
   };
 
   // Format min datetime as YYYY-MM-DDTHH:mm for datetime-local input
-  const minStartDateTime = new Date().toISOString().slice(0, 16);
+  const minStartDateTime = getCurrentLocalISO();
   const minEndDateTime = formData.start_time || minStartDateTime;
 
   const handleStartDateTimeChange = (value: string) => {
@@ -268,17 +268,8 @@ export default function EditShiftForm({
     try {
       // Convert form's local time strings back to ISO string for Supabase
       // datetime-local inputs return values in format YYYY-MM-DDTHH:mm in local timezone
-      const convertLocalToISO = (localDateTimeStr: string): string => {
-        if (!localDateTimeStr) return '';
-        // Create Date object from local datetime string
-        // JavaScript Date constructor interprets YYYY-MM-DDTHH:mm as local time
-        const localDate = new Date(localDateTimeStr);
-        // Convert to ISO string (UTC)
-        return localDate.toISOString();
-      };
-
-      const startTimeISO = convertLocalToISO(formData.start_time);
-      const endTimeISO = convertLocalToISO(formData.end_time);
+      const startTimeISO = fromLocalISO(formData.start_time);
+      const endTimeISO = fromLocalISO(formData.end_time);
 
       const payload = {
         location_id: formData.location_id || null,

@@ -11,11 +11,11 @@ export async function getCompanyNotificationCounts() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return { candidates: 0, finances: 0 };
+    return { applicants: 0, finances: 0 };
   }
 
   // Execute both count queries in parallel
-  const [candidatesResult, financesResult] = await Promise.all([
+  const [applicantsResult, financesResult] = await Promise.all([
     // Count pending shift_applications
     supabase
       .from('shift_applications')
@@ -32,7 +32,7 @@ export async function getCompanyNotificationCounts() {
   ]);
 
   return {
-    candidates: candidatesResult.count || 0,
+    applicants: applicantsResult.count || 0,
     finances: financesResult.count || 0,
   };
 }

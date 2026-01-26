@@ -1,17 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Briefcase, Building2 } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { getDictionary } from '@/app/[lang]/dictionaries';
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const params = useParams();
+  const lang = (params?.lang as string) || 'en-US';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkingRole, setCheckingRole] = useState(true);
+  const [dict, setDict] = useState<any>(null);
+
+  // Load dictionary
+  useEffect(() => {
+    async function loadDict() {
+      const dictionary = await getDictionary(lang as 'en-US' | 'da');
+      setDict(dictionary);
+    }
+    loadDict();
+  }, [lang]);
 
   // Check if user already has a role (from sign-up)
   useEffect(() => {
@@ -139,9 +152,9 @@ export default function OnboardingPage() {
               >
                 <Briefcase className="h-12 w-12" />
                 <div className="text-center">
-                  <div className="font-semibold text-lg">Arbejder</div>
+                  <div className="font-semibold text-lg">{dict?.auth?.roleWorker || 'Arbejder'}</div>
                   <div className="text-sm text-muted-foreground">
-                    Jeg søger vikarjobs
+                    {dict?.auth?.roleWorkerDescription || 'Jeg søger midlertidige jobs'}
                   </div>
                 </div>
               </Button>
@@ -153,9 +166,9 @@ export default function OnboardingPage() {
               >
                 <Building2 className="h-12 w-12" />
                 <div className="text-center">
-                  <div className="font-semibold text-lg">Virksomhed</div>
+                  <div className="font-semibold text-lg">{dict?.auth?.roleCompany || 'Virksomhed'}</div>
                   <div className="text-sm text-muted-foreground">
-                    Jeg søger vikarer
+                    {dict?.auth?.roleCompanyDescription || 'Jeg søger midlertidige medarbejdere'}
                   </div>
                 </div>
               </Button>

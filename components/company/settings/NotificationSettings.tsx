@@ -18,7 +18,7 @@ interface NotificationPreferences {
     new_worker_applied: boolean;
     offer_accepted: boolean;
     pending_workdays: boolean;
-    pick_candidates: boolean;
+    pick_applicants: boolean;
     rate_worker: boolean;
   };
 }
@@ -33,7 +33,7 @@ const defaultPreferences: NotificationPreferences = {
     new_worker_applied: true,
     offer_accepted: true,
     pending_workdays: true,
-    pick_candidates: true,
+    pick_applicants: true,
     rate_worker: true,
   },
 };
@@ -296,7 +296,7 @@ export default function NotificationSettings({ userId }: NotificationSettingsPro
 
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="flex-1">
-                <Label htmlFor="type_pick_candidates" className="font-semibold cursor-pointer">
+                <Label htmlFor="type_pick_applicants" className="font-semibold cursor-pointer">
                   Pick Applicants
                 </Label>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -304,9 +304,9 @@ export default function NotificationSettings({ userId }: NotificationSettingsPro
                 </p>
               </div>
               <Switch
-                id="type_pick_candidates"
-                checked={preferences.types.pick_candidates}
-                onCheckedChange={(checked) => handleTypeChange('pick_candidates', checked)}
+                id="type_pick_applicants"
+                checked={preferences.types.pick_applicants}
+                onCheckedChange={(checked) => handleTypeChange('pick_applicants', checked)}
                 disabled={submitLoading}
               />
             </div>
