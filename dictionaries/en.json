@@ -86,6 +86,11 @@
       "unknownError": "Unknown error occurred"
     }
   },
+  "onboarding": {
+    "title": "Choose your role",
+    "description": "Select whether you are a worker or a company",
+    "roleUpdateError": "An error occurred while updating your role. Please try again."
+  },
   "common": {
     "welcome": "Welcome",
     "loading": "Loading...",

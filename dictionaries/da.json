@@ -86,6 +86,11 @@
       "unknownError": "Ukendt fejl opstod"
     }
   },
+  "onboarding": {
+    "title": "Vælg din rolle",
+    "description": "Vælg om du er en arbejder eller en virksomhed",
+    "roleUpdateError": "Der opstod en fejl ved opdatering af rolle. Prøv igen."
+  },
   "common": {
     "welcome": "Velkommen",
     "loading": "Indlæser...",
