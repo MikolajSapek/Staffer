@@ -8,6 +8,8 @@ import DashboardActionButtons from '@/components/dashboard/DashboardActionButton
 import ArchivedShiftsList from '@/components/dashboard/ArchivedShiftsList';
 import { Card, CardContent } from '@/components/ui/card';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CompanyDashboardPage({
   params,
 }: {
@@ -89,7 +91,7 @@ export default async function CompanyDashboardPage({
     .limit(10);
 
   if (activeError) {
-    console.error('Error fetching active shifts:', activeError);
+    // Error fetching active shifts - continue with empty array
   }
 
   // Map shifts to flatten avatar_url and phone_number from worker_details

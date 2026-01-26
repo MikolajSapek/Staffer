@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import ApplicantsClient from './ApplicantsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ApplicantsPage({
   params,
 }: {
@@ -18,7 +20,6 @@ export default async function ApplicantsPage({
 
     // Handle network/auth errors gracefully
     if (error) {
-      console.error('Auth error in ApplicantsPage:', error.message);
       // Redirect to login on auth errors (including network failures)
       redirect(`/${lang}/login`);
     }
@@ -92,7 +93,6 @@ export default async function ApplicantsPage({
 
     // Handle fetch errors gracefully
     if (fetchError) {
-      console.error('Error fetching applications:', fetchError);
       // Return empty state instead of crashing
       return (
         <div className="container mx-auto px-4 py-6">
@@ -128,7 +128,6 @@ export default async function ApplicantsPage({
   );
   } catch (err: unknown) {
     // Catch any unexpected errors and redirect to login
-    console.error('Unexpected error in ApplicantsPage:', err);
     redirect(`/${lang}/login`);
   }
 }

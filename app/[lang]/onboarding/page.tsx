@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import OnboardingClient from './OnboardingClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function OnboardingPage({
   params,
 }: {
