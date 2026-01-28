@@ -1,12 +1,21 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { getCompanyNotificationCounts } from '@/app/actions/notifications';
+import { COMPANY_NAVIGATION } from '@/lib/config/company-navigation';
 import { 
   User, 
   LogOut, 
@@ -116,13 +125,11 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   // Jeśli to strona z własnym Sidebar -> Nie renderuj starego Navbara
   if (shouldHideNavbar) return null;
   
-  const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState({ applicants: 0, finances: 0 });
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Get page title based on pathname
   const getPageTitle = () => {
@@ -159,23 +166,6 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   };
 
   const pageTitle = getPageTitle();
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
 
   // Fetch user and role
   useEffect(() => {
@@ -350,7 +340,6 @@ export default function Navbar({ dict, lang }: NavbarProps) {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      setIsOpen(false);
       setUser(null);
       setRole(null);
       setAvatarUrl(null);
@@ -368,10 +357,26 @@ export default function Navbar({ dict, lang }: NavbarProps) {
     return 'U';
   };
 
-  const toggleDropdown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsOpen(!isOpen);
+  const getNotificationCount = (itemName: string) => {
+    if (itemName === 'Applicants') return counts.applicants;
+    if (itemName === 'Finances') return counts.finances;
+    return 0;
+  };
+
+  // Map item names to dictionary keys
+  const getItemLabel = (name: string) => {
+    const labelMap: Record<string, string> = {
+      'Dashboard': dict.nav?.dashboard || dict.navigation.dashboard,
+      'Shifts': dict.nav?.shifts || 'Shifts',
+      'Job Listings': 'Job Listings',
+      'Timesheets': dict.nav?.timesheets || dict.navigation.timesheets,
+      'Applicants': dict.nav?.applicants || dict.navigation.applicants,
+      'Locations': dict.nav?.locations || 'Locations',
+      'Templates': 'Templates',
+      'Team': 'Team',
+      'Finances': dict.nav?.finances || dict.navigation.finances,
+    };
+    return labelMap[name] || name;
   };
 
   if (loading) {
@@ -416,27 +421,26 @@ export default function Navbar({ dict, lang }: NavbarProps) {
               </Button>
             </div>
           ) : (
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={toggleDropdown}
-                className="rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary cursor-pointer"
-                aria-label={dict.navigation.userMenu}
-                type="button"
-              >
-                <Avatar>
-                  <AvatarImage src={avatarUrl || undefined} alt={user?.email || dict.common.user} />
-                  <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                </Avatar>
-              </button>
-
-              {isOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-[100]">
-                  {/* SEKCJA 1: ZAWSZE WIDOCZNA - HEADER */}
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]" title={user?.email || dict.common.user}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-10 w-10 rounded-full p-0 overflow-hidden ring-1 ring-border hover:ring-2 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={avatarUrl || undefined} alt={user?.email || dict.common.user} />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {/* Header */}
+                <DropdownMenuLabel>
+                  <div>
+                    <p className="text-sm font-semibold truncate" title={user?.email || dict.common.user}>
                       {user?.email || dict.common.user}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {role === 'worker' 
                         ? dict.workerNav.roleLabel
                         : role 
@@ -444,171 +448,108 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         : dict.navigation.noRoleAssigned}
                     </p>
                   </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
 
-                  {/* SEKCJA 2: OPCJE ZALEŻNE OD ROLI */}
-                  {role === 'worker' && (
-                    <>
-                      <Link
-                        href={`/${lang}/schedule`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {dict.workerNav.calendar}
-                      </Link>
-                      <Link
-                        href={`/${lang}/applications`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Briefcase className="mr-2 h-4 w-4" />
-                        {dict.workerNav.applications}
-                      </Link>
-                      <Link
-                        href={`/${lang}/finances`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        {dict.workerNav.finances}
-                      </Link>
-                    </>
-                  )}
+                {/* Mobile Navigation Section - Only for company users */}
+                {role === 'company' && (
+                  <div className="lg:hidden">
+                    {(() => {
+                      const flat = COMPANY_NAVIGATION.flatMap((c) => c.items);
+                      const dashboard = flat.find((i) => i.name === 'Dashboard');
+                      const shifts = flat.find((i) => i.name === 'Shifts');
+                      const finances = flat.find((i) => i.name === 'Finances');
 
-                  {role === 'company' && (
-                    <>
-                      <Link
-                        href={`/${lang}/dashboard`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        {dict.nav?.dashboard || dict.navigation.dashboard}
-                      </Link>
-                      <Link
-                        href={`/${lang}/shifts`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Clock className="mr-2 h-4 w-4" />
-                        {dict.nav?.shifts || 'Shifts'}
-                      </Link>
-                      <Link
-                        href={`/${lang}/locations`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <MapPin className="mr-2 h-4 w-4" />
-                        {dict.nav?.locations || 'Locations'}
-                      </Link>
-                      <Link
-                        href={`/${lang}/applicants`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        <span className="flex items-center">
-                          {dict.nav?.applicants || dict.navigation.applicants}
-                          {counts.applicants > 0 && (
-                            <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
-                              {counts.applicants}
-                            </span>
+                      return (
+                        <>
+                          {dashboard && (
+                            <DropdownMenuItem asChild>
+                              <Link href={`/${lang}${dashboard.href}`} className="flex w-full items-center gap-2">
+                                <dashboard.icon className="h-4 w-4" />
+                                <span className="flex-1">{getItemLabel(dashboard.name)}</span>
+                              </Link>
+                            </DropdownMenuItem>
                           )}
-                        </span>
-                      </Link>
-                      <Link
-                        href={`/${lang}/timesheets`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        {dict.nav?.timesheets || dict.navigation.timesheets}
-                      </Link>
-                      <Link
-                        href={`/${lang}/billing`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Wallet className="mr-2 h-4 w-4" />
-                        <span className="flex items-center">
-                          {dict.nav?.finances || dict.navigation.finances}
-                          {counts.finances > 0 && (
-                            <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
-                              {counts.finances}
-                            </span>
+                          {shifts && (
+                            <DropdownMenuItem asChild>
+                              <Link href={`/${lang}${shifts.href}`} className="flex w-full items-center gap-2">
+                                <shifts.icon className="h-4 w-4" />
+                                <span className="flex-1">{getItemLabel(shifts.name)}</span>
+                              </Link>
+                            </DropdownMenuItem>
                           )}
-                        </span>
-                      </Link>
-                    </>
-                  )}
-
-                  {/* SEKCJA 3: ZAWSZE WIDOCZNA - STOPKA */}
-                  <div className="border-t border-gray-100 mt-1">
-                    <Link
-                      href={`/${lang}`}
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <Globe className="mr-2 h-4 w-4" />
-                      {dict.jobBoard?.title || 'Job Board'}
-                    </Link>
-                    <Link
-                      href={`/${lang}/profile`}
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <UserCircle className="mr-2 h-4 w-4" />
-                      {dict.nav?.profile || dict.navigation.profile}
-                    </Link>
-                    <Link
-                      href={`/${lang}/support`}
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <LifeBuoy className="mr-2 h-4 w-4" />
-                      {dict.nav?.support || 'Support'}
-                    </Link>
-                    {role === 'worker' && (
-                      <Link
-                        href={`/${lang}/worker/settings`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        {dict.nav?.settings || 'Settings'}
-                      </Link>
-                    )}
-                    {role === 'company' && (
-                      <Link
-                        href={`/${lang}/settings`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        {dict.nav?.settings || 'Settings'}
-                      </Link>
-                    )}
-                    {!role && (
-                      <Link
-                        href={`/${lang}/profile`}
-                        onClick={() => setIsOpen(false)}
-                        className="flex items-center px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors"
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        {dict.nav?.settings || 'Settings'} <span className="ml-1 text-xs">(Setup Required)</span>
-                      </Link>
-                    )}
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {dict.nav?.logout || dict.navigation.logout}
-                  </button>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/${lang}/marketplace`} className="flex w-full items-center gap-2">
+                              <Globe className="h-4 w-4" />
+                              <span className="flex-1">Job Listings</span>
+                            </Link>
+                          </DropdownMenuItem>
+                          {finances && (
+                            <DropdownMenuItem asChild>
+                              <Link href={`/${lang}${finances.href}`} className="flex w-full items-center gap-2">
+                                <finances.icon className="h-4 w-4" />
+                                <span className="flex-1">{getItemLabel(finances.name)}</span>
+                                {finances.hasBadge && getNotificationCount(finances.name) > 0 && (
+                                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold leading-none text-white min-w-[1.25rem]">
+                                    {getNotificationCount(finances.name)}
+                                  </span>
+                                )}
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+
+                {/* Worker Navigation Section - Mobile */}
+                {role === 'worker' && (
+                  <div className="lg:hidden">
+                    <DropdownMenuItem asChild>
+                      <Link href={`/${lang}/schedule`} className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>{dict.workerNav.calendar}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/${lang}/applications`} className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4" />
+                        <span>{dict.workerNav.applications}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/${lang}/finances`} className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        <span>{dict.workerNav.finances}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </div>
+                )}
+
+                {/* Common Links - Always visible */}
+                <DropdownMenuSeparator className="lg:hidden" />
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={
+                      role === 'company'
+                        ? `/${lang}/company/profile`
+                        : `/${lang}/profile`
+                    }
+                    className="flex w-full items-center gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span>{dict.nav?.logout || dict.navigation.logout}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>

@@ -120,7 +120,7 @@ export default function CompanyLayoutWrapper({
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* 1. Sidebar (Lewa strona, pełna wysokość) */}
-      <aside className="hidden md:flex flex-col w-64 border-r bg-white h-full z-30">
+      <aside className="hidden lg:flex flex-col w-64 border-r bg-white h-full z-30">
         <CompanySidebarDynamic dict={dict} lang={currentLang} />
       </aside>
 

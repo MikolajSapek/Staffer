@@ -2,20 +2,45 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { usePathname, useParams } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { COMPANY_NAVIGATION, SYSTEM_LINKS } from '@/lib/config/company-navigation';
+import { LayoutDashboard, Briefcase, FileText, Users, MapPin, Copy, UserCog, Wallet, Settings, LogOut } from 'lucide-react';
+import { getCompanyNotificationCounts } from '@/app/actions/notifications';
 
 interface CompanyHeaderProps {
   dict: {
     nav?: {
+      dashboard: string;
+      shifts: string;
+      locations: string;
+      timesheets: string;
+      applicants: string;
+      settings: string;
+      profile: string;
+      support: string;
       logout: string;
+      finances: string;
     };
     navigation: {
       logout: string;
     };
     common: {
       user: string;
+    };
+    dashboard?: {
+      team?: string;
+      templates?: string;
     };
   };
   lang: string;
@@ -36,6 +61,7 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [counts, setCounts] = useState({ applicants: 0, finances: 0 });
 
   // Get page title based on pathname
   const getPageTitle = () => {
@@ -149,12 +175,69 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
     };
   }, []);
 
+  // Fetch notification counts
+  useEffect(() => {
+    if (user) {
+      getCompanyNotificationCounts().then(setCounts).catch(() => {
+        setCounts({ applicants: 0, finances: 0 });
+      });
+    } else {
+      setCounts({ applicants: 0, finances: 0 });
+    }
+  }, [user]);
+
 
   const getUserInitials = () => {
     if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
     return 'U';
+  };
+
+  const handleLogout = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push(`/${currentLang}`);
+      router.refresh();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const getNotificationCount = (itemName: string) => {
+    if (itemName === 'Applicants') return counts.applicants;
+    if (itemName === 'Finances') return counts.finances;
+    return 0;
+  };
+
+  // Map item names to dictionary keys
+  const getItemLabel = (name: string) => {
+    const labelMap: Record<string, string> = {
+      'Dashboard': dict.nav?.dashboard || 'Dashboard',
+      'Shifts': dict.nav?.shifts || 'Shifts',
+      'Job Listings': 'Job Listings',
+      'Timesheets': dict.nav?.timesheets || 'Timesheets',
+      'Applicants': dict.nav?.applicants || 'Applicants',
+      'Locations': dict.nav?.locations || 'Locations',
+      'Templates': dict.dashboard?.templates || 'Templates',
+      'Team': dict.dashboard?.team || 'Team',
+      'Finances': dict.nav?.finances || 'Finances',
+      'Settings': dict.nav?.settings || 'Settings',
+      'Support': dict.nav?.support || 'Support',
+    };
+    return labelMap[name] || name;
+  };
+
+  const isActive = (href: string) => {
+    if (!pathname) return false;
+    const pathWithoutLang = pathname.replace(/^\/(en-US|da)/, '') || '/';
+    const hrefWithoutLang = href.startsWith('/') ? href : `/${href}`;
+    
+    if (pathWithoutLang === hrefWithoutLang) return true;
+    if (hrefWithoutLang !== '/' && pathWithoutLang.startsWith(hrefWithoutLang)) return true;
+    
+    return false;
   };
 
   const pageTitle = getPageTitle();
@@ -184,7 +267,91 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
             <p className="text-sm font-medium text-slate-700">{user?.email || dict.common.user}</p>
             <p className="text-xs text-slate-500 capitalize">Company</p>
           </div>
-          <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white">
+          
+          {/* Mobile Navigation Dropdown */}
+          <div className="block lg:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    <span className="font-bold">{getUserInitials()}</span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div>
+                    <p className="text-sm font-semibold truncate">{user?.email || dict.common.user}</p>
+                    <p className="text-xs text-muted-foreground">Company</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                
+                {/* Navigation Links from Sidebar */}
+                {COMPANY_NAVIGATION.map((category) =>
+                  category.items.map((item) => {
+                    const Icon = item.icon;
+                    const notificationCount = item.hasBadge ? getNotificationCount(item.name) : 0;
+                    
+                    return (
+                      <DropdownMenuItem key={item.name} asChild>
+                        <Link
+                          href={`/${currentLang}${item.href}`}
+                          className={`flex items-center gap-2 ${isActive(item.href) ? 'bg-accent' : ''}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="flex-1">{getItemLabel(item.name)}</span>
+                          {notificationCount > 0 && (
+                            <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
+                              {notificationCount}
+                            </span>
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })
+                )}
+                
+                {/* System Links (excluding Settings - it goes at the bottom) */}
+                {SYSTEM_LINKS.filter(item => item.name !== 'Settings' && item.name !== 'Support').map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.name} asChild>
+                      <Link
+                        href={`/${currentLang}${item.href}`}
+                        className={`flex items-center gap-2 ${isActive(item.href) ? 'bg-accent' : ''}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{getItemLabel(item.name)}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+                
+                <DropdownMenuSeparator />
+                
+                {/* Settings and Logout at the bottom */}
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={`/${currentLang}/settings`}
+                    className={`flex items-center gap-2 ${isActive('/settings') ? 'bg-accent' : ''}`}
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>{dict.nav?.settings || 'Settings'}</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span>{dict.nav?.logout || dict.navigation.logout}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
+          {/* Desktop Avatar (no dropdown) */}
+          <div className="hidden lg:block h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Profile" className="h-full w-full rounded-full object-cover" />
             ) : (

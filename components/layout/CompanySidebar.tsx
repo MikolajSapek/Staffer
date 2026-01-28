@@ -114,7 +114,7 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
   const systemLinksWithoutSettings = SYSTEM_LINKS.filter(item => item.name !== 'Settings');
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="hidden lg:flex flex-col h-full">
       {/* Logo - Top */}
       <div className="h-16 flex items-center px-6 border-b">
         <Link href={`/${currentLang}/dashboard`} className="flex items-center">
