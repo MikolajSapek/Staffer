@@ -199,6 +199,7 @@ export async function updateShiftAction(
       p_start_time: startIso,
       p_end_time: endIso,
       p_location_id: formData.location_id ?? null,
+      p_manager_id: formData.manager_id ?? null,
       p_hourly_rate: hourlyRate,
       p_vacancies_total: vacanciesTotal,
       p_category: formData.category,

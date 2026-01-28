@@ -208,7 +208,7 @@ export default function ShiftsClient({ dict, statusDict, lang }: ShiftsClientPro
                   </div>
                   <div className="mt-4 flex justify-between gap-2">
                     <Button asChild variant="outline" size="sm">
-                      <Link href={`/${lang}/shifts/${shift.id}`}>
+                      <Link href={`/${lang}/listings/${shift.id}`}>
                         {dict.viewDetails}
                       </Link>
                     </Button>

@@ -223,7 +223,7 @@ export default function ActiveShiftsList({
       const result = await cancelWorkerAction(
         selectedApplicationId,
         reason,
-        `/${lang}/shifts`
+        `/${lang}/listings`
       );
 
       if (!result.success) {
@@ -442,7 +442,7 @@ export default function ActiveShiftsList({
                         className="gap-1"
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/${lang}/shifts/${shift.id}`);
+                          router.push(`/${lang}/listings/${shift.id}`);
                         }}
                       >
                         <Eye className="h-3 w-3" />

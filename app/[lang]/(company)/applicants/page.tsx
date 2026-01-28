@@ -109,24 +109,24 @@ export default async function ApplicantsPage({
     }
 
     return (
-    <div className="container mx-auto px-4 py-6">
-      {!allApplications || allApplications.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              {dict.applicantsPage.empty}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <ApplicantsClient
-          applications={allApplications as any}
-          dict={dict}
-          lang={lang}
-        />
-      )}
-    </div>
-  );
+      <>
+        {!allApplications || allApplications.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                {dict.applicantsPage.empty}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <ApplicantsClient
+            applications={allApplications as any}
+            dict={dict}
+            lang={lang}
+          />
+        )}
+      </>
+    );
   } catch (err: unknown) {
     // Catch any unexpected errors and redirect to login
     redirect(`/${lang}/login`);

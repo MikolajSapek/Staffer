@@ -1,49 +1,27 @@
-import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { getDictionary } from '@/app/[lang]/dictionaries';
 import { createClient } from '@/utils/supabase/server';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { getDictionary } from '@/app/[lang]/dictionaries';
-import DashboardActionButtons from '@/components/dashboard/DashboardActionButtons';
+import { Button } from '@/components/ui/button';
 import ShiftsTabs from '@/components/dashboard/ShiftsTabs';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CompanyDashboardPage({
-  params,
-}: {
-  params: Promise<{ lang: string }>;
+export default async function CompanyListingsPage({ 
+  params 
+}: { 
+  params: Promise<{ lang: string }> 
 }) {
   const { lang } = await params;
   const dict = await getDictionary(lang as 'en-US' | 'da');
   const supabase = await createClient();
+  
+  // Layout już sprawdza autoryzację i rolę - nie trzeba powtarzać tutaj
   const { data: { user } } = await supabase.auth.getUser();
-
+  
   if (!user) {
-    redirect(`/${lang}/login`);
-  }
-
-  // Get user profile to check role (layout already checks this, but double-check for safety)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (!profile || profile.role !== 'company') {
-    redirect(`/${lang}`);
-  }
-
-  // Check if company has completed onboarding
-  const { data: companyDetails } = await supabase
-    .from('company_details')
-    .select('company_name')
-    .eq('profile_id', user.id)
-    .maybeSingle();
-
-  // If no company_details, redirect to company-setup
-  if (!companyDetails) {
-    redirect(`/${lang}/company-setup`);
+    return null; // Layout już przekierowuje
   }
 
   // Upewnij się, że stare zmiany są oznaczone jako completed
@@ -54,7 +32,7 @@ export default async function CompanyDashboardPage({
 
   // Fetch active (upcoming) shifts
   // Active = end_time >= now AND status != 'cancelled'
-  const { data: activeShifts, error: activeError } = await supabase
+  const { data: activeShifts } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -79,6 +57,7 @@ export default async function CompanyDashboardPage({
 
   // Fetch archived shifts
   // Archived = end_time < now OR status IN ('completed', 'cancelled')
+  // Używamy dwóch zapytań i łączymy wyniki
   const { data: pastShifts } = await supabase
     .from('shifts')
     .select(`
@@ -100,7 +79,7 @@ export default async function CompanyDashboardPage({
     .eq('company_id', user.id)
     .lt('end_time', now)
     .order('start_time', { ascending: false })
-    .limit(50);
+    .limit(100);
 
   const { data: statusShifts } = await supabase
     .from('shifts')
@@ -123,13 +102,13 @@ export default async function CompanyDashboardPage({
     .eq('company_id', user.id)
     .in('status', ['completed', 'cancelled'])
     .order('start_time', { ascending: false })
-    .limit(50);
+    .limit(100);
 
-  // Combine and deduplicate archived shifts
+  // Combine and deduplicate shifts
   const allArchivedShifts = [...(pastShifts || []), ...(statusShifts || [])];
   const uniqueArchivedShifts = Array.from(
     new Map(allArchivedShifts.map(shift => [shift.id, shift])).values()
-  ).slice(0, 50);
+  ).slice(0, 100);
 
   // Map shifts to flatten structure for ShiftsTabs component
   const mapShifts = (shifts: any[]) => {
@@ -161,47 +140,32 @@ export default async function CompanyDashboardPage({
   const mappedActiveShifts = mapShifts(activeShifts || []);
   const mappedArchivedShifts = mapShifts(uniqueArchivedShifts);
 
-  // Count pending applications (for Applicants button badge)
-  const { count: pendingCount } = await supabase
-    .from('shift_applications')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', user.id)
-    .eq('status', 'pending');
-
   return (
-    <div className="container mx-auto px-4 py-6">
-      {/* Action Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-end mb-6">
-          <Button asChild size="lg">
-            <Link href={`/${lang}/create-shift`}>
-              <Plus className="mr-2 h-4 w-4" />
-              {dict.dashboard.createJobListing}
-            </Link>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            {dict.companyShifts?.title || 'Shifts'}
+          </h1>
+          <p className="text-slate-500">
+            {dict.companyShifts?.description || 'Manage all your active job listings here.'}
+          </p>
+        </div>
+        <Link href={`/${lang}/create-shift`}>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="mr-2 h-4 w-4" /> 
+            {dict.createShift?.createNewShift || 'Create New Listing'}
           </Button>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mb-6">
-          <DashboardActionButtons
-            pendingCount={pendingCount || 0}
-            lang={lang}
-            dict={{
-              applicants: dict.dashboard.applicants,
-              applicantsDesc: dict.dashboard.applicantsDesc,
-              archiveShifts: dict.companyShifts.archiveShifts,
-              locations: dict.dashboard.locations,
-              templates: dict.dashboard.templates,
-              managers: dict.dashboard.managers || 'Managers',
-              managersDesc: dict.dashboard.managersDesc || 'Add and manage shift managers.',
-              pending: dict.dashboard.pending,
-            }}
-          />
-        </div>
+        </Link>
       </div>
 
-      {/* Shifts Section with Tabs */}
-      <div id="active-shifts" className="mb-8 scroll-mt-8">
+      {/* Content Area - Shifts Tabs */}
+      <Suspense fallback={
+        <div className="p-10 text-center text-gray-500">
+          <p>Loading shifts...</p>
+        </div>
+      }>
         <ShiftsTabs
           activeShifts={mappedActiveShifts}
           archivedShifts={mappedArchivedShifts}
@@ -235,8 +199,7 @@ export default async function CompanyDashboardPage({
             },
           }}
         />
-      </div>
+      </Suspense>
     </div>
   );
 }
-

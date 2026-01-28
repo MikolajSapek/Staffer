@@ -55,7 +55,7 @@ export default function DashboardActionButtons({
       </Link>
 
       {/* Archive Shifts - Full Width */}
-      <Link href={`/${lang}/shifts?status=completed`} className="md:col-span-3 block">
+      <Link href={`/${lang}/listings`} className="md:col-span-3 block">
         <Card className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer h-full">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <div className="flex items-center gap-3">

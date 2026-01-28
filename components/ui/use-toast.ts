@@ -11,9 +11,29 @@ export interface ToastOptions {
   duration?: number;
 }
 
+// Maximum number of visible toasts at once
+const MAX_VISIBLE_TOASTS = 1;
+
+/**
+ * Dismiss all existing toasts immediately
+ */
+function dismissAllToasts() {
+  if (typeof document === 'undefined') return;
+  
+  const container = document.getElementById('app-toast-container');
+  if (container) {
+    // Remove all child elements immediately
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+  }
+}
+
 /**
  * Minimal, self-contained toast helper inspired by shadcn/ui.
  * Renders toasts into a fixed container attached to document.body.
+ * - Position: bottom-right
+ * - Max visible toasts: 1 (previous toasts are dismissed)
  */
 export function useToast() {
   const toast = React.useCallback((options: ToastOptions) => {
@@ -25,6 +45,9 @@ export function useToast() {
       variant = 'default',
       duration = 4000,
     } = options;
+
+    // Dismiss all existing toasts before showing new one (limit to 1)
+    dismissAllToasts();
 
     // Ensure container exists
     let container = document.getElementById('app-toast-container');
@@ -107,6 +130,11 @@ export function useToast() {
     window.setTimeout(remove, duration);
   }, []);
 
-  return { toast };
+  // Expose dismiss function for manual control
+  const dismiss = React.useCallback(() => {
+    dismissAllToasts();
+  }, []);
+
+  return { toast, dismiss };
 }
 

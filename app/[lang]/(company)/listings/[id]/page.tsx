@@ -49,6 +49,7 @@ export default async function ShiftDetailsPage({
       status,
       category,
       location_id,
+      manager_id,
       is_urgent,
       possible_overtime,
       company_id,
@@ -231,6 +232,13 @@ export default async function ShiftDetailsPage({
     .eq('company_id', user.id)
     .order('name', { ascending: true });
 
+  // Fetch company managers for use in edit shift dialog
+  const { data: managersData } = await supabase
+    .from('managers')
+    .select('id, first_name, last_name')
+    .eq('company_id', user.id)
+    .order('first_name', { ascending: true });
+
   // Build dispute information map for each worker
   // Map worker_id to payment metadata (for CorrectionBadge component)
   const disputesMap: Record<string, { 
@@ -268,6 +276,7 @@ export default async function ShiftDetailsPage({
       lang={lang}
       dict={dict}
       locations={locationsData || []}
+      managers={managersData || []}
       createShiftDict={dict.createShift}
       shiftOptions={dict.shiftOptions}
     />

@@ -72,6 +72,50 @@ interface NavbarProps {
 export default function Navbar({ dict, lang }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Lista tras, które mają WŁASNY layout (Sidebar) i nie potrzebują starego Navbara
+  const routesWithSidebar = [
+    // Trasy Firmy
+    '/dashboard',
+    '/listings',    // Zmienione z /shifts na /listings
+    '/applicants',
+    '/locations',
+    '/templates',
+    '/billing',
+    '/managers',
+    '/timesheets',
+    '/create-shift',
+    '/settings',    // Tylko company settings (nie /worker/settings)
+    '/company/profile', // Profil firmy
+    
+    // Trasy Pracownika (DODANE TERAZ)
+    '/market',       // To jest Job Listings dla zalogowanego
+    '/schedule',
+    '/applications', // My Shifts
+    '/finances',
+    '/profile',      // Profil pracownika
+    '/worker/settings',
+    '/support'       // Support również jest w (worker)
+  ];
+
+  // Sprawdź, czy aktualna ścieżka zawiera którąś z powyższych
+  // Usuwamy prefix języka przed sprawdzeniem
+  const pathWithoutLang = pathname?.replace(/^\/(en-US|da)/, '') || '/';
+  
+  // Sprawdź czy jesteśmy na którejś z tych tras
+  const shouldHideNavbar = routesWithSidebar.some(route => {
+    // Dla /settings, upewnij się że to nie jest /worker/settings
+    if (route === '/settings') {
+      return pathWithoutLang === '/settings' || 
+             (pathWithoutLang.startsWith('/settings/') && !pathWithoutLang.startsWith('/worker/'));
+    }
+    // Dla pozostałych routes użyj startsWith, żeby złapać też podstrony (np. /shifts/[id])
+    return pathWithoutLang.startsWith(route);
+  });
+
+  // Jeśli to strona z własnym Sidebar -> Nie renderuj starego Navbara
+  if (shouldHideNavbar) return null;
+  
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
@@ -101,7 +145,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       // Company pages
       '/dashboard': 'Dashboard',
       '/create-shift': 'Create Shift',
-      '/shifts': 'Shifts',
+      '/listings': 'Job Listings',
       '/applicants': 'Applicants',
       '/managers': 'Managers',
       '/templates': 'Shift Templates',

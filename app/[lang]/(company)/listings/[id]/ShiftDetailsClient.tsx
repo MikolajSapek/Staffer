@@ -76,6 +76,7 @@ interface Shift {
   status: string;
   category: string;
   location_id: string;
+  manager_id?: string | null;
   is_urgent: boolean;
   company_id: string;
   must_bring?: string | null;
@@ -114,6 +115,7 @@ interface ShiftDetailsClientProps {
   lang: string;
   dict: any;
   locations: Array<{ id: string; name: string; address: string }>;
+  managers?: Array<{ id: string; first_name: string; last_name: string }>;
   createShiftDict: any;
   shiftOptions: any;
 }
@@ -126,6 +128,7 @@ export default function ShiftDetailsClient({
   lang,
   dict,
   locations,
+  managers = [],
   createShiftDict,
   shiftOptions,
 }: ShiftDetailsClientProps) {
@@ -225,7 +228,7 @@ export default function ShiftDetailsClient({
         const result = await cancelWorkerAction(
           cancelTarget.applicationId,
           reason,
-          `/${lang}/shifts/${shift.id}`
+          `/${lang}/listings/${shift.id}`
         );
 
         if (!result.success) {
@@ -748,6 +751,7 @@ export default function ShiftDetailsClient({
           description: shift.description,
           category: shift.category,
           location_id: shift.location_id,
+          manager_id: shift.manager_id || null,
           start_time: shift.start_time,
           end_time: shift.end_time,
           hourly_rate: shift.hourly_rate,
@@ -765,6 +769,7 @@ export default function ShiftDetailsClient({
         }}
         lang={lang}
         locations={locations}
+        managers={managers}
         createShiftDict={createShiftDict}
         shiftOptions={shiftOptions}
       />

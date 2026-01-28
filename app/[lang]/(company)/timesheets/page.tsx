@@ -29,7 +29,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { getDictionary } from '@/app/[lang]/dictionaries';
-import TimesheetsClient from '@/app/[lang]/(company)/timesheets/TimesheetsClient';
+import TimesheetsClient from './TimesheetsClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -182,7 +182,7 @@ export default async function TimesheetsPage({
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{dict.timesheetsPage.title}</h1>
         <p className="text-muted-foreground">
@@ -195,7 +195,7 @@ export default async function TimesheetsPage({
         dict={dict}
         lang={lang}
       />
-    </div>
+    </>
   );
 }
 

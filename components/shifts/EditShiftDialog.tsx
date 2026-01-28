@@ -18,12 +18,19 @@ interface Location {
   address: string;
 }
 
+interface Manager {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 interface ShiftForEdit {
   id: string;
   title: string;
   description: string | null;
   category: string;
   location_id: string;
+  manager_id?: string | null;
   start_time: string;
   end_time: string;
   hourly_rate: number;
@@ -46,6 +53,7 @@ interface EditShiftDialogProps {
   shift: ShiftForEdit | null;
   lang: string;
   locations: Location[];
+  managers?: Manager[];
   createShiftDict: any;
   shiftOptions: any;
 }
@@ -56,6 +64,7 @@ export default function EditShiftDialog({
   shift,
   lang,
   locations,
+  managers = [],
   createShiftDict,
   shiftOptions,
 }: EditShiftDialogProps) {
@@ -94,6 +103,7 @@ export default function EditShiftDialog({
               description: shift.description,
               category: shift.category,
               location_id: shift.location_id,
+              manager_id: shift.manager_id ?? null,
               start_time: shift.start_time,
               end_time: shift.end_time,
               hourly_rate: shift.hourly_rate,
@@ -114,6 +124,7 @@ export default function EditShiftDialog({
             dict={createShiftDict}
             shiftOptions={shiftOptions}
             locations={locations}
+            managers={managers}
             onSuccess={handleSuccess}
             onClose={handleClose}
             className="border-0 shadow-none"

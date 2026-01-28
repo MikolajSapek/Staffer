@@ -32,12 +32,19 @@ interface Location {
   address: string;
 }
 
+interface Manager {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 interface EditShiftFormProps {
   initialData: {
     title: string;
     description: string | null;
     category: string;
     location_id: string;
+    manager_id?: string | null;
     start_time: string;
     end_time: string;
     hourly_rate: number;
@@ -107,6 +114,7 @@ interface EditShiftFormProps {
     };
   };
   locations: Array<{ id: string; name: string; address: string }>;
+  managers?: Array<{ id: string; first_name: string; last_name: string }>;
   onSuccess?: () => void;
   onClose?: () => void;
   className?: string;
@@ -138,14 +146,16 @@ export default function EditShiftForm({
   dict,
   shiftOptions,
   locations,
+  managers = [],
   onSuccess,
   onClose,
   className,
 }: EditShiftFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
+  const [availableManagers, setAvailableManagers] = useState<Manager[]>(managers);
 
   // Initialize form state with clean data mapping
   const [formData, setFormData] = useState({
@@ -153,6 +163,7 @@ export default function EditShiftForm({
     description: initialData.description || '',
     category: initialData.category || '',
     location_id: initialData.location_id || (locations[0]?.id ?? ''),
+    manager_id: initialData.manager_id || '',
     start_time: toLocalISO(initialData.start_time),
     end_time: toLocalISO(initialData.end_time),
     hourly_rate: initialData.hourly_rate.toString(),
@@ -169,11 +180,13 @@ export default function EditShiftForm({
     required_licence_ids: initialData.required_licence_ids || [],
   });
 
-  // Fetch available skills on mount
+  // Fetch available skills and managers on mount
   useEffect(() => {
-    async function fetchSkills() {
+    async function fetchSkillsAndManagers() {
       try {
         const supabase = createClient();
+        
+        // Fetch skills
         const { data: skillsData, error: skillsError } = await supabase
           .from('skills')
           .select('id, name, category')
@@ -182,13 +195,55 @@ export default function EditShiftForm({
         if (!skillsError && skillsData) {
           setAvailableSkills(skillsData);
         }
+        
+        // Fetch managers if not passed as props
+        if (managers.length === 0) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: managersData, error: managersError } = await supabase
+              .from('managers')
+              .select('id, first_name, last_name')
+              .eq('company_id', user.id)
+              .order('first_name', { ascending: true });
+
+            if (!managersError && managersData) {
+              setAvailableManagers(managersData);
+            }
+          }
+        }
       } catch (err) {
-        // Continue without skills
+        // Continue without skills/managers
       }
     }
 
-    fetchSkills();
-  }, []);
+    fetchSkillsAndManagers();
+  }, [managers.length]);
+
+  // Sync form data when initialData changes (handles async data loading)
+  // This ensures must_bring, manager_id and required_language_ids are populated
+  // even if they arrive after the initial render
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title || '',
+        description: initialData.description || '',
+        category: initialData.category || '',
+        location_id: initialData.location_id || (locations[0]?.id ?? ''),
+        manager_id: initialData.manager_id || '',
+        start_time: toLocalISO(initialData.start_time),
+        end_time: toLocalISO(initialData.end_time),
+        hourly_rate: initialData.hourly_rate.toString(),
+        break_minutes: initialData.break_minutes.toString(),
+        is_break_paid: initialData.is_break_paid,
+        vacancies_total: initialData.vacancies_total.toString(),
+        is_urgent: initialData.is_urgent,
+        possible_overtime: initialData.possible_overtime,
+        mustBring: initialData.must_bring || '',
+        required_language_ids: initialData.required_language_ids || [],
+        required_licence_ids: initialData.required_licence_ids || [],
+      });
+    }
+  }, [initialData, locations]);
 
   const isLocked = vacanciesTaken > 0;
 
@@ -273,6 +328,7 @@ export default function EditShiftForm({
 
       const payload = {
         location_id: formData.location_id || null,
+        manager_id: formData.manager_id && formData.manager_id !== 'none' ? formData.manager_id : null,
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         category: formData.category,
@@ -296,6 +352,8 @@ export default function EditShiftForm({
         const errorMessage = result.error || result.message || 'Failed to update shift';
         setError(errorMessage);
         
+        // Dismiss any existing toasts before showing error
+        dismiss();
         toast({
           variant: 'destructive',
           title: 'Error updating shift',
@@ -306,6 +364,8 @@ export default function EditShiftForm({
         return;
       }
 
+      // Dismiss any existing toasts before showing success
+      dismiss();
       toast({
         variant: 'default',
         title: 'Success',
@@ -407,6 +467,31 @@ export default function EditShiftForm({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Shift Manager */}
+          <div className="space-y-2">
+            <Label htmlFor="manager_id">Shift Manager / Contact Person</Label>
+            <Select
+              value={formData.manager_id || 'none'}
+              onValueChange={(value) => setFormData({ ...formData, manager_id: value })}
+              disabled={loading}
+            >
+              <SelectTrigger id="manager_id" className="w-full">
+                <SelectValue placeholder="Select a manager (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No manager</SelectItem>
+                {availableManagers.map((manager) => (
+                  <SelectItem key={manager.id} value={manager.id}>
+                    {manager.first_name} {manager.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Assign a manager as the contact person for this shift
+            </p>
           </div>
 
           {/* Date & Time */}

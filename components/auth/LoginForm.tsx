@@ -103,22 +103,50 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
       }
 
       if (data?.user) {
-        // Determine redirect path: prioritize 'next' parameter, otherwise go to dashboard
-        let redirectPath = `/${lang}/dashboard`;
-        
-        if (nextParam) {
-          // Validate next parameter to prevent open redirect attacks
-          // Only allow relative paths starting with /
-          const trimmedNext = nextParam.trim();
-          if (trimmedNext.startsWith('/') && !trimmedNext.match(/^https?:\/\//i)) {
-            // Ensure the path includes locale if it doesn't already
-            const hasLocale = trimmedNext.startsWith(`/${lang}/`) || trimmedNext === `/${lang}`;
-            redirectPath = hasLocale ? trimmedNext : `/${lang}${trimmedNext}`;
+        // Pobierz dane użytkownika, aby sprawdzić rolę
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+        if (currentUser) {
+          // Pobierz rolę z tabeli profiles
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single();
+
+          const userRole = profile?.role;
+
+          // Determine redirect path: prioritize 'next' parameter, otherwise use role-based redirect
+          let redirectPath = `/${lang}/dashboard`; // Default fallback
+          
+          if (nextParam) {
+            // Validate next parameter to prevent open redirect attacks
+            // Only allow relative paths starting with /
+            const trimmedNext = nextParam.trim();
+            if (trimmedNext.startsWith('/') && !trimmedNext.match(/^https?:\/\//i)) {
+              // Ensure the path includes locale if it doesn't already
+              const hasLocale = trimmedNext.startsWith(`/${lang}/`) || trimmedNext === `/${lang}`;
+              redirectPath = hasLocale ? trimmedNext : `/${lang}${trimmedNext}`;
+            }
+          } else {
+            // Logika przekierowania na podstawie roli
+            if (userRole === 'worker') {
+              // Pracownik idzie do ofert pracy
+              redirectPath = `/${lang}/market`;
+            } else if (userRole === 'company') {
+              // Firma idzie do dashboardu
+              redirectPath = `/${lang}/dashboard`;
+            } else {
+              // Fallback (np. admin)
+              redirectPath = `/${lang}/dashboard`;
+            }
           }
+          
+          // Use router.push for SPA navigation instead of full page reload
+          router.push(redirectPath);
+        } else {
+          router.refresh();
         }
-        
-        // Use router.push for SPA navigation instead of full page reload
-        router.push(redirectPath);
       } else {
         setError(dict.validation.loginFailed);
         setLoading(false);

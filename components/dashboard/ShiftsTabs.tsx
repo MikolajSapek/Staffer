@@ -119,10 +119,8 @@ export default function ShiftsTabs({
       .map(getWorkerDetails)
       .filter((worker): worker is NonNullable<typeof worker> => worker !== null);
 
-    // Archive shifts link to shift details, active shifts link to dashboard
-    const href = isArchived 
-      ? `/${lang}/shifts/${shift.id}` 
-      : `/${lang}/dashboard`;
+    // Archive shifts link to shift details, active shifts link to listings details
+    const href = `/${lang}/listings/${shift.id}`;
 
     return (
       <Link

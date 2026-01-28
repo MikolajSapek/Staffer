@@ -468,7 +468,13 @@ export function JobDetailsDialog({
 
           {/* Footer - Sticky Apply Button */}
           <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 sticky bottom-0">
-            {isApplied ? (
+            {userRole === 'company' ? (
+              <div className="w-full h-12 flex items-center justify-center">
+                <Badge variant="outline" className="text-sm text-gray-600">
+                  Preview Mode - View Only
+                </Badge>
+              </div>
+            ) : isApplied ? (
               <Button
                 disabled
                 className={cn(

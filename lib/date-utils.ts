@@ -40,10 +40,19 @@ export function formatDateTime(dateString: string | null): string {
 export function toLocalISO(dateStr: string | null | undefined): string {
   if (!dateStr) return '';
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '';
-    const offset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    
+    // Formatowanie 'sv-SE' daje format ISO (YYYY-MM-DD HH:mm) w czasie LOKALNYM przeglądarki
+    // Zamieniamy spację na 'T' i mamy gotowe value dla inputa.
+    return date.toLocaleString('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: undefined // Bez sekund, żeby input nie krzyczał o walidację
+    }).replace(' ', 'T');
   } catch (err) {
     console.error('Error converting UTC to local datetime:', err);
     return '';
