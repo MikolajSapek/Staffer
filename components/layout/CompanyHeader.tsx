@@ -45,7 +45,7 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
     
     const titleMap: Record<string, string> = {
       '/dashboard': 'Dashboard',
-      '/listings': 'Job Listings',
+      '/listings': 'Shifts',
       '/timesheets': 'Timesheets',
       '/applicants': 'Applicants',
       '/locations': 'Locations',
