@@ -50,7 +50,7 @@ export default async function CompanyDashboardPage({
   // Upewnij się, że stare zmiany są oznaczone jako completed
   await supabase.rpc('update_completed_shifts');
 
-  // Get current time for filtering
+  // Get current time for filtering (UTC for database queries)
   const now = new Date().toISOString();
 
   // Fetch active (upcoming) shifts with detailed profile information

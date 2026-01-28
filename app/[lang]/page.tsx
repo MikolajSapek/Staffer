@@ -58,6 +58,7 @@ export default async function JobBoardPage({
   console.log('🔍 DIAGNOSTYKA POBIERANIA OFERT');
   console.log('═══════════════════════════════════════════════════════');
   console.log('👤 Użytkownik:', user ? `${user.id} (${userRole})` : '❌ NIEZALOGOWANY (GUEST)');
+  // Note: Using new Date().toISOString() for UTC timestamp in logs is correct
   console.log('📅 Czas zapytania:', new Date().toISOString());
   
   // Fetch only essential shift data for public job board (no manager data)
@@ -92,6 +93,7 @@ export default async function JobBoardPage({
       )
     `)
     .eq('status', 'published')
+    // Using new Date().toISOString() for UTC timestamp in database queries is correct
     .gt('start_time', new Date().toISOString())
     .order('start_time', { ascending: true });
 

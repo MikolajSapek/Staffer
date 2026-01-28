@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { CorrectionBadge } from '@/components/ui/correction-badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
+export const dynamic = 'force-dynamic';
+
 export default async function BillingPage({
   params,
 }: {

@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import ActiveShiftsList from './ActiveShiftsList';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ShiftsPage({
   params,
   searchParams,
@@ -36,7 +38,7 @@ export default async function ShiftsPage({
   // Upewnij się, że stare zmiany są oznaczone jako completed
   await supabase.rpc('update_completed_shifts');
 
-  // Get current time for filtering
+  // Get current time for filtering (UTC for database queries)
   const now = new Date().toISOString();
 
   // Determine if showing archive or active shifts

@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { createClient } from '@/utils/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Shift {
   id: string;
@@ -51,6 +52,7 @@ export default function ApplyModal({
   onSuccess,
 }: ApplyModalProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,17 +96,49 @@ export default function ApplyModal({
         });
 
       if (insertError) {
+        // Check for double-booking error from database trigger
+        if (
+          insertError.message?.includes('Application is not possible because you already have a confirmed job at this time.') ||
+          insertError.message?.includes('already have a confirmed job') ||
+          insertError.message?.includes('confirmed job at this time')
+        ) {
+          const errorMessage = insertError.message || 'Nie możesz aplikować - masz już potwierdzoną pracę w tym czasie.';
+          setError(errorMessage);
+          toast({
+            title: 'Aplikacja niemożliwa',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+        }
         // Check if it's a unique constraint violation (already applied)
-        if (insertError.code === '23505') {
+        else if (insertError.code === '23505') {
           setError(dict.alreadyApplied);
+          toast({
+            title: 'Błąd aplikacji',
+            description: dict.alreadyApplied,
+            variant: 'destructive',
+          });
         } else if (
           insertError.code === '42501' ||
           insertError.message?.toLowerCase().includes('row-level security') ||
           insertError.message?.toLowerCase().includes('policy')
         ) {
-          setError('You must verify your identity first.');
+          const errorMsg = 'You must verify your identity first.';
+          setError(errorMsg);
+          toast({
+            title: 'Wymagana weryfikacja',
+            description: errorMsg,
+            variant: 'destructive',
+          });
         } else {
-          setError(dict.error);
+          // For other errors, show the actual error message if available, otherwise use generic message
+          const errorMsg = insertError.message || dict.error;
+          setError(errorMsg);
+          toast({
+            title: 'Błąd aplikowania',
+            description: errorMsg,
+            variant: 'destructive',
+          });
         }
         setLoading(false);
         return;
@@ -120,7 +154,30 @@ export default function ApplyModal({
         onSuccess(shift);
       }
     } catch (err: unknown) {
-      setError(dict.error);
+      // Handle unexpected errors, including double-booking errors that might be thrown
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      
+      // Check for double-booking error message
+      if (
+        errorMessage.includes('Application is not possible because you already have a confirmed job at this time.') ||
+        errorMessage.includes('already have a confirmed job') ||
+        errorMessage.includes('confirmed job at this time')
+      ) {
+        const doubleBookingMsg = errorMessage || 'Nie możesz aplikować - masz już potwierdzoną pracę w tym czasie.';
+        setError(doubleBookingMsg);
+        toast({
+          title: 'Aplikacja niemożliwa',
+          description: doubleBookingMsg,
+          variant: 'destructive',
+        });
+      } else {
+        setError(dict.error);
+        toast({
+          title: 'Błąd aplikowania',
+          description: dict.error,
+          variant: 'destructive',
+        });
+      }
       setLoading(false);
     }
   };

@@ -138,6 +138,7 @@ export async function approveTimesheet(timesheetId: string) {
  */
 export async function getWorkerTimesheets(workerId: string) {
   const supabase = await createClient();
+  // UTC timestamp for database queries
   const now = new Date().toISOString();
 
   const { data: timesheets, error } = await supabase

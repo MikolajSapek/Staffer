@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import WorkerSettingsClient from '@/components/worker/WorkerSettingsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function WorkerSettingsPage({
   params,
 }: {

@@ -94,7 +94,7 @@ export default function CompanyProfileDialog({
 
       setProfile(profileData as CompanyProfile);
 
-      // Optionally fetch active shifts count
+      // Optionally fetch active shifts count (UTC for database queries)
       const now = new Date().toISOString();
       const { count, error: shiftsError } = await supabase
         .from('shifts')

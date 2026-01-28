@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { formatTime, formatDateShort } from '@/lib/date-utils';
+import { formatTime, formatDateShort, getCurrentLocalISO } from '@/lib/date-utils';
 import { Calendar, Users, Phone, MapPin, ChevronDown, Trash2, Pencil, Eye, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -618,7 +618,7 @@ export default function ActiveShiftsList({
         onClose={closeCancelDialog}
         onConfirm={handleCancelConfirm}
         workerName={selectedWorkerName || ''}
-        shiftStartTime={selectedShiftStart || new Date().toISOString()}
+        shiftStartTime={selectedShiftStart || getCurrentLocalISO()}
         isPending={isCancelPending}
       />
       <EditShiftDialog

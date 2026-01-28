@@ -26,6 +26,7 @@ import { type Manager } from '@/app/actions/managers';
 import { useToast } from '@/components/ui/use-toast';
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { getCurrentLocalISO, toLocalISO } from '@/lib/date-utils';
 
 interface CreateShiftFormProps {
   companyId: string;
@@ -865,7 +866,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   id="start_time"
                   value={formData.start_time}
                   onChange={(value) => setFormData({ ...formData, start_time: value })}
-                  min={new Date().toISOString()}
+                  min={getCurrentLocalISO()}
                   required
                   disabled={loading}
                 />
@@ -883,7 +884,7 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
                   id="end_time"
                   value={formData.end_time}
                   onChange={(value) => setFormData({ ...formData, end_time: value })}
-                  min={formData.start_time || new Date().toISOString()}
+                  min={formData.start_time ? toLocalISO(formData.start_time) : getCurrentLocalISO()}
                   required
                   disabled={loading}
                 />

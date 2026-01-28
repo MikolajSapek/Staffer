@@ -333,6 +333,24 @@ export default function ApplicantsClient({
         {shiftGroupsWithStats.map((group) => {
           const isLoading = loadingShiftId === group.shiftId;
 
+          // Pre-filtering: Filter applications based on shift end time
+          const shiftEndTime = group.shift?.end_time;
+          const isPast = shiftEndTime ? new Date(shiftEndTime) < new Date() : false;
+
+          const visibleApplications = group.applications.filter(app => {
+            // Jeśli zmiana TRWA lub jest w PRZYSZŁOŚCI -> Pokaż wszystkich
+            if (!isPast) return true;
+            
+            // Jeśli zmiana MINĘŁA -> Pokaż tylko zaakceptowanych
+            const status = app.status?.toLowerCase().trim() || '';
+            return status === 'accepted' || status === 'completed' || status === 'approved';
+          });
+
+          // Skip rendering empty cards for past shifts with no accepted workers
+          if (visibleApplications.length === 0) {
+            return null;
+          }
+
           return (
           <Card key={group.shiftId} className="overflow-hidden">
             <CardHeader className="relative">
@@ -340,7 +358,7 @@ export default function ApplicantsClient({
                 {group.canFillVacancies && group.shift && (
                   <Button
                     size="sm"
-                    onClick={() => handleFillVacancies(group.shift!, group.applications)}
+                    onClick={() => handleFillVacancies(group.shift!, visibleApplications)}
                     disabled={isLoading}
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
                   >
@@ -423,11 +441,32 @@ export default function ApplicantsClient({
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-3">
-                {group.applications.map((app) => {
+                {visibleApplications.map((app) => {
                   const profile = app.profiles;
                   const workerDetails = getWorkerDetails(profile);
 
                   if (!profile) return null;
+
+                  // --- SAFE LOGIC: Clean up past shifts ---
+                  const shiftEndTime = app.shifts?.end_time;
+                  if (shiftEndTime) {
+                    const isShiftEnded = new Date(shiftEndTime) < new Date();
+                    
+                    // Normalizuj status (małe litery, usuń spacje), aby uniknąć błędów
+                    const status = app.status?.toLowerCase().trim() || '';
+
+                    // 1. Ukryj ODRZUCONYCH (Rejected) na starych zmianach
+                    if (isShiftEnded && status === 'rejected') {
+                      return null;
+                    }
+                    
+                    // 2. Ukryj OCZEKUJĄCYCH (Pending) na starych zmianach (bo jest już za późno na akceptację)
+                    // UWAGA: Nie ukrywaj 'accepted', 'completed', 'approved' itp.
+                    if (isShiftEnded && status === 'pending') {
+                      return null;
+                    }
+                  }
+                  // ----------------------------------------
 
                   const firstName = profile.first_name || '';
                   const lastName = profile.last_name || '';

@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import ScheduleCalendarClient from './ScheduleCalendarClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SchedulePage({
   params,
 }: {

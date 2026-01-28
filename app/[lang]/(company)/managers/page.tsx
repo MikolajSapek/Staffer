@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import ManagersClient from './ManagersClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ManagersPage({
   params,
 }: {

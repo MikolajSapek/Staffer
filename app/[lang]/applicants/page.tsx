@@ -44,6 +44,7 @@ export default async function ApplicantsPage({
     // Using worker_details table via nested join through profiles (1:1 via profile_id)
     // Fetch from profiles: first_name, last_name, email
     // Fetch from worker_details: avatar_url, phone_number, experience, description
+    // Calculate date 3 days ago (UTC for database queries)
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
     
     const { data: allApplications, error: fetchError } = await supabase

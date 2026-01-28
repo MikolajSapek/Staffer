@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import ShiftDetailsClient from './ShiftDetailsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ShiftDetailsPage({
   params,
 }: {

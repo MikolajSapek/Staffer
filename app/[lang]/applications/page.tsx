@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import WorkerApplicationsClient from '@/components/worker/WorkerApplicationsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ApplicationsPage({
   params,
 }: {

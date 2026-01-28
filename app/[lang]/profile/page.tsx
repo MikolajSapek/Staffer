@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import WorkerProfileForm from '@/components/profile/WorkerProfileForm';
 import CompanyProfileForm from '@/components/profile/CompanyProfileForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProfilePage({
   params,
 }: {

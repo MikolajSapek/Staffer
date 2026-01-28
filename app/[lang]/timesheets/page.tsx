@@ -31,6 +31,8 @@ import { createClient } from '@/utils/supabase/server';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import TimesheetsClient from '@/app/[lang]/(company)/timesheets/TimesheetsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function TimesheetsPage({
   params,
 }: {
@@ -99,7 +101,7 @@ export default async function TimesheetsPage({
     console.error('SERVER ERROR FETCHING TIMESHEETS:', JSON.stringify(error, null, 2));
   }
 
-  // Get current time for filtering completed shifts
+  // Get current time for filtering completed shifts (UTC for database queries)
   const now = new Date().toISOString();
 
   // Map and calculate total_pay for each timesheet

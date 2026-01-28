@@ -183,6 +183,13 @@ export default function ShiftDetailsClient({
   const isArchived = shift.status === 'completed' || shift.status === 'cancelled';
   const canRateWorkers = shift.status === 'completed' || shift.status === 'cancelled';
 
+  // Hygienic View: Filter applications based on shift end time
+  // If shift has ended, only show accepted workers (hide rejected/pending)
+  const isShiftEnded = shift.end_time ? new Date(shift.end_time) < new Date() : false;
+  const displayedHiredTeam = isShiftEnded
+    ? hiredTeam.filter((app) => app.status === 'accepted')
+    : hiredTeam;
+
   const handleRateClick = (workerId: string, workerName: string) => {
     setSelectedWorker({ id: workerId, name: workerName });
     setRatingDialogOpen(true);
@@ -569,7 +576,7 @@ export default function ShiftDetailsClient({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {hiredTeam.length === 0 ? (
+          {displayedHiredTeam.length === 0 ? (
             <div className="py-12 text-center">
               <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">
@@ -578,7 +585,7 @@ export default function ShiftDetailsClient({
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {hiredTeam.map((application) => {
+              {displayedHiredTeam.map((application) => {
                 const profile = application.profiles;
                 if (!profile) return null;
 

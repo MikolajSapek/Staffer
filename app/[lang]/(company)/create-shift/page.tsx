@@ -4,6 +4,8 @@ import CreateShiftForm from './CreateShiftForm';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { getTemplates } from '@/app/actions/templates';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CreateShiftPage({
   params,
 }: {

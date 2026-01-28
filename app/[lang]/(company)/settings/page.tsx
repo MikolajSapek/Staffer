@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import CompanySettingsClient from '@/components/company/settings/CompanySettingsClient';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: Promise<{
     lang: string;
