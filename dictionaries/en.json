@@ -542,6 +542,7 @@
       "addressPlaceholder": "E.g. Main Street 123, 2100 Copenhagen",
       "save": "Save Location",
       "creating": "Creating...",
+      "updating": "Updating...",
       "cancel": "Cancel",
       "deleting": "Deleting...",
       "deleteConfirm": "Are you sure you want to delete this location?",
@@ -549,6 +550,7 @@
       "nameRequired": "Name and address are required",
       "notLoggedIn": "You are not logged in",
       "createError": "An error occurred while creating location",
+      "updateError": "An error occurred while updating location",
       "fetchError": "Could not fetch locations"
     }
   },

@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { createClient } from '@/utils/supabase/client';
-import { Plus, MapPin, Loader2, Trash2 } from 'lucide-react';
+import { Plus, MapPin, Loader2, Trash2, Pencil } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 interface Location {
@@ -43,6 +43,7 @@ interface LocationsClientProps {
       addressPlaceholder: string;
       save: string;
       creating: string;
+      updating: string;
       cancel: string;
       deleting: string;
       deleteConfirm: string;
@@ -50,6 +51,7 @@ interface LocationsClientProps {
       nameRequired: string;
       notLoggedIn: string;
       createError: string;
+      updateError: string;
       fetchError: string;
     };
   };
@@ -62,6 +64,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -122,30 +125,58 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
         return;
       }
 
-      const { error: insertError } = await supabase
-        .from('locations')
-        .insert({
-          company_id: user.id,
-          name: formData.name.trim(),
-          address: formData.address.trim(),
-        });
+      if (editingLocation) {
+        // Update existing location
+        const { error: updateError } = await supabase
+          .from('locations')
+          .update({
+            name: formData.name.trim(),
+            address: formData.address.trim(),
+          })
+          .eq('id', editingLocation.id)
+          .eq('company_id', user.id);
 
-      if (insertError) {
-        throw insertError;
+        if (updateError) {
+          throw updateError;
+        }
+      } else {
+        // Create new location
+        const { error: insertError } = await supabase
+          .from('locations')
+          .insert({
+            company_id: user.id,
+            name: formData.name.trim(),
+            address: formData.address.trim(),
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
       }
 
       // Reset form and close dialog
       setFormData({ name: '', address: '' });
+      setEditingLocation(null);
       setDialogOpen(false);
       
       // Refresh locations list
       await fetchLocations();
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : dict.form.createError;
+      const errorMessage = err instanceof Error ? err.message : (editingLocation ? dict.form.updateError : dict.form.createError);
       setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEdit = (location: Location) => {
+    setEditingLocation(location);
+    setFormData({
+      name: location.name,
+      address: location.address,
+    });
+    setDialogOpen(true);
+    setError(null);
   };
 
   const handleDelete = async (locationId: string) => {
@@ -196,16 +227,26 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
             {dict.description}
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingLocation(null);
+            setFormData({ name: '', address: '' });
+            setError(null);
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => {
+              setEditingLocation(null);
+              setFormData({ name: '', address: '' });
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               {dict.addLocation}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{dict.form.addTitle}</DialogTitle>
+              <DialogTitle>{editingLocation ? dict.form.editTitle : dict.form.addTitle}</DialogTitle>
               <DialogDescription>
                 {dict.form.addDescription}
               </DialogDescription>
@@ -250,6 +291,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
                   variant="outline"
                   onClick={() => {
                     setDialogOpen(false);
+                    setEditingLocation(null);
                     setFormData({ name: '', address: '' });
                     setError(null);
                   }}
@@ -261,7 +303,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
                   {submitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {dict.form.creating}
+                      {editingLocation ? dict.form.updating : dict.form.creating}
                     </>
                   ) : (
                     dict.form.save
@@ -280,16 +322,26 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
             <p className="text-muted-foreground mb-4">
               {dict.noLocations}
             </p>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) {
+                setEditingLocation(null);
+                setFormData({ name: '', address: '' });
+                setError(null);
+              }
+            }}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => {
+                  setEditingLocation(null);
+                  setFormData({ name: '', address: '' });
+                }}>
                   <Plus className="mr-2 h-4 w-4" />
                   {dict.addLocation}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{dict.form.addTitle}</DialogTitle>
+                  <DialogTitle>{editingLocation ? dict.form.editTitle : dict.form.addTitle}</DialogTitle>
                   <DialogDescription>
                     {dict.form.addDescription}
                   </DialogDescription>
@@ -334,6 +386,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
                       variant="outline"
                       onClick={() => {
                         setDialogOpen(false);
+                        setEditingLocation(null);
                         setFormData({ name: '', address: '' });
                         setError(null);
                       }}
@@ -345,7 +398,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
                       {submitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {dict.form.creating}
+                          {editingLocation ? dict.form.updating : dict.form.creating}
                         </>
                       ) : (
                         dict.form.save
@@ -362,7 +415,7 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
           {locations.map((location) => (
             <Card key={location.id}>
               <CardHeader>
-                <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-primary/10 p-2">
                       <MapPin className="h-5 w-5 text-primary" />
@@ -374,14 +427,24 @@ export default function LocationsClient({ dict, lang }: LocationsClientProps) {
                       </CardDescription>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(location.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(location)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(location.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
             </Card>

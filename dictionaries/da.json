@@ -527,6 +527,7 @@
       "addressPlaceholder": "F.eks. Hovedgade 123, 2100 København",
       "save": "Gem lokation",
       "creating": "Opretter...",
+      "updating": "Opdaterer...",
       "cancel": "Annuller",
       "deleting": "Sletter...",
       "deleteConfirm": "Er du sikker på, at du vil slette denne lokation?",
@@ -534,6 +535,7 @@
       "nameRequired": "Navn og adresse er påkrævet",
       "notLoggedIn": "Du er ikke logget ind",
       "createError": "Der opstod en fejl ved oprettelse af lokation",
+      "updateError": "Der opstod en fejl ved opdatering af lokation",
       "fetchError": "Kunne ikke hente lokationer"
     }
   },
