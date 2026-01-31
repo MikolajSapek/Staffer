@@ -18,7 +18,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { updateShiftAction } from '@/app/actions/shifts';
 import { useToast } from '@/components/ui/use-toast';
 import { createClient } from '@/utils/supabase/client';
-import { toLocalISO, fromLocalISO, getCurrentLocalISO } from '@/lib/date-utils';
+import { toLocalISO, fromLocalISO, getCurrentLocalISO, roundLocalISOTo10Min } from '@/lib/date-utils';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
 
 interface Skill {
   id: string;
@@ -164,8 +165,8 @@ export default function EditShiftForm({
     category: initialData.category || '',
     location_id: initialData.location_id || (locations[0]?.id ?? ''),
     manager_id: initialData.manager_id || '',
-    start_time: toLocalISO(initialData.start_time),
-    end_time: toLocalISO(initialData.end_time),
+    start_time: roundLocalISOTo10Min(toLocalISO(initialData.start_time)),
+    end_time: roundLocalISOTo10Min(toLocalISO(initialData.end_time)),
     hourly_rate: initialData.hourly_rate.toString(),
     break_minutes: initialData.break_minutes.toString(),
     is_break_paid: initialData.is_break_paid,
@@ -230,8 +231,8 @@ export default function EditShiftForm({
         category: initialData.category || '',
         location_id: initialData.location_id || (locations[0]?.id ?? ''),
         manager_id: initialData.manager_id || '',
-        start_time: toLocalISO(initialData.start_time),
-        end_time: toLocalISO(initialData.end_time),
+        start_time: roundLocalISOTo10Min(toLocalISO(initialData.start_time)),
+        end_time: roundLocalISOTo10Min(toLocalISO(initialData.end_time)),
         hourly_rate: initialData.hourly_rate.toString(),
         break_minutes: initialData.break_minutes.toString(),
         is_break_paid: initialData.is_break_paid,
@@ -289,18 +290,6 @@ export default function EditShiftForm({
     }
 
     return null;
-  };
-
-  // Format min datetime as YYYY-MM-DDTHH:mm for datetime-local input
-  const minStartDateTime = getCurrentLocalISO();
-  const minEndDateTime = formData.start_time || minStartDateTime;
-
-  const handleStartDateTimeChange = (value: string) => {
-    setFormData({ ...formData, start_time: value });
-  };
-
-  const handleEndDateTimeChange = (value: string) => {
-    setFormData({ ...formData, end_time: value });
   };
 
   const handleCancel = () => {
@@ -494,43 +483,33 @@ export default function EditShiftForm({
             </p>
           </div>
 
-          {/* Date & Time */}
+          {/* Date & Time - same as Create form: DatePicker + Hour Select + Minute Select (10-min) */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>
+              <Label htmlFor="start_time">
                 {dict.startTime} <span className="text-red-500">*</span>
               </Label>
-              <div className="grid gap-2">
-                <Input
-                  id="start_time"
-                  type="datetime-local"
-                  step="60"
-                  value={formData.start_time}
-                  onChange={(e) => handleStartDateTimeChange(e.target.value)}
-                  min={minStartDateTime}
-                  required
-                  disabled={loading || isLocked}
-                  className="w-full"
-                />
-              </div>
+              <DateTimePicker
+                id="start_time"
+                value={formData.start_time}
+                onChange={(value) => setFormData({ ...formData, start_time: value })}
+                min={getCurrentLocalISO()}
+                required
+                disabled={loading || isLocked}
+              />
             </div>
             <div className="space-y-2">
-              <Label>
+              <Label htmlFor="end_time">
                 {dict.endTime} <span className="text-red-500">*</span>
               </Label>
-              <div className="grid gap-2">
-                <Input
-                  id="end_time"
-                  type="datetime-local"
-                  step="60"
-                  value={formData.end_time}
-                  onChange={(e) => handleEndDateTimeChange(e.target.value)}
-                  min={minEndDateTime}
-                  required
-                  disabled={loading || isLocked}
-                  className="w-full"
-                />
-              </div>
+              <DateTimePicker
+                id="end_time"
+                value={formData.end_time}
+                onChange={(value) => setFormData({ ...formData, end_time: value })}
+                min={formData.start_time || getCurrentLocalISO()}
+                required
+                disabled={loading || isLocked}
+              />
             </div>
           </div>
 

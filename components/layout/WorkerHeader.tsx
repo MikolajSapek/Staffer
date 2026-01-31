@@ -150,20 +150,17 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
         </h1>
       )}
 
-      {/* User Profile - Right (Fixed) */}
-      <div className="flex items-center gap-4 ml-auto">
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden md:block">
-            <p className="text-sm font-medium text-slate-700">{user?.email || 'User'}</p>
-            <p className="text-xs text-slate-500 capitalize">Worker</p>
-          </div>
-          <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="h-full w-full rounded-full object-cover" />
-            ) : (
-              <span className="font-bold">{getUserInitials()}</span>
-            )}
-          </div>
+      {/* User Profile - Right: email + avatar in one line */}
+      <div className="flex items-center gap-3 ml-auto flex-row flex-shrink-0">
+        <span className="text-sm font-medium text-slate-700 truncate max-w-[180px] hidden sm:block" title={user?.email || 'User'}>
+          {user?.email || 'User'}
+        </span>
+        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white flex-shrink-0">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Profile" className="h-full w-full rounded-full object-cover" />
+          ) : (
+            <span className="font-bold">{getUserInitials()}</span>
+          )}
         </div>
       </div>
     </header>

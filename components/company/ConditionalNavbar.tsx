@@ -26,9 +26,11 @@ interface ConditionalNavbarProps {
 
 export default function ConditionalNavbar({ dict, lang }: ConditionalNavbarProps) {
   const pathname = usePathname();
-  
-  // Hide Navbar for company routes (they use Sidebar instead)
-  const isCompanyRoute = pathname?.includes('/dashboard') || 
+  const pathWithoutLang = pathname?.replace(/^\/(en-US|da)/, '') || '';
+
+  // Hide Navbar for company routes (they use Sidebar + Header instead)
+  const isCompanyRoute = pathname?.includes('/dashboard') ||
+                         pathname?.includes('/listings') ||
                          pathname?.includes('/shifts') ||
                          pathname?.includes('/locations') ||
                          pathname?.includes('/timesheets') ||
@@ -38,9 +40,15 @@ export default function ConditionalNavbar({ dict, lang }: ConditionalNavbarProps
                          pathname?.includes('/templates') ||
                          pathname?.includes('/managers') ||
                          pathname?.includes('/create-shift') ||
-                         pathname?.includes('/company-setup');
+                         pathname?.includes('/company-setup') ||
+                         pathname?.includes('/company') ||
+                         pathname?.includes('/marketplace');
 
-  if (isCompanyRoute) {
+  // Hide Navbar for worker routes (they use WorkerSidebar + WorkerHeader; logo only in Sidebar)
+  const isWorkerRoute = /^\/(applications|schedule|finances|profile|market|support)(\/|$)/.test(pathWithoutLang) ||
+                        pathWithoutLang.startsWith('/worker/');
+
+  if (isCompanyRoute || isWorkerRoute) {
     return null;
   }
 

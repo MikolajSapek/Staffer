@@ -39,7 +39,7 @@ export default function ScheduleCalendar({
   onDateSelect,
   dict,
 }: ScheduleCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => startOfMonth(new Date()));
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
 
@@ -101,11 +101,13 @@ export default function ScheduleCalendar({
   }, [shiftsByDate, now]);
 
   const handlePreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1));
+    const firstOfMonth = startOfMonth(currentDate);
+    setCurrentDate(subMonths(firstOfMonth, 1));
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1));
+    const firstOfMonth = startOfMonth(currentDate);
+    setCurrentDate(addMonths(firstOfMonth, 1));
   };
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

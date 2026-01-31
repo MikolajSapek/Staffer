@@ -114,7 +114,11 @@ export default function WorkerApplicationsClient({
 }: WorkerApplicationsClientProps) {
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
   const params = useParams();
   const lang = params?.lang || 'en';
 
@@ -125,6 +129,7 @@ export default function WorkerApplicationsClient({
   const handlePreviousMonth = () => {
     setCurrentMonth(prev => {
       const newDate = new Date(prev);
+      newDate.setDate(1);
       newDate.setMonth(newDate.getMonth() - 1);
       return newDate;
     });
@@ -133,6 +138,7 @@ export default function WorkerApplicationsClient({
   const handleNextMonth = () => {
     setCurrentMonth(prev => {
       const newDate = new Date(prev);
+      newDate.setDate(1);
       newDate.setMonth(newDate.getMonth() + 1);
       return newDate;
     });

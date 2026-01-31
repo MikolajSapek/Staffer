@@ -80,15 +80,13 @@ export default async function ApplicationsPage({
   }));
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <WorkerApplicationsClient 
-        applications={applications || []} 
-        dict={dict}
-        user={user}
-        userRole="worker"
-        verificationStatus={profile?.verification_status ?? null}
-      />
-    </div>
+    <WorkerApplicationsClient 
+      applications={applications || []} 
+      dict={dict}
+      user={user}
+      userRole="worker"
+      verificationStatus={profile?.verification_status ?? null}
+    />
   );
 }
 

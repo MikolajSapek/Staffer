@@ -89,3 +89,33 @@ export function getCurrentLocalISO(): string {
   return toLocalISO(new Date().toISOString());
 }
 
+const MINUTE_OPTIONS = [0, 10, 20, 30, 40, 50];
+
+/**
+ * Round local datetime string to nearest 10-minute boundary (00, 10, 20, 30, 40, 50).
+ * Used when loading existing shift times into the Time Picker (10-min interval).
+ * @param localISO - Local datetime string (YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss)
+ * @returns Local datetime string with minutes rounded, format YYYY-MM-DDTHH:mm:00
+ */
+export function roundLocalISOTo10Min(localISO: string | null | undefined): string {
+  if (!localISO) return '';
+  try {
+    const date = new Date(localISO);
+    if (isNaN(date.getTime())) return '';
+    const min = date.getMinutes();
+    const rounded = MINUTE_OPTIONS.reduce((prev, curr) =>
+      Math.abs(curr - min) < Math.abs(prev - min) ? curr : prev
+    );
+    date.setMinutes(rounded, 0, 0);
+    const y = date.getFullYear();
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    const h = date.getHours().toString().padStart(2, '0');
+    const mm = date.getMinutes().toString().padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${mm}:00`;
+  } catch (err) {
+    console.error('Error rounding local datetime to 10 min:', err);
+    return '';
+  }
+}
+
