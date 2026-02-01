@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { Menu, LogOut } from 'lucide-react';
+import { getWorkerNotificationCounts } from '@/app/actions/notifications';
+import { Menu, LogOut, User, LifeBuoy, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -12,11 +13,7 @@ import {
   SheetTrigger,
   SheetTitle,
 } from '@/components/ui/sheet';
-import {
-  WORKER_NAVIGATION,
-  WORKER_SYSTEM_LINKS,
-  NavigationCategory,
-} from '@/lib/config/worker-navigation';
+import { WORKER_NAVIGATION } from '@/lib/config/worker-navigation';
 
 interface WorkerHeaderProps {
   lang: string;
@@ -31,6 +28,17 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
   const [workerName, setWorkerName] = useState<{ first_name: string | null; last_name: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [counts, setCounts] = useState({ finances: 0 });
+
+  const refreshCounts = useCallback(() => {
+    getWorkerNotificationCounts()
+      .then(setCounts)
+      .catch(() => setCounts({ finances: 0 }));
+  }, []);
+
+  useEffect(() => {
+    refreshCounts();
+  }, [refreshCounts]);
 
   // Check if a nav item is active
   const isActive = (href: string) => {
@@ -217,11 +225,11 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
     <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-6 z-20">
       {/* Mobile: Hamburger Menu + Logo | Desktop: Page Title */}
       <div className="flex items-center gap-3">
-        {/* Mobile Menu Trigger - only visible on mobile */}
+        {/* Mobile Menu Trigger - visible when sidebar is hidden (lg breakpoint) */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <button
-              className="md:hidden p-2 -ml-2 rounded-md hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-2 -ml-2 rounded-md hover:bg-gray-100 transition-colors"
               aria-label="Open menu"
             >
               <Menu className="h-6 w-6 text-slate-700" />
@@ -244,86 +252,107 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
                 </Link>
               </div>
 
-              {/* Navigation - Middle (scrollable) */}
+              {/* Navigation - Middle (scrollable, flat, no category headers) */}
               <nav className="flex-1 overflow-y-auto p-4">
-                {WORKER_NAVIGATION.map((category: NavigationCategory) => (
-                  <div key={category.category || 'main'}>
-                    <ul className="space-y-0.5">
-                      {category.items.map((item) => {
-                        const Icon = item.icon;
-                        const isItemActive = isActive(item.href);
+                <ul className="space-y-0.5">
+                  {WORKER_NAVIGATION.flatMap((cat) => cat.items).map((item) => {
+                    const Icon = item.icon;
+                    const isItemActive = isActive(item.href);
+                    const notificationCount = item.hasBadge ? counts.finances : 0;
 
-                        return (
-                          <li key={item.name}>
-                            <Link
-                              href={`/${currentLang}${item.href}`}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className={cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                                isItemActive
-                                  ? 'bg-slate-900 text-white'
-                                  : 'text-slate-700 hover:bg-slate-100'
-                              )}
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={`/${currentLang}${item.href}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                            isItemActive
+                              ? 'bg-slate-900 text-white'
+                              : 'text-slate-700 hover:bg-slate-100'
+                          )}
+                        >
+                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          <span className="flex-1">{item.name}</span>
+                          {item.hasBadge && notificationCount > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white rounded-full min-w-[1.25rem]"
+                              style={{ backgroundColor: '#EF4444' }}
                             >
-                              <Icon className="h-5 w-5 flex-shrink-0" />
-                              <span className="flex-1">{item.name}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
+                              {notificationCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </nav>
 
-              {/* Footer - Bottom (Pinned) */}
+              {/* Footer - Bottom: Profile, Support, Settings, Log Out */}
               <div className="mt-auto border-t border-slate-200 p-4 bg-white space-y-2">
-                {WORKER_SYSTEM_LINKS.map((item) => {
-                  const Icon = item.icon;
-                  const isItemActive = isActive(item.href);
-
-                  return (
-                    <Link
-                      key={item.name}
-                      href={`/${currentLang}${item.href}`}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                        isItemActive
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-700 hover:bg-slate-100'
-                      )}
-                    >
-                      <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="flex-1">{item.name}</span>
-                    </Link>
-                  );
-                })}
-
-                {/* Log Out Button */}
+                <Link
+                  href={`/${currentLang}/profile`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                    isActive('/profile')
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  )}
+                >
+                  <User className="h-5 w-5 flex-shrink-0" />
+                  <span>Profile</span>
+                </Link>
+                <Link
+                  href={`/${currentLang}/support`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                    isActive('/support')
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  )}
+                >
+                  <LifeBuoy className="h-5 w-5 flex-shrink-0" />
+                  <span>Support</span>
+                </Link>
+                <Link
+                  href={`/${currentLang}/worker/settings`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                    isActive('/worker/settings')
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  )}
+                >
+                  <Settings className="h-5 w-5 flex-shrink-0" />
+                  <span>Settings</span>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-700 hover:bg-slate-100 text-left"
                 >
                   <LogOut className="h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1 text-left">Log Out</span>
+                  <span>Log out</span>
                 </button>
               </div>
             </div>
           </SheetContent>
         </Sheet>
 
-        {/* Mobile: Logo (hidden on md+) */}
+        {/* Mobile: Logo (hidden on lg+) */}
         <Link
           href={`/${currentLang}/market`}
-          className="md:hidden italic font-bold text-xl tracking-tight text-slate-900"
+          className="lg:hidden italic font-bold text-xl tracking-tight text-slate-900"
         >
           Staffer
         </Link>
 
         {/* Desktop: Page Title (hidden on mobile) */}
         {pageTitle && (
-          <h1 className="hidden md:block font-bold text-xl text-foreground">
+          <h1 className="hidden lg:block font-bold text-xl text-foreground">
             {pageTitle}
           </h1>
         )}

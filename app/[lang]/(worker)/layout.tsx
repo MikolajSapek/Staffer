@@ -42,7 +42,7 @@ export default async function WorkerLayout({
   }
 
   return (
-    <WorkerLayoutWrapper lang={currentLang}>
+    <WorkerLayoutWrapper lang={currentLang} dict={dict}>
       {children}
     </WorkerLayoutWrapper>
   );

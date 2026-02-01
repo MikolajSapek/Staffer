@@ -6,29 +6,27 @@ import { WorkerHeader } from '@/components/layout/WorkerHeader';
 interface WorkerLayoutWrapperProps {
   children: React.ReactNode;
   lang: string;
+  dict: Record<string, unknown>;
 }
 
 export default function WorkerLayoutWrapper({
   children,
   lang,
+  dict,
 }: WorkerLayoutWrapperProps) {
-  // Zabezpieczenie: jeśli lang jest undefined, użyj 'en-US'
   const currentLang = lang || 'en-US';
-  
-  // Debug (opcjonalnie, usuń po testach)
+
   if (!lang) {
     console.warn('WorkerLayoutWrapper: lang is missing, using fallback "en-US"');
   }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden">
-      {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-20 border-r border-black bg-white h-full z-30">
-        <WorkerSidebar lang={currentLang} />
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 w-64 h-full border-r border-black/10 bg-white z-30">
+        <WorkerSidebar dict={dict} lang={currentLang} />
       </aside>
 
-      {/* Main Content + Header */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden lg:pl-64">
         <header className="flex-shrink-0 z-20">
           <WorkerHeader lang={currentLang} />
         </header>

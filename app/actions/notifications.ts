@@ -93,3 +93,25 @@ export async function getCompanyNotificationCounts() {
     timesheets: timesheetsCount,
   };
 }
+
+/**
+ * Get notification counts for worker users
+ * Returns count of: pending payouts (payments where worker_id = user.id and payment_status = 'pending')
+ */
+export async function getWorkerNotificationCounts() {
+  unstable_noStore();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { finances: 0 };
+  }
+
+  const { count } = await supabase
+    .from('payments')
+    .select('*', { count: 'exact', head: true })
+    .eq('worker_id', user.id)
+    .eq('payment_status', 'pending');
+
+  return { finances: count || 0 };
+}

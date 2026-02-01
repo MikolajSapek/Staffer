@@ -29,7 +29,7 @@ export const WORKER_NAVIGATION: NavigationCategory[] = [
       { name: 'My Calendar', href: '/schedule', icon: CalendarDays },
       { name: 'Job Listings', href: '/market', icon: Globe },
       { name: 'My Shifts', href: '/applications', icon: Briefcase },
-      { name: 'Finances', href: '/finances', icon: Wallet },
+      { name: 'Finances', href: '/finances', icon: Wallet, hasBadge: true },
     ]
   }
 ];
