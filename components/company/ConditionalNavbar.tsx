@@ -42,10 +42,11 @@ export default function ConditionalNavbar({ dict, lang }: ConditionalNavbarProps
                          pathname?.includes('/create-shift') ||
                          pathname?.includes('/company-setup') ||
                          pathname?.includes('/company') ||
-                         pathname?.includes('/marketplace');
+                         pathname?.includes('/marketplace') ||
+                         pathname?.includes('/support');
 
   // Hide Navbar for worker routes (they use WorkerSidebar + WorkerHeader; logo only in Sidebar)
-  const isWorkerRoute = /^\/(applications|schedule|finances|profile|market|support)(\/|$)/.test(pathWithoutLang) ||
+  const isWorkerRoute = /^\/(applications|schedule|finances|profile|market)(\/|$)/.test(pathWithoutLang) ||
                         pathWithoutLang.startsWith('/worker/');
 
   if (isCompanyRoute || isWorkerRoute) {

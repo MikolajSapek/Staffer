@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { Menu, LogOut, Settings, User } from 'lucide-react';
+import { Menu, LogOut, LifeBuoy, User, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -12,12 +12,7 @@ import {
   SheetTrigger,
   SheetTitle,
 } from '@/components/ui/sheet';
-import {
-  COMPANY_NAVIGATION,
-  SYSTEM_LINKS,
-  NavigationCategory,
-  NavigationItem,
-} from '@/lib/config/company-navigation';
+import { COMPANY_NAVIGATION_ITEMS } from '@/lib/config/company-navigation';
 import { getCompanyNotificationCounts } from '@/app/actions/notifications';
 
 interface CompanyHeaderProps {
@@ -55,6 +50,7 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
   const currentLang = lang || 'en-US';
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [counts, setCounts] = useState({ applicants: 0, finances: 0 });
@@ -72,7 +68,7 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
     const labelMap: Record<string, string> = {
       'Dashboard': dict.nav?.dashboard || 'Dashboard',
       'Shifts': dict.nav?.shifts || 'Shifts',
-      'Job Listings': dict.jobBoard?.title || 'Job Listings',
+      'Applicants': dict.nav?.applicants || 'Applicants',
       'Timesheets': dict.nav?.timesheets || 'Timesheets',
       'Applicants': dict.nav?.applicants || 'Applicants',
       'Locations': dict.nav?.locations || 'Locations',
@@ -148,12 +144,14 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
         if (user) {
           const { data: companyDetails } = await supabase
             .from('company_details')
-            .select('logo_url')
+            .select('logo_url, company_name')
             .eq('profile_id', user.id)
             .maybeSingle();
           setAvatarUrl(companyDetails?.logo_url || null);
+          setCompanyName(companyDetails?.company_name || null);
         } else {
           setAvatarUrl(null);
+          setCompanyName(null);
         }
         setLoading(false);
       } catch (err) {
@@ -174,13 +172,19 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
         if (session?.user) {
           createClient()
             .from('company_details')
-            .select('logo_url')
+            .select('logo_url, company_name')
             .eq('profile_id', session.user.id)
             .maybeSingle()
             .then(({ data }) => {
-              if (mounted) setAvatarUrl(data?.logo_url || null);
+              if (mounted) {
+                setAvatarUrl(data?.logo_url || null);
+                setCompanyName(data?.company_name || null);
+              }
             });
-        } else setAvatarUrl(null);
+        } else {
+          setAvatarUrl(null);
+          setCompanyName(null);
+        }
       });
       subscription = authSub;
     } catch (_) {}
@@ -196,7 +200,6 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
   };
 
   const pageTitle = getPageTitle();
-  const systemLinksWithoutSettings = SYSTEM_LINKS.filter((item) => item.name !== 'Settings');
 
   if (loading) {
     return (
@@ -226,9 +229,9 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
           <SheetContent side="left" className="w-72 p-0">
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <div className="flex flex-col h-full bg-white">
-              <div className="h-16 flex items-center px-6 border-b">
+              <div className="h-16 flex items-center px-6 border-b border-slate-200">
                 <Link
-                  href={`/${currentLang}/listings`}
+                  href={`/${currentLang}/dashboard`}
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center"
                 >
@@ -238,104 +241,86 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
                 </Link>
               </div>
               <nav className="flex-1 overflow-y-auto p-4">
-                {COMPANY_NAVIGATION.map((category: NavigationCategory) => (
-                  <div key={category.category} className="mb-6">
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
-                      {category.category}
-                    </h3>
-                    <ul className="space-y-1">
-                      {category.items.map((item) => {
-                        const Icon = item.icon;
-                        const isItemActive = isActive(item.href);
-                        const notificationCount = item.hasBadge ? getNotificationCount(item.name) : 0;
-                        return (
-                          <li key={item.name}>
-                            <Link
-                              href={`/${currentLang}${item.href}`}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className={cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                                isItemActive
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'text-gray-700 hover:bg-gray-100'
-                              )}
+                <ul className="space-y-0.5">
+                  {COMPANY_NAVIGATION_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const isItemActive = isActive(item.href);
+                    const notificationCount = item.hasBadge ? getNotificationCount(item.name) : 0;
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={`/${currentLang}${item.href}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                            isItemActive
+                              ? 'bg-slate-900 text-white'
+                              : 'text-slate-700 hover:bg-slate-100'
+                          )}
+                        >
+                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          <span className="flex-1">{getItemLabel(item.name)}</span>
+                          {item.hasBadge && notificationCount > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white rounded-full min-w-[1.25rem]"
+                              style={{ backgroundColor: '#EF4444' }}
                             >
-                              <Icon className="h-5 w-5 flex-shrink-0" />
-                              <span className="flex-1">{getItemLabel(item.name)}</span>
-                              {notificationCount > 0 && (
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
-                                  {notificationCount}
-                                </span>
-                              )}
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-                {systemLinksWithoutSettings.length > 0 && (
-                  <div className="mb-6">
-                    <ul className="space-y-1">
-                      {systemLinksWithoutSettings.map((item: NavigationItem) => {
-                        const Icon = item.icon;
-                        const isItemActive = isActive(item.href);
-                        return (
-                          <li key={item.name}>
-                            <Link
-                              href={`/${currentLang}${item.href}`}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className={cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                                isItemActive
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'text-gray-700 hover:bg-gray-100'
-                              )}
-                            >
-                              <Icon className="h-5 w-5 flex-shrink-0" />
-                              <span className="flex-1">{getItemLabel(item.name)}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
+                              {notificationCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
               </nav>
-              <div className="mt-auto border-t p-4 bg-white">
-                <div className="space-y-1">
+              <div className="mt-auto border-t border-slate-200 p-4 bg-white">
+                <div className="space-y-0.5">
                   <Link
                     href={`/${currentLang}/company/profile`}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                       isActive('/company/profile')
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-700 hover:bg-slate-100'
                     )}
                   >
                     <User className="h-5 w-5 flex-shrink-0" />
-                    <span className="flex-1">{dict.nav?.profile || 'Profile'}</span>
+                    <span>{dict.nav?.profile || 'Profile'}</span>
+                  </Link>
+                  <Link
+                    href={`/${currentLang}/support`}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive('/support')
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    )}
+                  >
+                    <LifeBuoy className="h-5 w-5 flex-shrink-0" />
+                    <span>{dict.nav?.support || 'Support'}</span>
                   </Link>
                   <Link
                     href={`/${currentLang}/settings`}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                       isActive('/settings')
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-700 hover:bg-slate-100'
                     )}
                   >
                     <Settings className="h-5 w-5 flex-shrink-0" />
-                    <span className="flex-1">{dict.nav?.settings || 'Settings'}</span>
+                    <span>{dict.nav?.settings || 'Settings'}</span>
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors text-gray-700 hover:bg-gray-100"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-700 hover:bg-slate-100 text-left"
                   >
                     <LogOut className="h-5 w-5 flex-shrink-0" />
-                    <span className="flex-1 text-left">{dict.nav?.logout || dict.navigation.logout}</span>
+                    <span>{dict.nav?.logout || dict.navigation?.logout || 'Log out'}</span>
                   </button>
                 </div>
               </div>
@@ -344,7 +329,7 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
         </Sheet>
 
         <Link
-          href={`/${currentLang}/listings`}
+          href={`/${currentLang}/dashboard`}
           className="lg:hidden italic font-bold text-xl tracking-tight text-slate-900"
         >
           Staffer
@@ -357,14 +342,16 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
         )}
       </div>
 
-      {/* Right: Email + Avatar (minimal, jak u pracownika) */}
+      {/* Right: Company Identity Block */}
       <div className="flex items-center gap-3 ml-auto flex-row flex-shrink-0">
-        <span
-          className="text-sm font-medium text-slate-700 truncate max-w-[180px] hidden sm:block"
-          title={user?.email || dict.common.user}
-        >
-          {user?.email || dict.common.user}
-        </span>
+        <div className="text-right hidden sm:block">
+          <div className="font-bold text-sm text-slate-900">
+            {companyName || 'Company'}
+          </div>
+          <div className="text-xs text-slate-500 truncate max-w-[180px]">
+            {user?.email || dict.common.user}
+          </div>
+        </div>
         <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white flex-shrink-0">
           {avatarUrl ? (
             <img

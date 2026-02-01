@@ -24,23 +24,18 @@ export interface NavigationCategory {
 
 export const WORKER_NAVIGATION: NavigationCategory[] = [
   {
-    category: "MY WORK",
+    category: "",
     items: [
       { name: 'My Calendar', href: '/schedule', icon: CalendarDays },
+      { name: 'Job Listings', href: '/market', icon: Globe },
       { name: 'My Shifts', href: '/applications', icon: Briefcase },
       { name: 'Finances', href: '/finances', icon: Wallet },
-    ]
-  },
-  {
-    category: "EXPLORE",
-    items: [
-      { name: 'Job Listings', href: '/market', icon: Globe },
     ]
   }
 ];
 
 export const WORKER_SYSTEM_LINKS: NavigationItem[] = [
   { name: 'Profile', href: '/profile', icon: User },
-  { name: 'Settings', href: '/worker/settings', icon: Settings },
   { name: 'Support', href: '/support', icon: LifeBuoy },
+  { name: 'Settings', href: '/worker/settings', icon: Settings },
 ];

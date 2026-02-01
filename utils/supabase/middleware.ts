@@ -65,7 +65,7 @@ export async function updateSession(request: NextRequest) {
         .select('profile_id')
         .eq('profile_id', user.id)
         .maybeSingle()
-      const target = companyDetails ? `/${locale}/listings` : `/${locale}/company-setup`
+      const target = companyDetails ? `/${locale}/dashboard` : `/${locale}/company-setup`
       const redirectUrl = new URL(target, request.url)
       const redirectResponse = NextResponse.redirect(redirectUrl)
       response.cookies.getAll().forEach((cookie) => {

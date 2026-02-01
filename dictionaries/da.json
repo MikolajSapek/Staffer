@@ -150,7 +150,13 @@
     "applicantsDesc": "Gennemgå ansøgninger, der kræver handling",
     "templates": "Skabeloner",
     "pending": "Afventende",
-    "team": "Hold"
+    "team": "Hold",
+    "urgentTasks": "Hasteopgaver",
+    "tools": "Værktøjer",
+    "timesheetsPending": "Timesedler afventer godkendelse",
+    "candidatesPending": "Kandidater afventer gennemgang",
+    "financesPending": "Betalinger afventer",
+    "reviewNow": "Gennemgå nu"
   },
   "status": {
     "active": "Aktiv",

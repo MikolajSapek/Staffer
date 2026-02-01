@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,6 +90,8 @@ export default function TimesheetsClient({
   const [isPending, startTransition] = useTransition();
   const [isUpdating, setIsUpdating] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  // Track all IDs currently being processed to prevent double-clicks
+  const processingIdsRef = useRef<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [disputeDialogOpen, setDisputeDialogOpen] = useState(false);
   const [disputingTimesheetId, setDisputingTimesheetId] = useState<string | null>(null);
@@ -105,32 +107,39 @@ export default function TimesheetsClient({
       timesheet.status === 'disputed'
   );
 
-  const handleApprove = async (timesheetId: string) => {
+  const handleApprove = useCallback(async (timesheetId: string) => {
+    // Immediate check using ref to prevent double-clicks (synchronous)
+    if (processingIdsRef.current.has(timesheetId)) {
+      return; // Already processing this timesheet
+    }
+    
+    // Mark as processing immediately (before any async operation)
+    processingIdsRef.current.add(timesheetId);
+    
     setIsUpdating(true);
     setProcessingId(timesheetId);
     setError(null);
 
     startTransition(async () => {
       try {
-        const result = await approveTimesheet(timesheetId);
+        const result = await approveTimesheet(timesheetId, lang);
 
         if (!result.success) {
           setError(result.error || 'Failed to approve timesheet');
-          setProcessingId(null);
-          setIsUpdating(false);
         } else {
-          setProcessingId(null);
-          setIsUpdating(false);
-          // Refresh the page to get updated data
+          // Refresh to get fresh data from server (single source of truth)
           router.refresh();
         }
       } catch (err: any) {
         setError(err.message || 'An unexpected error occurred');
+      } finally {
+        // Always clean up processing state
+        processingIdsRef.current.delete(timesheetId);
         setProcessingId(null);
         setIsUpdating(false);
       }
     });
-  };
+  }, [router, startTransition, lang]);
 
   const handleDisputeClick = (timesheetId: string) => {
     setDisputingTimesheetId(timesheetId);

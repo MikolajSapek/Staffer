@@ -208,7 +208,7 @@ export default async function BillingPage({
 
                   return (
                     <TableRow 
-                      key={payment.id} 
+                      key={payment.application_id ?? payment.id}
                       className="hover:bg-muted/50 transition-colors"
                     >
                       <TableCell className="text-muted-foreground">

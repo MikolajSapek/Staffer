@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 
 export interface Payment {
   id: string;
+  application_id: string; // Unique per application - use for React key to prevent ghost rows
   amount: number;
   payment_status: 'pending' | 'paid' | 'cancelled';
   currency: string;
@@ -68,10 +69,10 @@ export async function getCompanyFinances(companyId: string): Promise<CompanyFina
       return sum + (parseFloat(payment.amount.toString()) || 0);
     }, 0);
 
-    // Get all payments sorted by created_at desc
+    // Get all payments sorted by created_at desc (application_id for React key deduplication)
     const { data: paymentsData, error: paymentsError } = await supabase
       .from('payments')
-      .select('id, amount, payment_status, shift_title_snapshot, worker_name_snapshot, created_at, hours_worked, hourly_rate, metadata, worker_id')
+      .select('id, application_id, amount, payment_status, shift_title_snapshot, worker_name_snapshot, created_at, hours_worked, hourly_rate, metadata, worker_id')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false });
 
@@ -130,12 +131,22 @@ export async function getCompanyFinances(companyId: string): Promise<CompanyFina
     }
 
     // Map payments to Payment interface (default currency is DKK)
-    const transactions: Payment[] = (paymentsData || []).map((payment: any) => {
+    // Deduplicate by application_id - constraint guarantees 1 payment per application
+    const seenApplicationIds = new Set<string>();
+    const transactions: Payment[] = (paymentsData || [])
+      .filter((payment: any) => {
+        const appId = payment.application_id;
+        if (!appId || seenApplicationIds.has(appId)) return false;
+        seenApplicationIds.add(appId);
+        return true;
+      })
+      .map((payment: any) => {
       // Get profile data from map (if available)
       const profile = payment.worker_id ? profilesMap[payment.worker_id] : null;
 
       return {
         id: payment.id,
+        application_id: payment.application_id,
         amount: parseFloat(payment.amount.toString()) || 0,
         payment_status: payment.payment_status as 'pending' | 'paid' | 'cancelled',
         currency: 'DKK', // Default currency

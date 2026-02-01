@@ -34,7 +34,7 @@ export default async function JobBoardPage({
     if (!companyDetails) {
       redirect(`/${lang}/company-setup`);
     }
-    redirect(`/${lang}/listings`);
+    redirect(`/${lang}/dashboard`);
   }
 
   // Logged-in worker: redirect to market (job listings) in worker layout

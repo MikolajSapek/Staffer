@@ -1,15 +1,8 @@
 import {
   LayoutDashboard,
-  Briefcase, // Ikona dla Job Listings (Wewnętrzne)
-  FileText,
-  Users,
-  MapPin,
-  Copy,
-  UserCog,
+  Briefcase,
+  LayoutList,
   Wallet,
-  Globe,     // Ikona dla Public Job Board (Zewnętrzne)
-  Settings,
-  LifeBuoy
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
@@ -20,41 +13,11 @@ export interface NavigationItem {
   hasBadge?: boolean;
 }
 
-export interface NavigationCategory {
-  category: string;
-  items: NavigationItem[];
-}
-
-export const COMPANY_NAVIGATION: NavigationCategory[] = [
-  {
-    category: "OPERATIONS",
-    items: [
-      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      // KLUCZOWE: To jest link do panelu zarządzania zmianami
-      { name: 'Shifts', href: '/listings', icon: Briefcase }, 
-      { name: 'Timesheets', href: '/timesheets', icon: FileText },
-      { name: 'Applicants', href: '/applicants', icon: Users, hasBadge: true },
-    ]
-  },
-  {
-    category: "MANAGEMENT",
-    items: [
-      { name: 'Locations', href: '/locations', icon: MapPin },
-      { name: 'Templates', href: '/templates', icon: Copy },
-      { name: 'Team', href: '/managers', icon: UserCog },
-    ]
-  },
-  {
-    category: "FINANCE",
-    items: [
-      { name: 'Finances', href: '/billing', icon: Wallet, hasBadge: true },
-    ]
-  }
-];
-
-export const SYSTEM_LINKS: NavigationItem[] = [
-  // KLUCZOWE: Marketplace - podgląd wszystkich ofert na rynku
-  { name: 'Job Listings', href: '/marketplace', icon: Globe }, 
-  { name: 'Settings', href: '/settings', icon: Settings },
-  { name: 'Support', href: '/support', icon: LifeBuoy },
+// Flat sidebar: Dashboard, Applicants, Shifts, Finances
+// Badges: Applicants (if > 0), Finances (pending payments)
+export const COMPANY_NAVIGATION_ITEMS: NavigationItem[] = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Applicants', href: '/applicants', icon: LayoutList, hasBadge: true },
+  { name: 'Shifts', href: '/listings', icon: Briefcase },
+  { name: 'Finances', href: '/billing', icon: Wallet, hasBadge: true },
 ];

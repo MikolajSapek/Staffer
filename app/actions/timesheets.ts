@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { revalidatePath } from 'next/cache';
 
 /**
  * Approve a timesheet with idempotency protection against duplicate payments.
@@ -11,7 +12,7 @@ import { createClient } from '@/utils/supabase/server';
  * If a payment already exists, it will only update the timesheet status to 'approved'
  * without creating a duplicate payment record.
  */
-export async function approveTimesheet(timesheetId: string) {
+export async function approveTimesheet(timesheetId: string, lang?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -95,6 +96,10 @@ export async function approveTimesheet(timesheetId: string) {
         };
       }
 
+      if (lang) {
+        revalidatePath(`/${lang}/timesheets`, 'page');
+        revalidatePath(`/${lang}/billing`, 'page');
+      }
       return {
         success: true,
         message: 'Timesheet approved (payment already exists)',
@@ -108,12 +113,45 @@ export async function approveTimesheet(timesheetId: string) {
     });
 
     if (rpcError) {
+      // Check if error is due to unique constraint violation (duplicate payment)
+      // This can happen in race conditions - treat as idempotent success
+      const errorMessage = rpcError.message?.toLowerCase() || '';
+      const isUniqueConstraintViolation = 
+        errorMessage.includes('unique') ||
+        errorMessage.includes('duplicate') ||
+        errorMessage.includes('unique_payment_per_application') ||
+        rpcError.code === '23505'; // PostgreSQL unique violation code
+      
+      if (isUniqueConstraintViolation) {
+        console.log('Unique constraint hit for application:', applicationId, '- treating as idempotent success');
+        
+        // Ensure timesheet is marked as approved even if payment creation was blocked
+        await supabase
+          .from('timesheets')
+          .update({ status: 'approved' })
+          .eq('id', timesheetId);
+        
+        if (lang) {
+          revalidatePath(`/${lang}/timesheets`, 'page');
+          revalidatePath(`/${lang}/billing`, 'page');
+        }
+        return {
+          success: true,
+          message: 'Timesheet approved (payment already exists)',
+          skippedPayment: true,
+        };
+      }
+      
       return {
         success: false,
         error: rpcError.message || 'Failed to approve timesheet',
       };
     }
 
+    if (lang) {
+      revalidatePath(`/${lang}/timesheets`, 'page');
+      revalidatePath(`/${lang}/billing`, 'page');
+    }
     return {
       success: true,
       message: 'Timesheet approved and payment created',

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { Menu, LogOut, Settings, User } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -16,7 +16,6 @@ import {
   WORKER_NAVIGATION,
   WORKER_SYSTEM_LINKS,
   NavigationCategory,
-  NavigationItem,
 } from '@/lib/config/worker-navigation';
 
 interface WorkerHeaderProps {
@@ -29,6 +28,7 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [workerName, setWorkerName] = useState<{ first_name: string | null; last_name: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -55,7 +55,6 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
     }
   };
 
-  // Get page title based on pathname
   const getPageTitle = () => {
     if (!pathname) return '';
     
@@ -73,11 +72,6 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
     
     return titleMap[pathWithoutLang] || '';
   };
-
-  // Filter system links for main nav (exclude Settings and Profile - they're in footer)
-  const systemLinksForMainNav = WORKER_SYSTEM_LINKS.filter(
-    (item) => item.name !== 'Settings' && item.name !== 'Profile'
-  );
 
   // Fetch user and worker details
   useEffect(() => {
@@ -106,16 +100,24 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
 
         setUser(user);
         if (user) {
-          // Fetch worker avatar
+          // Fetch worker details (avatar and name)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .maybeSingle();
+          
           const { data: workerDetails } = await supabase
             .from('worker_details')
             .select('avatar_url')
             .eq('profile_id', user.id)
             .maybeSingle();
           
+          setWorkerName(profile ? { first_name: profile.first_name, last_name: profile.last_name } : null);
           setAvatarUrl(workerDetails?.avatar_url || null);
         } else {
           setAvatarUrl(null);
+          setWorkerName(null);
         }
         setLoading(false);
       } catch (err: unknown) {
@@ -141,18 +143,26 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
         setUser(session?.user ?? null);
         if (session?.user) {
           const supabase = createClient();
-          supabase
-            .from('worker_details')
-            .select('avatar_url')
-            .eq('profile_id', session.user.id)
-            .maybeSingle()
-            .then(({ data: workerDetails }) => {
-              if (mounted) {
-                setAvatarUrl(workerDetails?.avatar_url || null);
-              }
-            });
+          Promise.all([
+            supabase
+              .from('profiles')
+              .select('first_name, last_name')
+              .eq('id', session.user.id)
+              .maybeSingle(),
+            supabase
+              .from('worker_details')
+              .select('avatar_url')
+              .eq('profile_id', session.user.id)
+              .maybeSingle()
+          ]).then(([{ data: profile }, { data: workerDetails }]) => {
+            if (mounted) {
+              setWorkerName(profile ? { first_name: profile.first_name, last_name: profile.last_name } : null);
+              setAvatarUrl(workerDetails?.avatar_url || null);
+            }
+          });
         } else {
           setAvatarUrl(null);
+          setWorkerName(null);
           setLoading(false);
         }
       });
@@ -170,10 +180,23 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
   }, []);
 
   const getUserInitials = () => {
+    if (workerName?.first_name) {
+      return workerName.first_name.charAt(0).toUpperCase();
+    }
     if (user?.email) {
       return user.email.charAt(0).toUpperCase();
     }
     return 'U';
+  };
+
+  const getDisplayName = () => {
+    if (workerName?.first_name && workerName?.last_name) {
+      return `${workerName.first_name} ${workerName.last_name}`;
+    }
+    if (workerName?.first_name) {
+      return workerName.first_name;
+    }
+    return 'Worker';
   };
 
   const pageTitle = getPageTitle();
@@ -209,7 +232,7 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
             {/* Mobile Navigation - same structure as WorkerSidebar */}
             <div className="flex flex-col h-full bg-white">
               {/* Logo - Top */}
-              <div className="h-16 flex items-center px-6 border-b">
+              <div className="h-16 flex items-center justify-center px-6 border-b">
                 <Link
                   href={`/${currentLang}/market`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -224,11 +247,8 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
               {/* Navigation - Middle (scrollable) */}
               <nav className="flex-1 overflow-y-auto p-4">
                 {WORKER_NAVIGATION.map((category: NavigationCategory) => (
-                  <div key={category.category} className="mb-6">
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">
-                      {category.category}
-                    </h3>
-                    <ul className="space-y-1">
+                  <div key={category.category || 'main'}>
+                    <ul className="space-y-0.5">
                       {category.items.map((item) => {
                         const Icon = item.icon;
                         const isItemActive = isActive(item.href);
@@ -239,10 +259,10 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
                               href={`/${currentLang}${item.href}`}
                               onClick={() => setMobileMenuOpen(false)}
                               className={cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                                 isItemActive
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'text-gray-700 hover:bg-gray-100'
+                                  ? 'bg-slate-900 text-white'
+                                  : 'text-slate-700 hover:bg-slate-100'
                               )}
                             >
                               <Icon className="h-5 w-5 flex-shrink-0" />
@@ -254,80 +274,40 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
                     </ul>
                   </div>
                 ))}
-
-                {/* System Links (Support) */}
-                {systemLinksForMainNav.length > 0 && (
-                  <div className="mb-6">
-                    <ul className="space-y-1">
-                      {systemLinksForMainNav.map((item: NavigationItem) => {
-                        const Icon = item.icon;
-                        const isItemActive = isActive(item.href);
-
-                        return (
-                          <li key={item.name}>
-                            <Link
-                              href={`/${currentLang}${item.href}`}
-                              onClick={() => setMobileMenuOpen(false)}
-                              className={cn(
-                                'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                                isItemActive
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'text-gray-700 hover:bg-gray-100'
-                              )}
-                            >
-                              <Icon className="h-5 w-5 flex-shrink-0" />
-                              <span className="flex-1">{item.name}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
               </nav>
 
               {/* Footer - Bottom (Pinned) */}
-              <div className="mt-auto border-t p-4 bg-white">
-                <div className="space-y-1">
-                  {/* Profile Link */}
-                  <Link
-                    href={`/${currentLang}/profile`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                      isActive('/profile')
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    )}
-                  >
-                    <User className="h-5 w-5 flex-shrink-0" />
-                    <span className="flex-1">Profile</span>
-                  </Link>
+              <div className="mt-auto border-t border-slate-200 p-4 bg-white space-y-2">
+                {WORKER_SYSTEM_LINKS.map((item) => {
+                  const Icon = item.icon;
+                  const isItemActive = isActive(item.href);
 
-                  {/* Settings Link */}
-                  <Link
-                    href={`/${currentLang}/worker/settings`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                      isActive('/worker/settings')
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    )}
-                  >
-                    <Settings className="h-5 w-5 flex-shrink-0" />
-                    <span className="flex-1">Settings</span>
-                  </Link>
+                  return (
+                    <Link
+                      key={item.name}
+                      href={`/${currentLang}${item.href}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                        isItemActive
+                          ? 'bg-slate-900 text-white'
+                          : 'text-slate-700 hover:bg-slate-100'
+                      )}
+                    >
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="flex-1">{item.name}</span>
+                    </Link>
+                  );
+                })}
 
-                  {/* Log Out Button */}
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors text-gray-700 hover:bg-gray-100"
-                  >
-                    <LogOut className="h-5 w-5 flex-shrink-0" />
-                    <span className="flex-1 text-left">Log Out</span>
-                  </button>
-                </div>
+                {/* Log Out Button */}
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-700 hover:bg-slate-100 text-left"
+                >
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  <span className="flex-1 text-left">Log Out</span>
+                </button>
               </div>
             </div>
           </SheetContent>
@@ -349,14 +329,16 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
         )}
       </div>
 
-      {/* User Profile - Right: email + avatar in one line */}
+      {/* Worker Identity - Right: Name (bold) + email (gray small) + avatar */}
       <div className="flex items-center gap-3 ml-auto flex-row flex-shrink-0">
-        <span
-          className="text-sm font-medium text-slate-700 truncate max-w-[180px] hidden sm:block"
-          title={user?.email || 'User'}
-        >
-          {user?.email || 'User'}
-        </span>
+        <div className="text-right hidden sm:block">
+          <div className="font-bold text-sm text-slate-900">
+            {getDisplayName()}
+          </div>
+          <div className="text-xs text-slate-500 truncate max-w-[180px]">
+            {user?.email || 'User'}
+          </div>
+        </div>
         <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white flex-shrink-0">
           {avatarUrl ? (
             <img

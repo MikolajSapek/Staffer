@@ -184,11 +184,11 @@ export default function CompanyOnboardingPage() {
         return;
       }
 
-      // Success - redirect to job listings so company sees their listings immediately
+      // Success - redirect to dashboard so company sees their overview
       if (isNavigatingRef.current) return;
       isNavigatingRef.current = true;
       setTimeout(() => {
-        router.push(`/${lang}/listings`);
+        router.push(`/${lang}/dashboard`);
       }, 0);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Der opstod en uventet fejl. Prøv igen.';

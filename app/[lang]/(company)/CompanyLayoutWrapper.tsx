@@ -102,7 +102,7 @@ export default function CompanyLayoutWrapper({
       if (pathname?.includes('/company-setup')) {
         isNavigatingRef.current = true;
         console.log('Redirecting to job listings (setup complete)...');
-        router.push(`/${langPrefix}/listings`);
+        router.push(`/${langPrefix}/dashboard`);
         return;
       }
     }

@@ -150,7 +150,13 @@
     "applicantsDesc": "Review applications requiring action",
     "templates": "Templates",
     "pending": "Pending",
-    "team": "Team"
+    "team": "Team",
+    "urgentTasks": "Urgent Tasks",
+    "tools": "Tools",
+    "timesheetsPending": "Timesheets awaiting approval",
+    "candidatesPending": "Candidates awaiting review",
+    "financesPending": "Payments pending",
+    "reviewNow": "Review now"
   },
   "status": {
     "active": "Active",
