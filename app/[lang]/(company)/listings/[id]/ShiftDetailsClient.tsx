@@ -359,26 +359,24 @@ export default function ShiftDetailsClient({
                     <Pencil className="h-4 w-4" />
                     Edit Shift
                   </Button>
-                  {hiredTeam.length > 0 && (
-                    <Button
-                      onClick={handleArchive}
-                      disabled={isPending}
-                      variant="outline"
-                      className="gap-2"
-                    >
-                      {isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Archiving...
-                        </>
-                      ) : (
-                        <>
-                          <Archive className="h-4 w-4" />
-                          Archive Shift
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    onClick={handleArchive}
+                    disabled={isPending}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Archiving...
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="h-4 w-4" />
+                        Archive Shift
+                      </>
+                    )}
+                  </Button>
                 </>
               )}
             </div>
@@ -624,8 +622,8 @@ export default function ShiftDetailsClient({
                                 </div>
                                 {disputesMap[profile.id]?.was_disputed && (
                                   <CorrectionBadge
-                                    metadata={disputesMap[profile.id].metadata}
-                                    was_disputed={disputesMap[profile.id].was_disputed}
+                                    metadata={disputesMap[profile.id]?.metadata ?? null}
+                                    was_disputed={disputesMap[profile.id]?.was_disputed}
                                   />
                                 )}
                               </div>

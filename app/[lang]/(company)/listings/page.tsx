@@ -30,8 +30,8 @@ export default async function CompanyListingsPage({
   // Get current time for filtering (UTC for database queries)
   const now = new Date().toISOString();
 
-  // Fetch active (upcoming) shifts
-  // Active = end_time >= now AND status != 'cancelled'
+  // Fetch active (upcoming) shifts.
+  // Criteria: end_time >= now AND status != 'cancelled'. Uses only status and end_time (no worker/application checks).
   const { data: activeShifts } = await supabase
     .from('shifts')
     .select(`
@@ -55,9 +55,7 @@ export default async function CompanyListingsPage({
     .neq('status', 'cancelled')
     .order('start_time', { ascending: true });
 
-  // Fetch archived shifts
-  // Archived = end_time < now OR status IN ('completed', 'cancelled')
-  // Używamy dwóch zapytań i łączymy wyniki
+  // Fetch archived shifts. Criteria: end_time < now OR status IN ('completed', 'cancelled'). Uses only status and end_time (no worker/application checks).
   const { data: pastShifts } = await supabase
     .from('shifts')
     .select(`

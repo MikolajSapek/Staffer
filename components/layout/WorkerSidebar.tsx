@@ -36,7 +36,7 @@ export function WorkerSidebar({ lang }: WorkerSidebarProps) {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.push('/');
+      router.push(`/${currentLang}`);
       router.refresh();
     } catch (error) {
       console.error('Error signing out:', error);
@@ -51,7 +51,7 @@ export function WorkerSidebar({ lang }: WorkerSidebarProps) {
     <div className="flex flex-col h-full w-64 bg-white border-r">
       {/* Logo - Top */}
       <div className="h-16 flex items-center px-6 border-b">
-        <Link href={`/${currentLang}`} className="flex items-center">
+        <Link href={`/${currentLang}/market`} className="flex items-center">
           <span className="italic font-bold text-2xl tracking-tight text-slate-900">
             Staffer
           </span>

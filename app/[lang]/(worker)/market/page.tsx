@@ -48,13 +48,6 @@ export default async function WorkerMarketPage({
     });
   }
 
-  // LOG: Informacja o użytkowniku dla diagnostyki
-  console.log('═══════════════════════════════════════════════════════');
-  console.log('🔍 DIAGNOSTYKA POBIERANIA OFERT (WORKER MARKET)');
-  console.log('═══════════════════════════════════════════════════════');
-  console.log('👤 Użytkownik:', user ? `${user.id} (${userRole})` : '❌ NIEZALOGOWANY');
-  console.log('📅 Czas zapytania:', new Date().toISOString());
-  
   // Fetch only essential shift data for worker job market (no manager data)
   const { data: shiftsData, error: shiftsError } = await supabase
     .from('shifts')
@@ -91,52 +84,11 @@ export default async function WorkerMarketPage({
     .gt('start_time', new Date().toISOString())
     .order('start_time', { ascending: true });
 
-  // AGRESYWNE LOGOWANIE BŁĘDÓW
-  if (shiftsError) {
-    console.error('❌ BŁĄD POBIERANIA OFERT:', shiftsError);
-    console.error('📝 Szczegóły błędu:');
-    console.error('  - Kod:', shiftsError.code);
-    console.error('  - Wiadomość:', shiftsError.message);
-    console.error('  - Szczegóły:', shiftsError.details);
-    console.error('  - Hint:', shiftsError.hint);
-  } else {
-    console.log('✅ ZAPYTANIE ZAKOŃCZONE SUKCESEM');
-    console.log('📊 Pobrano shiftów:', shiftsData?.length || 0);
-    
-    if (shiftsData && shiftsData.length > 0) {
-      console.log('📋 Przykładowy shift (pierwszy):');
-      const firstShift = shiftsData[0];
-      console.log('  - ID:', firstShift.id);
-      console.log('  - Tytuł:', firstShift.title);
-      console.log('  - Status:', firstShift.status);
-      console.log('  - Start:', firstShift.start_time);
-      console.log('  - Wolne miejsca:', `${firstShift.vacancies_taken}/${firstShift.vacancies_total}`);
-      console.log('  - Ma lokalizację?', !!firstShift.locations);
-      console.log('  - Ma profil firmy?', !!firstShift.profiles);
-    } else {
-      console.warn('⚠️ PUSTA LISTA OFERT!');
-      console.warn('   Możliwe przyczyny:');
-      console.warn('   1. Brak ofert ze statusem "published"');
-      console.warn('   2. Wszystkie oferty mają datę w przeszłości');
-      console.warn('   3. Problem z RLS (Row Level Security)');
-      console.warn('   4. Brak danych w bazie');
-    }
-  }
-
   // Filtrujemy tylko te zmiany, które mają wolne miejsca
   const availableShifts = (shiftsData || []).filter(shift => 
     shift.vacancies_taken < shift.vacancies_total
   );
-  
-  console.log('🔍 Po filtrowaniu (wolne miejsca):', availableShifts.length);
-  
-  if (shiftsData && shiftsData.length > 0 && availableShifts.length === 0) {
-    console.warn('⚠️ WSZYSTKIE OFERTY SĄ ZAPEŁNIONE (vacancies_taken >= vacancies_total)');
-  }
-  
   const shifts = shiftsError ? [] : availableShifts;
-  console.log('🎯 FINALNA LICZBA OFERT DO WYŚWIETLENIA:', shifts.length);
-  console.log('═══════════════════════════════════════════════════════');
 
   return (
     <div>

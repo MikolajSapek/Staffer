@@ -42,7 +42,7 @@ interface Shift {
 
 interface Application {
   id: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'waitlist';
+  status: 'pending' | 'accepted' | 'rejected' | 'waitlist' | 'completed';
   applied_at: string;
   worker_message: string | null;
   shift_id: string;
@@ -116,40 +116,36 @@ export default function ApplicantProfileModal({
       licenses: Array<{ id: string; name: string }>;
     };
     
-    supabase
-      .from('applicant_skills_view')
-      .select('*')
-      .eq('worker_id', application.worker_id)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data, error }: { data: ApplicantSkills | null; error: any }) => {
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('applicant_skills_view')
+          .select('*')
+          .eq('worker_id', application.worker_id)
+          .limit(1)
+          .maybeSingle();
+
         if (error) {
           console.error('Error fetching applicant skills:', error);
           setWorkerSkills({ languages: [], licenses: [] });
-          setSkillsLoading(false);
           return;
         }
-        
+
         if (!data) {
-          // Worker has no skills entry yet - this is normal
           setWorkerSkills({ languages: [], licenses: [] });
-          setSkillsLoading(false);
           return;
         }
-        
-        // Data comes directly as arrays of { id: string; name: string }
-        // No need for parsing or JSON.parse() - Supabase client handles JSONB automatically
+
         setWorkerSkills({
-          languages: data.languages || [],
-          licenses: data.licenses || []
+          languages: (data as ApplicantSkills).languages || [],
+          licenses: (data as ApplicantSkills).licenses || [],
         });
-        
-        setSkillsLoading(false);
-      })
-      .catch(() => {
+      } catch {
         setWorkerSkills({ languages: [], licenses: [] });
+      } finally {
         setSkillsLoading(false);
-      });
+      }
+    })();
   }, [open, application.worker_id]);
 
   if (!profile || !shift) {

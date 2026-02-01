@@ -101,7 +101,7 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.push('/');
+      router.push(`/${currentLang}`);
       router.refresh();
     } catch (error) {
       console.error('Error signing out:', error);

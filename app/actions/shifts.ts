@@ -366,6 +366,8 @@ export async function archiveShift({
 
     revalidatePath(`/${lang}/shifts`);
     revalidatePath(`/${lang}/shifts/${shiftId}`);
+    revalidatePath(`/${lang}/listings`);
+    revalidatePath(`/${lang}/listings/${shiftId}`);
     revalidatePath(`/${lang}/dashboard`);
 
     return { message: 'Shift archived successfully', error: null };
