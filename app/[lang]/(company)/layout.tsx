@@ -3,6 +3,11 @@ import { createClient } from '@/utils/supabase/server';
 import CompanyLayoutWrapper from './CompanyLayoutWrapper';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 
+/**
+ * JEDYNE źródło prawdy dla zalogowanej firmy.
+ * Wszystkie trasy w (company) używają tego layoutu – Sidebar jest zawsze renderowany,
+ * bez starego Navbara. Sesja jest walidowana przy każdym żądaniu (createClient + getUser).
+ */
 export default async function CompanyLayout({
   children,
   params,
@@ -10,31 +15,19 @@ export default async function CompanyLayout({
   children: React.ReactNode;
   params: Promise<{ lang: string }>;
 }) {
-  // W Next.js 15 params jest Promise, więc trzeba użyć await
   const { lang } = await params;
-  
-  // Zabezpieczenie: jeśli lang jest undefined/null, użyj 'en-US'
   const currentLang = lang || 'en-US';
-  
-  // Debug (opcjonalnie, usuń po testach)
-  if (!lang) {
-    console.warn('CompanyLayout: lang is missing from params, using fallback "en-US"');
-  }
-  
+
   const dict = await getDictionary(currentLang as 'en-US' | 'da');
   const supabase = await createClient();
+  // Re-walidacja sesji przy każdym żądaniu (cookies) – ważne przy otwieraniu linku w nowym oknie
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (authError) {
-    console.error('CompanyLayout: Auth error:', authError);
+  if (authError || !user) {
+    if (authError) console.error('CompanyLayout: Auth error:', authError);
     redirect(`/${currentLang}/login`);
   }
 
-  if (!user) {
-    redirect(`/${currentLang}/login`);
-  }
-
-  // Get user profile to check role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')

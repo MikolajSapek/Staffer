@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { Building2, Loader2 } from 'lucide-react';
 
 export default function CompanyOnboardingPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const lang = pathname?.match(/^\/(en-US|da)/)?.[1] || 'en-US';
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,9 +61,9 @@ export default function CompanyOnboardingPage() {
 
       if (!isMounted) return;
 
-      // If company_details exists, redirect to dashboard
+      // If company_details exists, redirect to job listings
       if (companyDetails) {
-        router.push('/dashboard');
+        router.push(`/${lang}/listings`);
         return;
       }
 
@@ -182,14 +184,11 @@ export default function CompanyOnboardingPage() {
         return;
       }
 
-      // Success - redirect to dashboard
-      // Prevent multiple navigation attempts
+      // Success - redirect to job listings so company sees their listings immediately
       if (isNavigatingRef.current) return;
       isNavigatingRef.current = true;
-      
-      // Use setTimeout to ensure state updates complete before navigation
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push(`/${lang}/listings`);
       }, 0);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Der opstod en uventet fejl. Prøv igen.';

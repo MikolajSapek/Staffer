@@ -117,7 +117,7 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
           const userRole = profile?.role;
 
           // Determine redirect path: prioritize 'next' parameter, otherwise use role-based redirect
-          let redirectPath = `/${lang}/dashboard`; // Default fallback
+          let redirectPath = `/${lang}/listings`; // Default fallback (company job listings)
           
           if (nextParam) {
             // Validate next parameter to prevent open redirect attacks
@@ -134,11 +134,11 @@ export default function LoginForm({ dict, lang }: LoginFormProps) {
               // Pracownik idzie do ofert pracy
               redirectPath = `/${lang}/market`;
             } else if (userRole === 'company') {
-              // Firma idzie do dashboardu
-              redirectPath = `/${lang}/dashboard`;
+              // Firma od razu widzi Job Listings (zarządzanie zmianami)
+              redirectPath = `/${lang}/listings`;
             } else {
               // Fallback (np. admin)
-              redirectPath = `/${lang}/dashboard`;
+              redirectPath = `/${lang}/listings`;
             }
           }
           

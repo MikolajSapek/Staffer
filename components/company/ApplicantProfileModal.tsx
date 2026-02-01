@@ -51,6 +51,7 @@ interface Application {
   shifts: Shift | null;
 }
 
+/** Modal props – must follow type definitions above (WorkerDetails, Profile, Shift, Application). */
 interface ApplicantProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

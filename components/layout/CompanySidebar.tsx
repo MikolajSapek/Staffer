@@ -117,7 +117,7 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
     <div className="flex flex-col h-full">
       {/* Logo - Top */}
       <div className="h-16 flex items-center px-6 border-b">
-        <Link href={`/${currentLang}/dashboard`} className="flex items-center">
+        <Link href={`/${currentLang}/listings`} className="flex items-center">
           <span className="italic font-bold text-2xl tracking-tight text-slate-900">
             Staffer
           </span>

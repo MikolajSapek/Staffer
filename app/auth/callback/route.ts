@@ -159,8 +159,8 @@ export async function GET(request: NextRequest) {
     let fallbackPath = `/${locale}/login`;
     
     if (userRole === 'company') {
-      // Company dashboard is at /(company)/dashboard
-      fallbackPath = `/${locale}/company/dashboard`;
+      // Company lands on job listings (Shifts) so they see their listings immediately
+      fallbackPath = `/${locale}/listings`;
     } else if (userRole === 'worker') {
       // Worker's main page is the job board at root
       fallbackPath = `/${locale}`;

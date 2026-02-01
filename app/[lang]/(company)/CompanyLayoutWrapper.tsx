@@ -101,8 +101,8 @@ export default function CompanyLayoutWrapper({
       // Jeśli jesteśmy na setupie (a mamy już dane), wróć do Dashboardu
       if (pathname?.includes('/company-setup')) {
         isNavigatingRef.current = true;
-        console.log('Redirecting to dashboard (setup complete)...');
-        router.push(`/${langPrefix}/dashboard`); // ✅ FIX: Dodano język
+        console.log('Redirecting to job listings (setup complete)...');
+        router.push(`/${langPrefix}/listings`);
         return;
       }
     }
@@ -119,20 +119,16 @@ export default function CompanyLayoutWrapper({
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* 1. Sidebar (Lewa strona, pełna wysokość) */}
-      <aside className="hidden lg:flex flex-col w-64 border-r bg-white h-full z-30">
+      {/* 1. Sidebar – tylko CompanySidebar, ukryty na mobile, wysuwany pod Avatarem (w Headerze) */}
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 w-64 h-full border-r bg-white z-30">
         <CompanySidebarDynamic dict={dict} lang={currentLang} />
       </aside>
 
-      {/* 2. Prawa kolumna (Header + Content) */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        
-        {/* Header na górze (Profil, Tytuł) */}
+      {/* 2. Główna treść: margines lg:pl-64, żeby nie chowała się pod Sidebarem na desktop */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden lg:pl-64">
         <header className="flex-shrink-0 z-20">
           <CompanyHeaderDynamic dict={dict} lang={currentLang} />
         </header>
-
-        {/* Scrollowalna treść główna */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="max-w-7xl mx-auto">
             {children}

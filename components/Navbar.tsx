@@ -335,7 +335,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
       <nav className="border-b bg-background sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href={role === 'company' ? `/${lang}/dashboard` : '/'} className="italic font-bold text-2xl tracking-tight text-slate-900">
+            <Link href={role === 'company' ? `/${lang}/listings` : '/'} className="italic font-bold text-2xl tracking-tight text-slate-900">
               Staffer
             </Link>
             <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
@@ -349,7 +349,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
     <nav className="border-b bg-background sticky top-0 z-50" suppressHydrationWarning={true}>
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between relative">
-          <Link href={role === 'company' ? `/${lang}/dashboard` : '/'} className="italic font-bold text-2xl tracking-tight text-slate-900">
+          <Link href={role === 'company' ? `/${lang}/listings` : '/'} className="italic font-bold text-2xl tracking-tight text-slate-900">
             Staffer
           </Link>
 
@@ -434,7 +434,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                   {role === 'company' && (
                     <>
                       <Link
-                        href={`/${lang}/dashboard`}
+                        href={`/${lang}/listings`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >
@@ -442,7 +442,7 @@ export default function Navbar({ dict, lang }: NavbarProps) {
                         {dict.nav?.dashboard || dict.navigation.dashboard}
                       </Link>
                       <Link
-                        href={`/${lang}/shifts`}
+                        href={`/${lang}/listings`}
                         onClick={() => setIsOpen(false)}
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                       >

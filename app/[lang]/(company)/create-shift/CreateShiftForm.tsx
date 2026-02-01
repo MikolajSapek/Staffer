@@ -600,10 +600,10 @@ export default function CreateShiftForm({ companyId, locations: initialLocations
       // Show success message
       setSuccess(true);
 
-      // Refresh to sync server state and redirect after 1.5 seconds
+      // Refresh to sync server state and redirect to Job Listings so the new shift is visible immediately
       router.refresh();
       setTimeout(() => {
-        router.push(`/${lang}/dashboard`);
+        router.push(`/${lang}/listings`);
       }, 1500);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : dict.validation.titleRequired;

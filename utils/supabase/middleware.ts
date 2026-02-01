@@ -57,6 +57,22 @@ export async function updateSession(request: NextRequest) {
       })
       return redirectResponse
     }
+
+    // Company: redirect to panel (listings) so they always get Sidebar layout, not root Navbar
+    if (profile?.role === 'company') {
+      const { data: companyDetails } = await supabase
+        .from('company_details')
+        .select('profile_id')
+        .eq('profile_id', user.id)
+        .maybeSingle()
+      const target = companyDetails ? `/${locale}/listings` : `/${locale}/company-setup`
+      const redirectUrl = new URL(target, request.url)
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, { path: '/' })
+      })
+      return redirectResponse
+    }
   }
 
   return response

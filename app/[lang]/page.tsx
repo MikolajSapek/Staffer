@@ -22,9 +22,8 @@ export default async function JobBoardPage({
   const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
   const verificationStatus = profile?.verification_status ?? null;
 
-  // If a logged-in company user visits the root page and their company
-  // profile is NOT completed yet, send them to company-setup.
-  // Fully onboarded companies are allowed to view the public job board.
+  // Logged-in company: always redirect into (company) panel so they get Sidebar layout.
+  // Prevents opening root in new tab and seeing old layout instead of panel.
   if (user && userRole === 'company') {
     const { data: companyDetails } = await supabase
       .from('company_details')
@@ -35,9 +34,10 @@ export default async function JobBoardPage({
     if (!companyDetails) {
       redirect(`/${lang}/company-setup`);
     }
+    redirect(`/${lang}/listings`);
   }
 
-  // If a logged-in worker visits the root page, redirect to Job Listings (market) in worker layout
+  // Logged-in worker: redirect to market (job listings) in worker layout
   if (user && userRole === 'worker') {
     redirect(`/${lang}/market`);
   }
