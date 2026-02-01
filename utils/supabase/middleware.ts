@@ -8,6 +8,7 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
+  console.log('DEBUG_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Loaded' : 'MISSING');
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

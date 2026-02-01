@@ -154,6 +154,8 @@
     "urgentTasks": "Urgent Tasks",
     "tools": "Tools",
     "timesheetsPending": "Timesheets awaiting approval",
+    "timesheetsDesc": "Review and approve worker hours",
+    "pendingApproval": "pending approval",
     "candidatesPending": "Candidates awaiting review",
     "financesPending": "Payments pending",
     "reviewNow": "Review now"
@@ -679,7 +681,13 @@
     "recordedTime": "Recorded Time",
     "notSpecified": "Not specified",
     "notRecorded": "Not recorded",
-    "notCheckedOut": "Not checked out"
+    "notCheckedOut": "Not checked out",
+    "ratingModal": {
+      "title": "Rate your collaboration with this worker",
+      "commentPlaceholder": "Add an optional comment...",
+      "save": "Save",
+      "skip": "Skip"
+    }
   },
   "Verification": {
     "status_verified": "Account Verified",

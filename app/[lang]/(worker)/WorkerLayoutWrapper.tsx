@@ -21,9 +21,9 @@ export default function WorkerLayoutWrapper({
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-white overflow-hidden">
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r bg-white h-full z-30">
+      <aside className="hidden md:flex flex-col w-20 border-r border-black bg-white h-full z-30">
         <WorkerSidebar lang={currentLang} />
       </aside>
 

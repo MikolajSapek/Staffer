@@ -8,6 +8,7 @@ import {
   Copy,
   UserCog,
   Plus,
+  Clock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -189,6 +190,30 @@ export default async function CompanyDashboardPage({
             <CardContent>
               <p className="text-sm text-slate-600">
                 {dashboardDict?.applicantsDesc || 'Review applications requiring action'}
+              </p>
+            </CardContent>
+          </Link>
+        </Card>
+
+        {/* Timesheets - Large tile */}
+        <Card className="mb-6 border border-black hover:bg-[#F3F4F6] transition-all cursor-pointer">
+          <Link href={`/${currentLang}/timesheets`} className="block">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-3">
+                <Clock className="h-6 w-6 text-black" />
+                <CardTitle className="text-xl font-semibold text-black">
+                  {nav?.timesheets || 'Timesheets'}
+                </CardTitle>
+              </div>
+              {counts.timesheets > 0 && (
+                <span className="text-sm text-black font-medium">
+                  {counts.timesheets} {dashboardDict?.pendingApproval || 'pending approval'}
+                </span>
+              )}
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                {dashboardDict?.timesheetsDesc || 'Review and approve worker hours'}
               </p>
             </CardContent>
           </Link>

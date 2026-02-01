@@ -58,7 +58,7 @@ export default async function TimesheetsPage({
     redirect(`/${lang}`);
   }
 
-  // First, get all shift IDs for this company
+  // Get company shift IDs
   const { data: companyShifts } = await supabase
     .from('shifts')
     .select('id')
@@ -66,8 +66,19 @@ export default async function TimesheetsPage({
 
   const shiftIds = companyShifts?.map(s => s.id) || [];
 
-  // Fetch timesheets with filters: company_id (through shifts), status = 'pending', 'disputed', or 'approved' (if was_disputed)
-  // Using explicit foreign key names for reliable relationship resolution
+  // Fetch accepted shift_applications: (shift_id, worker_id) - required for valid timesheets
+  const { data: acceptedApplications } = await supabase
+    .from('shift_applications')
+    .select('shift_id, worker_id')
+    .eq('company_id', user.id)
+    .eq('status', 'accepted');
+
+  const acceptedKeys = new Set(
+    (acceptedApplications || []).map((a) => `${a.shift_id}:${a.worker_id}`)
+  );
+
+  // Fetch timesheets: shifts -> timesheets, worker via profiles (timesheets.worker_id)
+  // Only include timesheets where shift_applications has status='accepted' for (shift_id, worker_id)
   const { data: timesheets, error } = await supabase
     .from('timesheets')
     .select(`
@@ -105,24 +116,21 @@ export default async function TimesheetsPage({
   const now = new Date().toISOString();
 
   // Map and calculate total_pay for each timesheet
-  // Filter to ensure we only show timesheets for this company's shifts AND only completed shifts
-  // Logic: Show timesheet IF: status = 'pending' AND shift.status = 'completed' (or shift.end_time < now)
+  // Filter: 1) company's shift, 2) has accepted shift_application, 3) shift completed
   const mappedTimesheets = (timesheets || [])
     .filter((timesheet: any) => {
       const shift = Array.isArray(timesheet.shift) ? timesheet.shift[0] : timesheet.shift;
-      
-      // First check: must be for this company's shift
-      if (shift?.company_id !== user.id) {
-        return false;
-      }
-      
-      // Second check: shift must be completed
-      // Check if shift.status === 'completed' OR shift.end_time < now
-      const isShiftCompleted = shift?.status === 'completed' || 
-                               (shift?.end_time && new Date(shift.end_time) < new Date(now));
-      
-      // Only show if timesheet is pending/disputed AND shift is completed
-      // This prevents showing future shifts with 0 hours in the timesheets list
+
+      // 1. Must be for this company's shift
+      if (shift?.company_id !== user.id) return false;
+
+      // 2. Must have accepted shift_application for (shift_id, worker_id)
+      if (!acceptedKeys.has(`${timesheet.shift_id}:${timesheet.worker_id}`)) return false;
+
+      // 3. Shift must be completed (end_time < now or status completed)
+      const isShiftCompleted = shift?.status === 'completed' ||
+        (shift?.end_time && new Date(shift.end_time) < new Date(now));
+
       return isShiftCompleted;
     })
     .map((timesheet: any) => {
@@ -161,6 +169,7 @@ export default async function TimesheetsPage({
       manager_approved_start: timesheet.manager_approved_start,
       manager_approved_end: timesheet.manager_approved_end,
       was_disputed: timesheet.was_disputed || false,
+      rejection_reason: timesheet.rejection_reason || null,
       total_pay: totalPay,
       shifts: {
         id: shift?.id || '',

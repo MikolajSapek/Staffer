@@ -9,8 +9,10 @@ interface SubmitReviewParams {
   workerId: string;
   rating: number;
   comment: string | null;
-  tags: string[] | null;
+  tags?: string[] | null;
   lang: string;
+  /** When true, skip shift status check (e.g. when called from timesheet approval flow) */
+  fromTimesheet?: boolean;
 }
 
 /**
@@ -33,7 +35,7 @@ export async function submitReview(params: SubmitReviewParams) {
   const commentValue = params.comment?.trim() || null;
 
   // Tags are optional - send null if empty or undefined
-  const tagsValue = params.tags && params.tags.length > 0 ? params.tags : null;
+  const tagsValue = (params.tags && params.tags.length > 0) ? params.tags : null;
 
   // Verify the shift exists and belongs to the company
   const { data: shift, error: shiftError } = await supabase
@@ -51,8 +53,8 @@ export async function submitReview(params: SubmitReviewParams) {
     return { error: 'Unauthorized: You can only review workers from your own shifts' };
   }
 
-  // Verify the shift is completed or archived
-  if (shift.status !== 'completed' && shift.status !== 'cancelled') {
+  // Verify the shift is completed or archived (skip when from timesheet flow)
+  if (!params.fromTimesheet && shift.status !== 'completed' && shift.status !== 'cancelled') {
     return { error: 'You can only review workers from completed shifts' };
   }
 
@@ -73,10 +75,10 @@ export async function submitReview(params: SubmitReviewParams) {
     return { error: 'You have already reviewed this worker for this shift' };
   }
 
-  // Verify the worker was actually hired for this shift
+  // Verify the worker was actually hired for this shift (reviewee_id = shift_applications.worker_id)
   const { data: application, error: appError } = await supabase
     .from('shift_applications')
-    .select('id, status')
+    .select('id, worker_id')
     .eq('shift_id', params.shiftId)
     .eq('worker_id', params.workerId)
     .eq('status', 'accepted')
@@ -90,13 +92,16 @@ export async function submitReview(params: SubmitReviewParams) {
     return { error: 'This worker was not hired for this shift' };
   }
 
+  // reviewee_id from shift_applications.worker_id (params.workerId validated above)
+  const revieweeId = application.worker_id;
+
   // Insert the review
   const { data: review, error: insertError } = await supabase
     .from('reviews')
     .insert({
       shift_id: params.shiftId,
       reviewer_id: user.id,
-      reviewee_id: params.workerId,
+      reviewee_id: revieweeId,
       rating: params.rating,
       comment: commentValue,
       tags: tagsValue,

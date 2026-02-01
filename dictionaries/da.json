@@ -154,6 +154,8 @@
     "urgentTasks": "Hasteopgaver",
     "tools": "Værktøjer",
     "timesheetsPending": "Timesedler afventer godkendelse",
+    "timesheetsDesc": "Gennemgå og godkend arbejdstimer",
+    "pendingApproval": "afventer godkendelse",
     "candidatesPending": "Kandidater afventer gennemgang",
     "financesPending": "Betalinger afventer",
     "reviewNow": "Gennemgå nu"
@@ -664,7 +666,13 @@
     "recordedTime": "Registreret tid",
     "notSpecified": "Ikke angivet",
     "notRecorded": "Ikke registreret",
-    "notCheckedOut": "Ikke afmeldt"
+    "notCheckedOut": "Ikke afmeldt",
+    "ratingModal": {
+      "title": "Vurder dit samarbejde med denne medarbejder",
+      "commentPlaceholder": "Tilføj en valgfri kommentar...",
+      "save": "Gem",
+      "skip": "Spring over"
+    }
   },
   "Verification": {
     "status_verified": "Konto verificeret",

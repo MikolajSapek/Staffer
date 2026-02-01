@@ -44,17 +44,17 @@ export function WorkerSidebar({ lang }: WorkerSidebarProps) {
   };
 
   return (
-    <div className="flex flex-col h-full w-64 bg-white border-r">
+    <div className="flex flex-col h-full w-20 bg-white border-r border-black">
       {/* Logo - Top */}
-      <div className="h-16 flex items-center justify-center px-6 border-b">
-        <Link href={`/${currentLang}/market`} className="flex items-center">
-          <span className="italic font-bold text-2xl tracking-tight text-slate-900">
-            Staffer
+      <div className="h-16 flex items-center justify-center px-3 border-b border-black">
+        <Link href={`/${currentLang}/market`} className="flex items-center" title="Staffer">
+          <span className="italic font-bold text-xl tracking-tight text-black">
+            S
           </span>
         </Link>
       </div>
 
-      {/* Navigation - Middle (scrollable) */}
+      {/* Navigation - Middle (icon-only for top 4 items) */}
       <nav className="flex-1 overflow-y-auto p-4">
         {WORKER_NAVIGATION.map((category: NavigationCategory) => (
           <div key={category.category || 'main'}>
@@ -67,15 +67,15 @@ export function WorkerSidebar({ lang }: WorkerSidebarProps) {
                   <li key={item.name}>
                     <Link
                       href={`/${currentLang}${item.href}`}
+                      title={item.name}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center justify-center p-3 rounded-lg text-sm font-medium transition-colors",
                         isItemActive
-                          ? "bg-slate-900 text-white"
-                          : "text-slate-700 hover:bg-slate-100"
+                          ? "bg-black text-white"
+                          : "text-black hover:bg-gray-100"
                       )}
                     >
                       <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="flex-1">{item.name}</span>
                     </Link>
                   </li>
                 );
@@ -85,8 +85,8 @@ export function WorkerSidebar({ lang }: WorkerSidebarProps) {
         ))}
       </nav>
 
-      {/* Footer - Bottom (Pinned) */}
-      <div className="mt-auto border-t border-slate-200 p-4 bg-white space-y-2">
+      {/* Footer - Bottom (Pinned, icon-only) */}
+      <div className="mt-auto border-t border-black p-4 bg-white space-y-2">
         {WORKER_SYSTEM_LINKS.map((item) => {
           const Icon = item.icon;
           const isItemActive = isActive(item.href);
@@ -95,15 +95,15 @@ export function WorkerSidebar({ lang }: WorkerSidebarProps) {
             <Link
               key={item.name}
               href={`/${currentLang}${item.href}`}
+              title={item.name}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center justify-center p-3 rounded-lg text-sm font-medium transition-colors",
                 isItemActive
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-black text-white"
+                  : "text-black hover:bg-gray-100"
               )}
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
-              <span className="flex-1">{item.name}</span>
             </Link>
           );
         })}
@@ -111,10 +111,10 @@ export function WorkerSidebar({ lang }: WorkerSidebarProps) {
         {/* Log Out Button */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-slate-700 hover:bg-slate-100 text-left"
+          title="Log Out"
+          className="w-full flex items-center justify-center p-3 rounded-lg text-sm font-medium transition-colors text-black hover:bg-gray-100"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
-          <span className="flex-1 text-left">Log Out</span>
         </button>
       </div>
     </div>

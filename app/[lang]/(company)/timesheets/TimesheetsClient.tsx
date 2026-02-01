@@ -26,8 +26,9 @@ import { Input } from '@/components/ui/input';
 import { formatDateShort, formatTime } from '@/lib/date-utils';
 import { createClient } from '@/utils/supabase/client';
 import { approveTimesheet } from '@/app/actions/timesheets';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import TimesheetRatingModal, { PendingTimesheetAction } from '@/components/timesheets/TimesheetRatingModal';
 
 interface Timesheet {
   id: string;
@@ -76,6 +77,12 @@ interface TimesheetsClientProps {
         approve: string;
         dispute: string;
       };
+      ratingModal?: {
+        title: string;
+        commentPlaceholder: string;
+        save: string;
+        skip: string;
+      };
     };
   };
   lang: string;
@@ -99,6 +106,10 @@ export default function TimesheetsClient({
   const [correctDialogOpen, setCorrectDialogOpen] = useState(false);
   const [correctingTimesheet, setCorrectingTimesheet] = useState<Timesheet | null>(null);
   const [extraMinutes, setExtraMinutes] = useState(0); // Extra time to add (starts at 0)
+  // Rating Modal Interceptor
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [ratingModalTimesheet, setRatingModalTimesheet] = useState<Timesheet | null>(null);
+  const [pendingRatingAction, setPendingRatingAction] = useState<PendingTimesheetAction | null>(null);
 
   // Filter to show only pending and disputed timesheets (approved ones are in Payments/Billing)
   const filteredTimesheets = timesheets.filter(
@@ -141,7 +152,17 @@ export default function TimesheetsClient({
     });
   }, [router, startTransition, lang]);
 
-  const handleDisputeClick = (timesheetId: string) => {
+  const handleDisputeClick = (timesheet: Timesheet) => {
+    if (!timesheet.worker_id) {
+      setError('Cannot rate: worker not found for this timesheet.');
+      return;
+    }
+    setRatingModalTimesheet(timesheet);
+    setPendingRatingAction('dispute');
+    setRatingModalOpen(true);
+  };
+
+  const handleDisputeClickDirect = (timesheetId: string) => {
     setDisputingTimesheetId(timesheetId);
     setDisputeReason('');
     setDisputeDialogOpen(true);
@@ -201,8 +222,36 @@ export default function TimesheetsClient({
     return parseFloat(hours.toFixed(2));
   };
 
-  const handleOpenCorrectDialog = (timesheet: Timesheet) => {
-    // Use manager-approved times if present, otherwise fall back to original shift times
+  const handleRatingModalSaveOrSkip = useCallback(async (action: PendingTimesheetAction, _didRate: boolean) => {
+    const ts = ratingModalTimesheet;
+    if (!ts) return;
+
+    setRatingModalOpen(false);
+    setRatingModalTimesheet(null);
+    setPendingRatingAction(null);
+
+    if (action === 'approve') {
+      handleApprove(ts.id);
+    } else if (action === 'dispute') {
+      handleDisputeClickDirect(ts.id);
+    } else if (action === 'add_overtime') {
+      handleOpenCorrectDialogInternal(ts);
+    }
+  }, [ratingModalTimesheet, handleApprove]);
+
+  const handleApproveClick = (timesheet: Timesheet) => {
+    // reviewee_id must come from shift_applications.worker_id - timesheet.worker_id is valid
+    // only when accepted application exists (enforced by page filter)
+    if (!timesheet.worker_id) {
+      setError('Cannot rate: worker not found for this timesheet.');
+      return;
+    }
+    setRatingModalTimesheet(timesheet);
+    setPendingRatingAction('approve');
+    setRatingModalOpen(true);
+  };
+
+  const handleOpenCorrectDialogInternal = (timesheet: Timesheet) => {
     const startTime = timesheet.manager_approved_start || timesheet.shifts.start_time;
     const endTime = timesheet.manager_approved_end || timesheet.shifts.end_time;
 
@@ -211,11 +260,19 @@ export default function TimesheetsClient({
       return;
     }
 
-    // CRITICAL: Always reset to 0 when opening dialog
-    // Inputs represent EXTRA time to add, not total time
     setExtraMinutes(0);
     setCorrectingTimesheet(timesheet);
     setCorrectDialogOpen(true);
+  };
+
+  const handleOpenCorrectDialog = (timesheet: Timesheet) => {
+    if (!timesheet.worker_id) {
+      setError('Cannot rate: worker not found for this timesheet.');
+      return;
+    }
+    setRatingModalTimesheet(timesheet);
+    setPendingRatingAction('add_overtime');
+    setRatingModalOpen(true);
   };
 
   const handleDurationHoursChange = (value: string) => {
@@ -334,10 +391,10 @@ export default function TimesheetsClient({
 
   return (
     <div className="space-y-4">
-      {error && (
-        <Card className="border-destructive">
+        {error && (
+        <Card className="border-black">
           <CardContent className="py-4">
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-black">{error}</p>
           </CardContent>
         </Card>
       )}
@@ -371,7 +428,7 @@ export default function TimesheetsClient({
                 const isDisputed = timesheet.status === 'disputed';
 
                 return (
-                  <TableRow key={timesheet.id} className={isDisputed ? 'bg-yellow-50' : ''}>
+                  <TableRow key={timesheet.id} className={isDisputed ? 'bg-gray-100' : ''}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
@@ -398,7 +455,7 @@ export default function TimesheetsClient({
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-900">{hours} {dict.timesheetsPage.hours}</span>
                         {timesheet.was_disputed && timesheet.rejection_reason && (
-                          <div className="text-[9px] uppercase tracking-tighter text-orange-600 font-bold leading-none mt-1">
+                          <div className="text-[9px] uppercase tracking-tighter text-gray-600 font-bold leading-none mt-1">
                             MODIFIED: {timesheet.rejection_reason.replace('Correction: ', '')}
                           </div>
                         )}
@@ -410,49 +467,46 @@ export default function TimesheetsClient({
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         {isDisputed && (
-                          <span className="text-sm text-yellow-600 font-medium mr-2">
+                          <span className="text-sm text-gray-600 font-medium mr-2">
                             Disputed
                           </span>
                         )}
-                        <Button
-                          onClick={() => handleApprove(timesheet.id)}
+                        <button
+                          type="button"
+                          onClick={() => handleApproveClick(timesheet)}
                           disabled={isUpdating || timesheet.status !== 'pending'}
-                          size="sm"
-                          variant="default"
-                          className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1 text-xs font-semibold text-white transition-colors bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-500"
                         >
                           {isProcessing ? (
                             <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                               {dict.timesheetsPage.processing}
                             </>
                           ) : (
                             <>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              <CheckCircle2 className="h-4 w-4 shrink-0" />
                               {dict.timesheetsPage.actions.approve}
                             </>
                           )}
-                        </Button>
-                        <Button
-                          onClick={() => handleDisputeClick(timesheet.id)}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDisputeClick(timesheet)}
                           disabled={isUpdating || timesheet.status !== 'pending'}
-                          size="sm"
-                          variant="destructive"
-                          className="disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1 text-xs font-semibold text-white transition-colors bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-500"
                         >
-                          <AlertTriangle className="mr-2 h-4 w-4" />
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
                           {dict.timesheetsPage.actions.dispute}
-                        </Button>
-                        <Button
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleOpenCorrectDialog(timesheet)}
                           disabled={isUpdating || timesheet.status !== 'pending'}
-                          size="sm"
-                          variant="secondary"
-                          className="bg-amber-500 hover:bg-amber-600 text-white disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1 text-xs font-semibold text-white transition-colors bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-yellow-500"
                         >
-                          <Clock className="mr-2 h-4 w-4" />
+                          <Clock className="h-4 w-4 shrink-0" />
                           Add Overtime
-                        </Button>
+                        </button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -632,6 +686,26 @@ export default function TimesheetsClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Rating Modal Interceptor */}
+      {ratingModalTimesheet && pendingRatingAction && (
+        <TimesheetRatingModal
+          open={ratingModalOpen}
+          onOpenChange={setRatingModalOpen}
+          workerId={ratingModalTimesheet.worker_id}
+          shiftId={ratingModalTimesheet.shifts.id}
+          workerName={`${ratingModalTimesheet.profiles?.first_name || ''} ${ratingModalTimesheet.profiles?.last_name || ''}`.trim() || 'Worker'}
+          lang={lang}
+          dict={dict.timesheetsPage.ratingModal || {
+            title: 'Rate your collaboration with this worker',
+            commentPlaceholder: 'Add an optional comment...',
+            save: 'Save',
+            skip: 'Skip',
+          }}
+          pendingAction={pendingRatingAction}
+          onSaveOrSkip={handleRatingModalSaveOrSkip}
+        />
+      )}
     </div>
   );
 }

@@ -329,8 +329,8 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
         )}
       </div>
 
-      {/* Worker Identity - Right: Name (bold) + email (gray small) + avatar */}
-      <div className="flex items-center gap-3 ml-auto flex-row flex-shrink-0">
+      {/* Worker Identity - Top right: first_name last_name (Bold), email (gray small), right-aligned */}
+      <div className="flex items-center gap-3 ml-auto flex-row flex-shrink-0 justify-end">
         <div className="text-right hidden sm:block">
           <div className="font-bold text-sm text-slate-900">
             {getDisplayName()}
