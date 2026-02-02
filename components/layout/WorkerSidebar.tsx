@@ -147,10 +147,10 @@ export function WorkerSidebar({ dict, lang }: WorkerSidebarProps) {
         </Link>
 
         <Link
-          href={`/${currentLang}/support`}
+          href={`/${currentLang}/worker/support`}
           className={cn(
             'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            isActive('/support')
+            isActive('/worker/support')
               ? 'bg-[#000000] text-white'
               : 'text-[#000000] hover:bg-[#F3F4F6]'
           )}

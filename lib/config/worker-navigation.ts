@@ -36,6 +36,6 @@ export const WORKER_NAVIGATION: NavigationCategory[] = [
 
 export const WORKER_SYSTEM_LINKS: NavigationItem[] = [
   { name: 'Profile', href: '/profile', icon: User },
-  { name: 'Support', href: '/support', icon: LifeBuoy },
+  { name: 'Support', href: '/worker/support', icon: LifeBuoy },
   { name: 'Settings', href: '/worker/settings', icon: Settings },
 ];
