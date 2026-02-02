@@ -376,4 +376,167 @@ export async function archiveShift({
   }
 }
 
+const PAGE_SIZE = 20;
+
+function mapListingsShifts(shifts: any[]): any[] {
+  return (shifts || []).map((shift) => ({
+    ...shift,
+    locations: shift.location,
+    shift_applications: (shift.shift_applications || []).map((app: any) => {
+      const worker = app.worker;
+      const workerDetails = Array.isArray(worker?.worker_details)
+        ? worker.worker_details[0]
+        : worker?.worker_details;
+      return {
+        ...app,
+        status: app.status,
+        profiles: worker
+          ? {
+              id: worker.id,
+              first_name: worker.first_name,
+              last_name: worker.last_name,
+              worker_details: workerDetails ? { avatar_url: workerDetails.avatar_url } : null,
+            }
+          : null,
+      };
+    }),
+  }));
+}
+
+/** Fetch next page of active (upcoming) company listings. */
+export async function getListingsActivePage(offset: number): Promise<{
+  shifts: any[];
+  hasMore: boolean;
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { shifts: [], hasMore: false };
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('shifts')
+    .select(`
+      *,
+      location:locations!shifts_location_id_fkey(*),
+      shift_applications(
+        id,
+        status,
+        worker:profiles!shift_applications_worker_id_fkey(
+          id,
+          first_name,
+          last_name,
+          worker_details:worker_details!worker_details_profile_id_fkey(avatar_url)
+        )
+      )
+    `)
+    .eq('company_id', user.id)
+    .gte('end_time', now)
+    .neq('status', 'cancelled')
+    .order('start_time', { ascending: true })
+    .range(offset, offset + PAGE_SIZE - 1);
+
+  if (error) {
+    console.error('DEBUG [getListingsActivePage shifts]:', { error, userId: user?.id });
+  }
+  const mapped = mapListingsShifts(data ?? []);
+  return { shifts: mapped, hasMore: mapped.length === PAGE_SIZE };
+}
+
+/** Fetch next page of archived company listings. */
+export async function getListingsArchivedPage(offset: number): Promise<{
+  shifts: any[];
+  hasMore: boolean;
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { shifts: [], hasMore: false };
+
+  const now = new Date().toISOString();
+  const { data: pastShifts, error: pastError } = await supabase
+    .from('shifts')
+    .select(`
+      *,
+      location:locations!shifts_location_id_fkey(*),
+      shift_applications(
+        id,
+        status,
+        worker:profiles!shift_applications_worker_id_fkey(
+          id,
+          first_name,
+          last_name,
+          worker_details:worker_details!worker_details_profile_id_fkey(avatar_url)
+        )
+      )
+    `)
+    .eq('company_id', user.id)
+    .lt('end_time', now)
+    .order('start_time', { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1);
+
+  const { data: statusShifts, error: statusError } = await supabase
+    .from('shifts')
+    .select(`
+      *,
+      location:locations!shifts_location_id_fkey(*),
+      shift_applications(
+        id,
+        status,
+        worker:profiles!shift_applications_worker_id_fkey(
+          id,
+          first_name,
+          last_name,
+          worker_details:worker_details!worker_details_profile_id_fkey(avatar_url)
+        )
+      )
+    `)
+    .eq('company_id', user.id)
+    .in('status', ['completed', 'cancelled'])
+    .order('start_time', { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1);
+
+  if (pastError) console.error('DEBUG [getListingsArchivedPage pastShifts]:', { error: pastError, userId: user?.id });
+  if (statusError) console.error('DEBUG [getListingsArchivedPage statusShifts]:', { error: statusError, userId: user?.id });
+
+  const merged = [...(pastShifts ?? []), ...(statusShifts ?? [])];
+  const unique = Array.from(new Map(merged.map((s) => [s.id, s])).values()).slice(0, PAGE_SIZE);
+  const mapped = mapListingsShifts(unique);
+  return { shifts: mapped, hasMore: mapped.length === PAGE_SIZE };
+}
+
+/** Fetch next page of market shifts for workers (market_shifts_view: company_name, logo_url). */
+function mapMarketViewToShift(row: Record<string, unknown>) {
+  const companyName = row.company_name ?? 'Company';
+  const logoUrl = row.logo_url ?? null;
+  return {
+    ...row,
+    requirements: Array.isArray(row.requirements) ? row.requirements : [],
+    locations: { name: row.location_name ?? '', address: row.location_address ?? '' },
+    profiles: { company_details: { company_name: companyName, logo_url } },
+    company: { company_name: companyName, logo_url },
+  };
+}
+
+export async function getMarketShiftsPage(offset: number): Promise<{
+  shifts: any[];
+  hasMore: boolean;
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { shifts: [], hasMore: false };
+
+  const { data, error } = await supabase
+    .from('market_shifts_view')
+    .select('id, title, description, category, hourly_rate, start_time, end_time, break_minutes, is_break_paid, possible_overtime, vacancies_total, vacancies_taken, status, is_urgent, must_bring, requirements, company_id, location_name, location_address, company_name, logo_url')
+    .eq('status', 'published')
+    .gt('start_time', new Date().toISOString())
+    .order('start_time', { ascending: true })
+    .range(offset, offset + PAGE_SIZE - 1);
+
+  if (error) console.error('DEBUG [getMarketShiftsPage]:', { error, userId: user?.id });
+  const list = data ?? [];
+  const available = list
+    .filter((s: Record<string, unknown>) => (s.vacancies_taken ?? 0) < (s.vacancies_total ?? 0))
+    .map(mapMarketViewToShift);
+  return { shifts: available, hasMore: list.length === PAGE_SIZE };
+}
 

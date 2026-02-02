@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { getCurrentProfile } from '@/utils/supabase/server';
 import JobBoardClient from '@/app/[lang]/JobBoardClient';
+import { getMarketShiftsPage } from '@/app/actions/shifts';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,61 +49,71 @@ export default async function WorkerMarketPage({
     });
   }
 
-  // Fetch only essential shift data for worker job market (no manager data)
+  // ZWERYFIKOWANE: market_shifts_view gwarantuje poprawne dane (requirements, location_name, location_address)
   const { data: shiftsData, error: shiftsError } = await supabase
-    .from('shifts')
-    .select(`
-      id,
-      title,
-      description,
-      category,
-      hourly_rate,
-      start_time,
-      end_time,
-      break_minutes,
-      is_break_paid,
-      possible_overtime,
-      vacancies_total,
-      vacancies_taken,
-      status,
-      is_urgent,
-      must_bring,
-      company_id,
-      locations!location_id (
-        name,
-        address
-      ),
-      profiles!company_id (
-        company_details!profile_id (
-          company_name,
-          logo_url
-        )
-      )
-    `)
+    .from('market_shifts_view')
+    .select('id, title, description, category, hourly_rate, start_time, end_time, break_minutes, is_break_paid, possible_overtime, vacancies_total, vacancies_taken, status, is_urgent, must_bring, requirements, company_id, location_name, location_address, company_name, logo_url')
     .eq('status', 'published')
-    // Using new Date().toISOString() for UTC timestamp in database queries is correct
     .gt('start_time', new Date().toISOString())
-    .order('start_time', { ascending: true });
+    .order('start_time', { ascending: true })
+    .range(0, 19);
 
-  // Filtrujemy tylko te zmiany, które mają wolne miejsca
-  const availableShifts = (shiftsData || []).filter(shift => 
-    shift.vacancies_taken < shift.vacancies_total
-  );
+  if (shiftsError) {
+    console.error('DEBUG [market market_shifts_view SELECT]:', { error: shiftsError, code: shiftsError.code, userId: user?.id });
+  }
+
+  // Mapowanie płaskich kolumn widoku (company_name, logo_url z widoku SQL) do struktury UI
+  const mapViewToShift = (row: Record<string, unknown>) => {
+    const companyName = row.company_name ?? 'Company';
+    const logoUrl = row.logo_url ?? null;
+    return {
+      ...row,
+      requirements: (Array.isArray(row.requirements) ? row.requirements : []) as string[],
+      locations: {
+        name: row.location_name ?? '',
+        address: row.location_address ?? '',
+      },
+      profiles: {
+        company_details: {
+          company_name: companyName,
+          logo_url: logoUrl,
+        },
+      },
+      company: { company_name: companyName, logo_url: logoUrl },
+    };
+  };
+
+  const availableShifts = (shiftsData ?? [])
+    .filter((row: Record<string, unknown>) => (row.vacancies_taken ?? 0) < (row.vacancies_total ?? 0))
+    .map(mapViewToShift);
   const shifts = shiftsError ? [] : availableShifts;
 
   return (
     <div>
-      {!shifts || shifts.length === 0 ? (
+      {shiftsError ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive font-medium">
+              {dict.jobBoard?.loadError ?? 'Unable to load job offers. Please try again or contact support.'}
+            </p>
+            <p className="text-muted-foreground text-sm mt-2">
+              {dict.jobBoard?.loadErrorHint ?? 'If this persists, check that you are logged in as a worker.'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : !shifts || shifts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              {dict.jobBoard.noJobs}
+              {dict.jobBoard.noOffersAvailable ?? dict.jobBoard.noJobs ?? 'No offers available'}
             </p>
           </CardContent>
         </Card>
       ) : (
         <JobBoardClient
           shifts={shifts}
+          onLoadMore={getMarketShiftsPage}
+          loadMoreLabel={dict.jobBoard?.loadMore ?? 'Load more'}
           userRole={userRole}
           user={user}
           appliedShiftIds={appliedShiftIds}

@@ -17,6 +17,7 @@ const ConditionalNavbar = dynamic(() => import('@/components/company/Conditional
 export const metadata: Metadata = {
   title: 'Staffer Systems - Danish Staffing Platform',
   description: 'B2B staffing platform connecting companies with temporary workers',
+  icons: { icon: '/favicon.ico' },
 };
 
 export function generateStaticParams() {

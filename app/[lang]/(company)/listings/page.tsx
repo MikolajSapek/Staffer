@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ShiftsTabs from '@/components/dashboard/ShiftsTabs';
+import { getListingsActivePage, getListingsArchivedPage } from '@/app/actions/shifts';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export default async function CompanyListingsPage({
 
   // Fetch active (upcoming) shifts.
   // Criteria: end_time >= now AND status != 'cancelled'. Uses only status and end_time (no worker/application checks).
-  const { data: activeShifts } = await supabase
+  const { data: activeShifts, error: activeError } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -53,10 +54,15 @@ export default async function CompanyListingsPage({
     .eq('company_id', user.id)
     .gte('end_time', now)
     .neq('status', 'cancelled')
-    .order('start_time', { ascending: true });
+    .order('start_time', { ascending: true })
+    .range(0, 19);
+
+  if (activeError) {
+    console.error('DEBUG [listings shifts SELECT active]:', { error: activeError, code: activeError.code, userId: user?.id });
+  }
 
   // Fetch archived shifts. Criteria: end_time < now OR status IN ('completed', 'cancelled'). Uses only status and end_time (no worker/application checks).
-  const { data: pastShifts } = await supabase
+  const { data: pastShifts, error: pastError } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -77,9 +83,13 @@ export default async function CompanyListingsPage({
     .eq('company_id', user.id)
     .lt('end_time', now)
     .order('start_time', { ascending: false })
-    .limit(100);
+    .range(0, 19);
 
-  const { data: statusShifts } = await supabase
+  if (pastError) {
+    console.error('DEBUG [listings shifts SELECT past]:', { error: pastError, code: pastError.code, userId: user?.id });
+  }
+
+  const { data: statusShifts, error: statusError } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -100,17 +110,21 @@ export default async function CompanyListingsPage({
     .eq('company_id', user.id)
     .in('status', ['completed', 'cancelled'])
     .order('start_time', { ascending: false })
-    .limit(100);
+    .range(0, 19);
 
-  // Combine and deduplicate shifts
-  const allArchivedShifts = [...(pastShifts || []), ...(statusShifts || [])];
+  if (statusError) {
+    console.error('DEBUG [listings shifts SELECT status]:', { error: statusError, code: statusError.code, userId: user?.id });
+  }
+
+  // Combine and deduplicate shifts (initial page: up to 20) – zabezpieczenie: data null → pusta tablica
+  const allArchivedShifts = [...(pastShifts ?? []), ...(statusShifts ?? [])];
   const uniqueArchivedShifts = Array.from(
     new Map(allArchivedShifts.map(shift => [shift.id, shift])).values()
-  ).slice(0, 100);
+  ).slice(0, 20);
 
   // Map shifts to flatten structure for ShiftsTabs component
   const mapShifts = (shifts: any[]) => {
-    return (shifts || []).map((shift) => ({
+    return (shifts ?? []).map((shift) => ({
       ...shift,
       locations: shift.location,
       shift_applications: (shift.shift_applications || []).map((app: any) => {
@@ -135,7 +149,7 @@ export default async function CompanyListingsPage({
     }));
   };
 
-  const mappedActiveShifts = mapShifts(activeShifts || []);
+  const mappedActiveShifts = mapShifts(activeShifts ?? []);
   const mappedArchivedShifts = mapShifts(uniqueArchivedShifts);
 
   return (
@@ -167,6 +181,9 @@ export default async function CompanyListingsPage({
         <ShiftsTabs
           activeShifts={mappedActiveShifts}
           archivedShifts={mappedArchivedShifts}
+          onLoadMoreActive={getListingsActivePage}
+          onLoadMoreArchived={getListingsArchivedPage}
+          loadMoreLabel={dict.dashboard?.loadMore ?? 'Load more'}
           lang={lang}
           dict={{
             dashboard: {

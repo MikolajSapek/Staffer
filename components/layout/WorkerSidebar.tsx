@@ -41,18 +41,11 @@ export function WorkerSidebar({ dict, lang }: WorkerSidebarProps) {
     refreshCounts();
   }, [refreshCounts]);
 
+  // Tabela 'payments' NIE jest w supabase_realtime (dozwolone: shifts, shift_applications, profiles, notification_logs, timesheets, worker_skills).
+  // Zamiast Realtime używamy okresowego re-fetch, żeby nie blokować UI na kanale, którego nie ma w publikacji.
   useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel('worker-sidebar-notification-counts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () =>
-        refreshCounts()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const intervalId = setInterval(refreshCounts, 60_000); // co 60 sekund
+    return () => clearInterval(intervalId);
   }, [refreshCounts]);
 
   const isActive = (href: string) => {

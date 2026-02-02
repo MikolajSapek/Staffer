@@ -13,10 +13,12 @@ interface Review {
   comment: string | null;
   tags: string[] | null;
   created_at: string;
+  company_name?: string | null;
+  company_logo?: string | null;
   reviewer?: {
     company_details?: {
-      company_name: string;
-      logo_url: string | null;
+      company_name?: string;
+      logo_url?: string | null;
     };
   } | null;
 }
@@ -48,8 +50,8 @@ export default function ReviewsSection({ reviews, reviewsLoading }: ReviewsSecti
           ) : (
             <div className="space-y-4">
               {reviews.map((review) => {
-                const companyName = review.reviewer?.company_details?.company_name || 'Company';
-                const companyLogo = review.reviewer?.company_details?.logo_url || null;
+                const companyName = review.company_name ?? review.reviewer?.company_details?.company_name ?? 'Anonymous Company';
+                const companyLogo = review.company_logo ?? review.reviewer?.company_details?.logo_url ?? null;
                 const companyInitials = companyName
                   .split(' ')
                   .map((word: string) => word.charAt(0))
@@ -62,7 +64,7 @@ export default function ReviewsSection({ reviews, reviewsLoading }: ReviewsSecti
                     key={review.id}
                     className="rounded-lg border bg-card p-4 space-y-3"
                   >
-                    {/* Header: Reviewer Name (Company) + Date */}
+                    {/* Header: Company Name + Date (reviewee_id=worker, reviewer_id=company) */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -75,7 +77,7 @@ export default function ReviewsSection({ reviews, reviewsLoading }: ReviewsSecti
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-sm">
+                          <div className="font-medium text-sm" title={companyName}>
                             {companyName}
                           </div>
                         </div>

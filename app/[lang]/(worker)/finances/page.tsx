@@ -34,8 +34,10 @@ export default async function FinancesPage({
     redirect(`/${lang}`);
   }
 
-  // Fetch timesheets with full shift and company data
+  // Fetch timesheets with full shift and company data (RLS: worker_id = auth.uid())
   const { data: timesheets, error } = await getWorkerTimesheets(user.id);
+
+  console.log('DATA CHECK [Finances]:', { timesheetsCount: timesheets?.length ?? 0, workerId: user.id, error: error?.message ?? null });
 
   if (error) {
     console.error('SERVER ERROR FETCHING FINANCES:', JSON.stringify(error, null, 2));

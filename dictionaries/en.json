@@ -109,6 +109,7 @@
     "title": "Job Listings",
     "subtitle": "Find your next temporary shift here",
     "noJobs": "There are no active job listings at the moment.",
+    "noOffersAvailable": "No offers available",
     "apply": "Apply now",
     "loginToApply": "Log in to apply",
     "fullyBooked": "Fully booked",

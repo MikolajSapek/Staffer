@@ -66,6 +66,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
   const [uploadingIdCard, setUploadingIdCard] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [documents, setDocuments] = useState<Array<Record<string, unknown>>>([]);
 
   // File states
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -97,7 +98,7 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
     cpr_number: '',
   });
 
-  // Fetch profile data function
+  // Fetch profile data (verification_status) for refresh after verification wizard
   const fetchProfileData = async (userId: string) => {
     const supabase = createClient();
     const { data: profileData, error: profileError } = await supabase
@@ -105,23 +106,24 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       .select('verification_status')
       .eq('id', userId)
       .maybeSingle();
-    
+
+    if (profileError) {
+      console.error('DEBUG [profiles]:', { error: profileError, data: profileData, userId });
+    }
     if (!profileError && profileData) {
       setProfile(profileData);
     }
   };
 
-  // Fetch user and profile data on mount
+  // Single RPC fetch: get_worker_full_profile replaces 7–8 separate queries
   useEffect(() => {
     async function fetchData() {
       try {
         const supabase = createClient();
-        
-        // Get authenticated user
+
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError) {
-          // Handle network/fetch errors gracefully
           if (userError.message?.includes('Failed to fetch') || userError.message?.includes('NetworkError')) {
             console.error('Supabase connection error in WorkerProfileForm:', userError.message);
             setAuthError('Connection error. Please check your internet connection and try again.');
@@ -142,119 +144,150 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
 
         setUser(authUser);
 
-        // Fetch profile data to get verification_status
-        await fetchProfileData(authUser.id);
-
-        // Fetch all available skills from the skills table (all 9 records)
-        const { data: skillsData, error: skillsError } = await supabase
-          .from('skills')
-          .select('id, name, category')
-          .order('category', { ascending: true })
-          .order('name', { ascending: true });
-
-        if (!skillsError && skillsData) {
-          setAvailableSkills(skillsData);
+        if (authUser.id == null || authUser.id === undefined) {
+          console.error('RPC skipped: user.id is undefined');
+          setWorkerDetails(null);
+          setSkillsLoading(false);
+          setIsLoading(false);
+          setReviewsLoading(false);
+          return;
         }
 
-        // Fetch current user's selected skills from worker_skills
-        const { data: workerSkillsData, error: workerSkillsError } = await supabase
-          .from('worker_skills')
-          .select('skill_id')
-          .eq('worker_id', authUser.id);
-
-        if (!workerSkillsError && workerSkillsData) {
-          setSelectedSkillIds(workerSkillsData.map((ws) => ws.skill_id));
-        }
+        const { data, error: rpcError } = await supabase.rpc('get_worker_full_profile', {
+          p_worker_id: authUser.id,
+        });
 
         setSkillsLoading(false);
 
-        // Fetch worker details using secure RPC (decrypts CPR)
-        const { data: workerData, error: workerError } = await supabase.rpc('get_worker_profile_secure');
-
-        if (workerError) {
-          // Handle errors gracefully - user might not have profile yet
-          if (workerError.code === 'P0001' || workerError.message?.includes('not found')) {
-            // Profile doesn't exist yet - this is fine, form will be empty
+        if (rpcError) {
+          console.error('DEBUG [get_worker_full_profile RPC]:', {
+            error: rpcError,
+            code: rpcError.code,
+            message: rpcError.message,
+            hint: rpcError.hint,
+            details: rpcError.details,
+            data,
+            userId: authUser?.id,
+          });
+          if (rpcError.code === 'P0001' || rpcError.message?.includes('not found')) {
             setWorkerDetails(null);
             setWorkerLoadError(false);
           } else {
             setWorkerDetails(null);
             setWorkerLoadError(true);
           }
-        } else {
-          setWorkerDetails(workerData);
-          setWorkerLoadError(false);
-          
-          // Populate form with existing data (CPR is now decrypted)
-          if (workerData) {
-            const data = workerData as Record<string, unknown>;
-            
-            // If RPC doesn't return certain fields, fetch directly from worker_details
-            let shirtSize = data.shirt_size;
-            let shoeSize = data.shoe_size;
-            let description = data.description;
-            let experience = data.experience;
-            
-            // Check if values are null/undefined (not just falsy, to allow empty strings)
-            if (shirtSize == null || shoeSize == null || description == null || experience == null) {
-              const { data: additionalData } = await supabase
-                .from('worker_details')
-                .select('shirt_size, shoe_size, description, experience')
-                .eq('profile_id', authUser.id)
-                .single();
-              
-              if (additionalData) {
-                // Only use fetched values if current values are null/undefined
-                if (shirtSize == null) shirtSize = additionalData.shirt_size;
-                if (shoeSize == null) shoeSize = additionalData.shoe_size;
-                if (description == null) description = additionalData.description;
-                if (experience == null) experience = additionalData.experience;
-              }
-            }
-            
-            setFormData({
-              first_name: data.first_name || '',
-              last_name: data.last_name || '',
-              phone_number: data.phone_number || '',
-              shirt_size: (shirtSize as string) || '',
-              shoe_size: (shoeSize as string) || '',
-              description: (description as string) || '',
-              experience: (experience as string) || '',
-              cpr_number: data.cpr_number || '', // Now decrypted, safe to show in form
-            });
+          setFetchError(null);
+          setIsLoading(false);
+          setReviewsLoading(false);
+          return;
+        }
 
-            // Set avatar preview if exists
-            if (data.avatar_url) {
-              setAvatarPreview(data.avatar_url);
-            }
-          } else {
-            // No profile data - form remains empty for user to fill in
-            setWorkerDetails(null);
-          }
+        // RPC może zwrócić tablicę (SETOF) lub pojedynczy obiekt – rozpakuj
+        let rpcData: Record<string, unknown>;
+        if (Array.isArray(data) && data.length > 0) {
+          rpcData = data[0] as Record<string, unknown>;
+        } else if (data && typeof data === 'object' && !Array.isArray(data)) {
+          rpcData = data as Record<string, unknown>;
+        } else {
+          setWorkerDetails(null);
+          setProfile(null);
+          setAvailableSkills([]);
+          setSelectedSkillIds([]);
+          setReviews([]);
+          setDocuments([]);
+          setIsLoading(false);
+          setReviewsLoading(false);
+          return;
+        }
+
+        // Profile (verification_status) – form renders whenever profile exists, even if worker_data is empty
+        if (rpcData.profile && typeof rpcData.profile === 'object') {
+          const profileObj = rpcData.profile as Record<string, unknown>;
+          setProfile({
+            verification_status: profileObj.verification_status as 'unverified' | 'pending' | 'verified' | 'rejected' | undefined,
+          });
+        } else {
+          setProfile(null);
+        }
+
+        // Worker details: setWorkerDetails(data.worker_data); null = new account (do not break – set defaults)
+        const workerData = rpcData.worker_data as Record<string, unknown> | null | undefined;
+        setWorkerDetails(workerData && typeof workerData === 'object' ? workerData : null);
+        setWorkerLoadError(false);
+
+        if (workerData && typeof workerData === 'object') {
+          setFormData({
+            first_name: (workerData.first_name as string) || '',
+            last_name: (workerData.last_name as string) || '',
+            phone_number: (workerData.phone_number as string) || '',
+            shirt_size: (workerData.shirt_size as string) || '',
+            shoe_size: (workerData.shoe_size as string) || '',
+            description: (workerData.description as string) || '',
+            experience: (workerData.experience as string) || '',
+            cpr_number: (workerData.cpr_number as string) || '',
+          });
+          setAvatarPreview((workerData.avatar_url as string) || '');
+        } else {
+          // New account: worker_data is null – default values so worker can fill in for the first time
+          setFormData({
+            first_name: '',
+            last_name: '',
+            phone_number: '',
+            shirt_size: '',
+            shoe_size: '',
+            description: '',
+            experience: '',
+            cpr_number: '',
+          });
+          setAvatarPreview('');
+        }
+
+        // Skills (all available) – set even when partial
+        const skillsArr = rpcData.skills;
+        if (skillsArr && Array.isArray(skillsArr)) {
+          setAvailableSkills(skillsArr as Array<{ id: string; name: string; category: 'language' | 'license' }>);
+        } else {
+          setAvailableSkills([]);
+        }
+
+        // Worker's selected skill IDs
+        setSelectedSkillIds((rpcData.worker_skill_ids as string[] | null | undefined) || []);
+
+        // Reviews (RPC zwraca company_name, company_logo w każdym elemencie tablicy)
+        const reviewsArr = rpcData.reviews;
+        if (reviewsArr && Array.isArray(reviewsArr)) {
+          const mapped = reviewsArr.map((r: Record<string, unknown>) => {
+            const reviewer = r.reviewer as Record<string, unknown> | undefined;
+            const companyDetails = reviewer?.company_details as Record<string, unknown> | undefined;
+            const companyName = (r.company_name as string) ?? companyDetails?.company_name ?? 'Anonymous Company';
+            const companyLogo = (r.company_logo as string | null) ?? companyDetails?.logo_url ?? null;
+            return {
+              ...r,
+              company_name: companyName,
+              company_logo: companyLogo,
+              reviewer: {
+                company_details: {
+                  company_name: companyName,
+                  logo_url: companyLogo,
+                },
+              },
+            };
+          });
+          setReviews(mapped);
+        } else {
+          setReviews([]);
+        }
+
+        // Documents
+        const docsArr = rpcData.documents;
+        if (docsArr && Array.isArray(docsArr)) {
+          setDocuments(docsArr as Array<Record<string, unknown>>);
+        } else {
+          setDocuments([]);
         }
 
         setFetchError(null);
-
-        // Fetch reviews for this worker
-        if (authUser) {
-          const { data: reviewsData, error: reviewsError } = await supabase
-            .from('reviews')
-            .select(`
-              *,
-              reviewer:profiles!reviews_reviewer_id_fkey (
-                company_details (
-                  company_name,
-                  logo_url
-                )
-              )
-            `)
-            .eq('reviewee_id', authUser.id)
-            .order('created_at', { ascending: false });
-
-          if (!reviewsError && reviewsData) {
-            setReviews(reviewsData || []);
-          }
-        }
+        console.log('Profile loaded successfully');
       } catch (err: unknown) {
         setFetchError('Der opstod en uventet fejl ved indlæsning af data.');
       } finally {
@@ -517,6 +550,25 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
           const uploadedUrl = await uploadIdCard(user.id);
           if (uploadedUrl) {
             idCardUrl = uploadedUrl;
+            // Register document in documents table for RLS (worker_id = owner)
+            const fileExt = idCardFile.name.split('.').pop() || 'jpg';
+            const filePath = `documents/${user.id}/id-card.${fileExt}`;
+            const { error: docError } = await supabase
+              .from('documents')
+              .insert({
+                worker_id: user.id,
+                type: 'id_card_front',
+                file_path: filePath,
+                verification_status: 'pending',
+              });
+            if (docError) {
+              console.error('DEBUG [documents INSERT]:', {
+                error: docError,
+                code: docError.code,
+                userId: user?.id,
+              });
+              // Don't block save - file was uploaded to storage
+            }
           }
         } catch (uploadErr: unknown) {
           const errorMessage = uploadErr instanceof Error ? uploadErr.message : 'Kunne ikke uploade ID-kort';
@@ -542,12 +594,17 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         .eq('profile_id', user.id);
 
       if (updateError) {
+        console.error('DEBUG [worker_details UPDATE]:', {
+          error: updateError,
+          code: updateError.code,
+          userId: user?.id,
+        });
         setSubmitError(updateError.message || 'Kunne ikke gemme oplysninger');
         setSubmitLoading(false);
         return;
       }
 
-      // SYNC PATTERN for worker_skills:
+      // SYNC PATTERN for worker_skills (RLS: worker_id = auth.uid(); authenticated role only)
       // 1. Delete all existing skills for this worker
       const { error: deleteError } = await supabase
         .from('worker_skills')
@@ -555,7 +612,15 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
         .eq('worker_id', user.id);
 
       if (deleteError) {
-        setSubmitError(deleteError.message || 'Could not update skills');
+        const isPermissionError = deleteError.code === '42501' || deleteError.message?.toLowerCase().includes('policy') || deleteError.message?.toLowerCase().includes('permission') || deleteError.message?.toLowerCase().includes('row-level');
+        console.error('DEBUG [worker_skills DELETE]:', {
+          error: deleteError,
+          code: deleteError.code,
+          userId: user?.id,
+        });
+        setSubmitError(isPermissionError
+          ? (dict.profile?.skillsPermissionError ?? 'Could not update skills (permission denied). Ensure RLS allows DELETE where worker_id = auth.uid().')
+          : (deleteError.message || 'Could not update skills'));
         setSubmitLoading(false);
         return;
       }
@@ -563,9 +628,9 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       // 2. Insert the newly selected skills (only if any are selected)
       if (selectedSkillIds.length > 0) {
         const skillsToInsert = selectedSkillIds.map((skillId) => ({
-          worker_id: user.id, // Explicitly set to authenticated user's ID for security
+          worker_id: user.id,
           skill_id: skillId,
-          verified: false, // Default to unverified
+          verified: false,
         }));
 
         const { error: insertError } = await supabase
@@ -573,7 +638,15 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
           .insert(skillsToInsert);
 
         if (insertError) {
-          setSubmitError(insertError.message || 'Could not save skills');
+          const isPermissionError = insertError.code === '42501' || insertError.message?.toLowerCase().includes('policy') || insertError.message?.toLowerCase().includes('permission') || insertError.message?.toLowerCase().includes('row-level');
+          console.error('DEBUG [worker_skills INSERT]:', {
+            error: insertError,
+            code: insertError.code,
+            userId: user?.id,
+          });
+          setSubmitError(isPermissionError
+            ? (dict.profile?.skillsPermissionError ?? 'Could not save skills (permission denied). Ensure RLS allows INSERT with worker_id = auth.uid().')
+            : (insertError.message || 'Could not save skills'));
           setSubmitLoading(false);
           return;
         }
@@ -597,54 +670,66 @@ export default function WorkerProfileForm({ dict, lang }: WorkerProfileFormProps
       // Refresh router to get fresh data from database (after all updates)
       router.refresh();
 
-      // Refresh data after successful save - use setTimeout to ensure DB has committed
+      // Refresh data after successful save - single RPC get_worker_full_profile
       setTimeout(async () => {
-        const supabaseRefresh = createClient();
-        
-        // First try to get data from RPC
-        const { data: refreshedData } = await supabaseRefresh.rpc('get_worker_profile_secure');
-        
-        // If RPC doesn't return certain fields, fetch directly from worker_details
-        let shirtSize = refreshedData?.shirt_size;
-        let shoeSize = refreshedData?.shoe_size;
-        let description = refreshedData?.description;
-        let experience = refreshedData?.experience;
-        
-        // Check if values are null/undefined (not just falsy, to allow empty strings)
-        if (shirtSize == null || shoeSize == null || description == null || experience == null) {
-          const { data: additionalData } = await supabaseRefresh
-            .from('worker_details')
-            .select('shirt_size, shoe_size, description, experience')
-            .eq('profile_id', user.id)
-            .single();
-          
-          if (additionalData) {
-            // Only use fetched values if current values are null/undefined
-            if (shirtSize == null) shirtSize = additionalData.shirt_size;
-            if (shoeSize == null) shoeSize = additionalData.shoe_size;
-            if (description == null) description = additionalData.description;
-            if (experience == null) experience = additionalData.experience;
-          }
+        if (user?.id == null || user.id === undefined) {
+          return;
         }
-        
-        if (refreshedData) {
-          setWorkerDetails(refreshedData);
-          const data = refreshedData as Record<string, unknown>;
-          // Update form with refreshed data (including decrypted CPR, sizes, description, and experience)
-          setFormData({
-            first_name: (data.first_name as string) || '',
-            last_name: (data.last_name as string) || '',
-            phone_number: (data.phone_number as string) || '',
-            shirt_size: (shirtSize as string) || (data.shirt_size as string) || '',
-            shoe_size: (shoeSize as string) || (data.shoe_size as string) || '',
-            description: (description as string) || (data.description as string) || '',
-            experience: (experience as string) || (data.experience as string) || '',
-            cpr_number: (data.cpr_number as string) || '', // Decrypted CPR
+        const supabaseRefresh = createClient();
+        const { data, error } = await supabaseRefresh.rpc('get_worker_full_profile', {
+          p_worker_id: user.id,
+        });
+
+        if (error) {
+          console.error('DEBUG [get_worker_full_profile RPC refresh]:', {
+            error,
+            data,
+            userId: user?.id,
           });
-          if (data.avatar_url) {
-            setAvatarPreview(data.avatar_url as string);
-            setAvatarError(false); // Reset error state when loading existing avatar
+          return;
+        }
+
+        // RPC może zwrócić tablicę lub obiekt – rozpakuj
+        const payload = Array.isArray(data) && data.length > 0
+          ? (data[0] as Record<string, unknown>)
+          : (data && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, unknown> : null);
+
+        if (payload) {
+          setWorkerDetails((payload.worker_data as Record<string, unknown> | null | undefined) ?? null);
+          const workerData = payload.worker_data as Record<string, unknown> | null | undefined;
+          if (workerData && typeof workerData === 'object') {
+            setFormData({
+              first_name: (workerData.first_name as string) || '',
+              last_name: (workerData.last_name as string) || '',
+              phone_number: (workerData.phone_number as string) || '',
+              shirt_size: (workerData.shirt_size as string) || '',
+              shoe_size: (workerData.shoe_size as string) || '',
+              description: (workerData.description as string) || '',
+              experience: (workerData.experience as string) || '',
+              cpr_number: (workerData.cpr_number as string) || '',
+            });
+            setAvatarPreview((workerData.avatar_url as string) || '');
+            setAvatarError(false);
+          } else {
+            setFormData({
+              first_name: '',
+              last_name: '',
+              phone_number: '',
+              shirt_size: '',
+              shoe_size: '',
+              description: '',
+              experience: '',
+              cpr_number: '',
+            });
+            setAvatarPreview('');
           }
+          const docsArr = payload.documents;
+          if (docsArr && Array.isArray(docsArr)) {
+            setDocuments(docsArr as Array<Record<string, unknown>>);
+          }
+        } else {
+          setWorkerDetails(null);
+          setDocuments([]);
         }
       }, 500);
     } catch (err: unknown) {

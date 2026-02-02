@@ -51,6 +51,7 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
   }, [refreshCounts]);
 
   // Realtime: refetch counts when timesheets or shift_applications change (instant badge update)
+  // Tabele w supabase_realtime: shifts, shift_applications, profiles, notification_logs, timesheets, worker_skills
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
@@ -65,7 +66,11 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
         { event: '*', schema: 'public', table: 'shift_applications' },
         () => refreshCounts()
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== 'SUBSCRIBED') {
+          console.warn('Realtime subscription failed for tables timesheets, shift_applications:', status);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);

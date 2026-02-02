@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+/**
+ * Server Supabase client: uses ANON key + user JWT from cookies.
+ * All requests run as role `authenticated` (never service_role).
+ * After RLS changes, ensure policies allow this role for shifts, company_details, worker_skills, etc.
+ */
 export async function createClient() {
   const cookieStore = await cookies()
 
