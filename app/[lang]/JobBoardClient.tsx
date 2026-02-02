@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { JobCard } from '@/components/JobCard';
 import ApplyModal from '@/components/worker/ApplyModal';
@@ -34,16 +34,19 @@ interface Shift {
   possible_overtime: boolean;
   must_bring: string | null;
   locations: { name: string; address: string } | null;
-  profiles: {
-    company_details: {
-      company_name: string;
-      logo_url: string | null;
+  company?: { company_name?: string; logo_url?: string | null };
+  profiles?: {
+    company_details?: {
+      company_name?: string;
+      logo_url?: string | null;
     } | null;
   } | null;
 }
 
 interface JobBoardClientProps {
   shifts: Shift[];
+  onLoadMore?: (offset: number) => Promise<{ shifts: Shift[]; hasMore: boolean }>;
+  loadMoreLabel?: string;
   userRole: 'worker' | 'company' | 'admin' | null;
   user: User | null;
   appliedShiftIds: string[];
@@ -80,7 +83,9 @@ interface JobBoardClientProps {
 }
 
 export default function JobBoardClient({
-  shifts,
+  shifts: initialShifts,
+  onLoadMore,
+  loadMoreLabel = 'Load more',
   userRole,
   user,
   appliedShiftIds: initialAppliedShiftIds,
@@ -90,12 +95,32 @@ export default function JobBoardClient({
   lang,
 }: JobBoardClientProps) {
   const { toast } = useToast();
+  const [shifts, setShifts] = useState<Shift[]>(initialShifts);
+  const [hasMore, setHasMore] = useState(initialShifts.length === 20);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successShift, setSuccessShift] = useState<Shift | null>(null);
   const [appliedShiftIds, setAppliedShiftIds] = useState<string[]>(initialAppliedShiftIds);
   const [applicationStatusMap, setApplicationStatusMap] = useState<Record<string, string>>(initialApplicationStatusMap);
+
+  useEffect(() => {
+    setShifts(initialShifts);
+    setHasMore(initialShifts.length === 20);
+  }, [initialShifts]);
+
+  const loadMore = useCallback(async () => {
+    if (!onLoadMore || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const { shifts: nextShifts, hasMore: nextHasMore } = await onLoadMore(shifts.length);
+      setShifts((prev) => [...prev, ...nextShifts]);
+      setHasMore(nextHasMore);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [onLoadMore, loadingMore, hasMore, shifts.length]);
 
   const handleApply = (shift: Shift) => {
     if (!user) {
@@ -160,6 +185,8 @@ export default function JobBoardClient({
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
   });
 
+  const showLoadMore = onLoadMore && hasMore && shifts.length > 0;
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -184,6 +211,18 @@ export default function JobBoardClient({
           );
         })}
       </div>
+
+      {showLoadMore && (
+        <div className="mt-6 flex justify-center">
+          <Button
+            variant="outline"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? '...' : loadMoreLabel}
+          </Button>
+        </div>
+      )}
 
       {selectedShift && (
         <ApplyModal
@@ -226,7 +265,7 @@ export default function JobBoardClient({
             <DialogDescription className="text-center pt-2">
               {successShift && (
                 <span className="block text-base text-gray-700 leading-relaxed">
-                  You have successfully applied for the <strong className="font-semibold text-gray-900">{successShift.title}</strong> position at <strong className="font-semibold text-gray-900">{successShift.profiles?.company_details?.company_name || 'Company'}</strong>.
+                  You have successfully applied for the <strong className="font-semibold text-gray-900">{successShift.title}</strong> position at <strong className="font-semibold text-gray-900">{successShift.company?.company_name || successShift.profiles?.company_details?.company_name || 'Company'}</strong>.
                 </span>
               )}
             </DialogDescription>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/utils/supabase/client';
+import { resizeImageToMaxWidth } from '@/lib/canvasUtils';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { Upload, X, Building2 } from 'lucide-react';
@@ -134,7 +135,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
 
         setUser(authUser);
 
-        // Fetch company details
+        // Fetch company details (RLS: cd_manage_owner or equivalent for SELECT where profile_id = auth.uid())
         const { data: companyData, error: companyError } = await supabase
           .from('company_details')
           .select('*')
@@ -142,6 +143,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
           .maybeSingle();
 
         if (companyError) {
+          console.error('[CompanyProfile] company_details SELECT error:', companyError.message, companyError.code, companyError.details);
           setCompanyDetails(null);
         } else {
           setCompanyDetails(companyData);
@@ -229,7 +231,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
     }
   };
 
-  // Upload logo to Supabase storage
+  // Upload logo to Supabase storage (resize to max 1200px width if larger)
   const uploadLogo = async (userId: string): Promise<string | null> => {
     if (!logoFile) return null;
 
@@ -237,7 +239,13 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       const supabase = createClient();
       setUploadingLogo(true);
 
-      const fileExt = logoFile.name.split('.').pop()?.toLowerCase() || 'png';
+      let fileToUpload: File = logoFile;
+      const resizedBlob = await resizeImageToMaxWidth(logoFile, 1200);
+      if (resizedBlob) {
+        fileToUpload = new File([resizedBlob], logoFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+      }
+
+      const fileExt = fileToUpload.name.split('.').pop()?.toLowerCase() || 'png';
       
       // Sanitize filename: remove spaces and special characters, keep only alphanumeric, dashes, and underscores
       const sanitizedBaseName = logoFile.name
@@ -255,7 +263,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       // Upload file to 'company-assets' bucket with upsert: true
       const { data, error: uploadError } = await supabase.storage
         .from('company-assets')
-        .upload(filePath, logoFile, {
+        .upload(filePath, fileToUpload, {
           cacheControl: '3600',
           upsert: true,
         });
@@ -289,7 +297,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
     }
   };
 
-  // Upload cover photo to Supabase storage
+  // Upload cover photo to Supabase storage (resize to max 1200px width if larger)
   const uploadCoverPhoto = async (userId: string): Promise<string | null> => {
     if (!coverPhotoFile) return null;
 
@@ -297,7 +305,13 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       const supabase = createClient();
       setUploadingCoverPhoto(true);
 
-      const fileExt = coverPhotoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      let fileToUpload: File = coverPhotoFile;
+      const resizedBlob = await resizeImageToMaxWidth(coverPhotoFile, 1200);
+      if (resizedBlob) {
+        fileToUpload = new File([resizedBlob], coverPhotoFile.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+      }
+
+      const fileExt = fileToUpload.name.split('.').pop()?.toLowerCase() || 'jpg';
       
       // Sanitize filename: remove spaces and special characters
       const sanitizedBaseName = coverPhotoFile.name
@@ -315,7 +329,7 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       // Upload file to 'company-assets' bucket with upsert: true
       const { data, error: uploadError } = await supabase.storage
         .from('company-assets')
-        .upload(filePath, coverPhotoFile, {
+        .upload(filePath, fileToUpload, {
           cacheControl: '3600',
           upsert: true,
         });
@@ -419,10 +433,11 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
         p_cover_photo_url: coverPhotoUrl || null,
       };
 
-      // Call secure RPC function
+      // Call secure RPC (writes company_details via policy cd_manage_owner)
       const { error: rpcError } = await supabase.rpc('upsert_company_secure', rpcParams);
 
       if (rpcError) {
+        console.error('[CompanyProfile] upsert_company_secure RPC error (company_details INSERT/UPDATE):', rpcError.message, rpcError.code, rpcError.details);
         setSubmitError(rpcError.message || dict.validation.saveFailed);
         setSubmitLoading(false);
         return;
@@ -434,12 +449,15 @@ export default function CompanyProfileForm({ dict, profileDict, navigationDict, 
       setTimeout(async () => {
         router.refresh();
         const supabase = createClient();
-        const { data: refreshedData } = await supabase
+        const { data: refreshedData, error: refreshError } = await supabase
           .from('company_details')
           .select('*')
           .eq('profile_id', user.id)
           .maybeSingle();
 
+        if (refreshError) {
+          console.error('[CompanyProfile] company_details SELECT error (refresh):', refreshError.message, refreshError.code, refreshError.details);
+        }
         if (refreshedData) {
           setCompanyDetails(refreshedData);
           const refreshedDataRecord = refreshedData as Record<string, unknown>;

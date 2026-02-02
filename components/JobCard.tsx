@@ -30,10 +30,11 @@ interface Shift {
   is_urgent: boolean;
   must_bring: string | null;
   locations: { name: string; address: string } | null;
-  profiles: {
-    company_details: {
-      company_name: string;
-      logo_url: string | null;
+  company?: { company_name?: string; logo_url?: string | null };
+  profiles?: {
+    company_details?: {
+      company_name?: string;
+      logo_url?: string | null;
     } | null;
   } | null;
 }
@@ -78,9 +79,9 @@ export function JobCard({
   const endTimeFormatted = formatInTimeZone(end, timeZone, 'HH:mm', { locale: da });
   const timeFormatted = `${startTimeFormatted} - ${endTimeFormatted}`;
 
-  const companyName = shift.profiles?.company_details?.company_name || 'Company';
+  const companyName = shift.company?.company_name ?? shift.profiles?.company_details?.company_name ?? 'Company';
   const locationName = shift.locations?.name || shift.locations?.address || dict.jobBoard.locationNotSpecified;
-  const logoUrl = shift.profiles?.company_details?.logo_url;
+  const logoUrl = shift.company?.logo_url ?? shift.profiles?.company_details?.logo_url;
 
   return (
     <JobDetailsDialog

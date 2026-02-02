@@ -1,0 +1,60 @@
+-- Fix reviews section in get_worker_full_profile RPC
+-- reviewee_id = worker (pracownik), reviewer_id = company (firma)
+-- JOIN do company_details przez r.reviewer_id = cd.profile_id
+--
+-- Uruchom w Supabase SQL Editor, jeśli funkcja get_worker_full_profile już istnieje.
+-- Jeśli tworzysz ją od zera, dostosuj całą definicję funkcji.
+--
+-- Fragment do wstawienia w sekcji reviews (zastąp poprzednią wersję):
+--
+-- 'reviews', (
+--   SELECT jsonb_agg(jsonb_build_object(
+--     'id', r.id,
+--     'rating', r.rating,
+--     'comment', r.comment,
+--     'created_at', r.created_at,
+--     'tags', r.tags,
+--     'company_name', cd.company_name,
+--     'company_logo', cd.logo_url
+--   ))
+--   FROM public.reviews r
+--   LEFT JOIN public.company_details cd ON r.reviewer_id = cd.profile_id
+--   WHERE r.reviewee_id = p_worker_id
+-- )
+
+-- Pełna migracja: DROP + CREATE funkcji get_worker_full_profile (dostosuj do aktualnej definicji)
+-- UWAGA: Poniższy plik jest SZABLONEM – sprawdź aktualną strukturę funkcji w Supabase Dashboard.
+-- Przykład wywołania w SQL Editor:
+--
+-- CREATE OR REPLACE FUNCTION public.get_worker_full_profile(p_worker_id uuid)
+-- RETURNS jsonb
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- AS $$
+-- DECLARE
+--   result jsonb;
+-- BEGIN
+--   SELECT jsonb_build_object(
+--     'profile', (SELECT row_to_json(p.*) FROM profiles p WHERE p.id = p_worker_id),
+--     'worker_data', (SELECT row_to_json(wd.*) FROM worker_details wd WHERE wd.profile_id = p_worker_id),
+--     'skills', (SELECT coalesce(jsonb_agg(jsonb_build_object('id', s.id, 'name', s.name, 'category', s.category)), '[]'::jsonb) FROM skills s),
+--     'worker_skill_ids', (SELECT coalesce(jsonb_agg(ws.skill_id), '[]'::jsonb) FROM worker_skills ws WHERE ws.worker_id = p_worker_id),
+--     'reviews', (
+--       SELECT coalesce(jsonb_agg(jsonb_build_object(
+--         'id', r.id,
+--         'rating', r.rating,
+--         'comment', r.comment,
+--         'created_at', r.created_at,
+--         'tags', r.tags,
+--         'company_name', cd.company_name,
+--         'company_logo', cd.logo_url
+--       )), '[]'::jsonb)
+--       FROM public.reviews r
+--       LEFT JOIN public.company_details cd ON r.reviewer_id = cd.profile_id
+--       WHERE r.reviewee_id = p_worker_id
+--     ),
+--     'documents', (SELECT coalesce(jsonb_agg(row_to_json(d.*)), '[]'::jsonb) FROM documents d WHERE d.worker_id = p_worker_id)
+--   ) INTO result;
+--   RETURN result;
+-- END;
+-- $$;

@@ -40,13 +40,15 @@ interface Shift {
   is_urgent: boolean;
   must_bring: string | null;
   manager_id?: string | null;
+  requirements?: string[]; // tablica ID skilli z market_shifts_view
   locations: { name: string; address: string } | null;
   profiles: {
-    company_details: {
-      company_name: string;
-      logo_url: string | null;
-    } | null;
+  company_details?: {
+    company_name?: string;
+    logo_url?: string | null;
   } | null;
+} | null;
+  company?: { company_name?: string; logo_url?: string | null };
   managers?: {
     id: string;
     first_name: string;
@@ -111,58 +113,50 @@ export function JobDetailsDialog({
   const [open, setOpen] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   
-  // State for shift requirements (fetched from shift_requirements table)
+  // Wymagania z market_shifts_view: shift.requirements to tablica ID skilli – pobieramy nazwy z skills
   const [requiredLanguages, setRequiredLanguages] = useState<Array<{ id: string; name: string }>>([]);
   const [requiredLicenses, setRequiredLicenses] = useState<Array<{ id: string; name: string }>>([]);
   const [requirementsLoading, setRequirementsLoading] = useState(true);
 
-  // Fetch shift requirements when dialog opens
   useEffect(() => {
     if (!open) return;
 
-    async function fetchShiftRequirements() {
+    const skillIds = Array.isArray(shift.requirements) ? shift.requirements : [];
+    if (skillIds.length === 0) {
+      setRequiredLanguages([]);
+      setRequiredLicenses([]);
+      setRequirementsLoading(false);
+      return;
+    }
+
+    async function fetchSkillNames() {
       setRequirementsLoading(true);
       try {
         const supabase = createClient();
-        
-        const { data: requirements, error } = await supabase
-          .from('shift_requirements')
-          .select(`
-            skill_id,
-            skills!inner (
-              id,
-              name,
-              category
-            )
-          `)
-          .eq('shift_id', shift.id);
-        
-        if (!error && requirements) {
+        const { data: skills, error } = await supabase
+          .from('skills')
+          .select('id, name, category')
+          .in('id', skillIds);
+
+        if (error) {
+          console.error('[JobDetailsDialog] skills SELECT error:', error.message);
+        }
+        if (!error && skills) {
           const languages: Array<{ id: string; name: string }> = [];
           const licenses: Array<{ id: string; name: string }> = [];
-          
-          requirements.forEach((req: any) => {
-            if (req.skills) {
-              const skill = { id: req.skills.id, name: req.skills.name };
-              if (req.skills.category === 'language') {
-                languages.push(skill);
-              } else if (req.skills.category === 'license') {
-                licenses.push(skill);
-              }
-            }
+          skills.forEach((s: { id: string; name: string; category?: string }) => {
+            const skill = { id: s.id, name: s.name };
+            if (s.category === 'language') languages.push(skill);
+            else if (s.category === 'license') licenses.push(skill);
           });
-          
           setRequiredLanguages(languages);
           setRequiredLicenses(licenses);
         }
-      } catch (error) {
-        console.error('Error fetching shift requirements:', error);
       } finally {
         setRequirementsLoading(false);
       }
     }
-
-    fetchShiftRequirements();
+    fetchSkillNames();
   }, [open, shift.id]);
 
   const timeZone = 'Europe/Copenhagen';
@@ -177,10 +171,10 @@ export function JobDetailsDialog({
   const endTimeFormatted = formatInTimeZone(end, timeZone, 'HH:mm', { locale: da });
   const timeFormatted = `${startTimeFormatted} - ${endTimeFormatted}`;
 
-  const companyName = shift.profiles?.company_details?.company_name || 'Company';
+  const companyName = shift.company?.company_name ?? shift.profiles?.company_details?.company_name ?? 'Company';
   const locationName = shift.locations?.name || shift.locations?.address || dict.jobBoard.locationNotSpecified;
   const locationAddress = shift.locations?.address || '';
-  const logoUrl = shift.profiles?.company_details?.logo_url;
+  const logoUrl = shift.company?.logo_url ?? shift.profiles?.company_details?.logo_url;
 
   // Get category display name
   const categoryDisplay = dict.createShift?.categories?.[shift.category] || shift.category;

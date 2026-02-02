@@ -21,6 +21,7 @@ interface CompanySidebarProps {
       settings: string;
       logout: string;
       finances: string;
+      jobListings?: string;
     };
     navigation: {
       logout: string;
@@ -51,10 +52,18 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
   }, [refreshCounts]);
 
   // Realtime: refetch counts when timesheets or shift_applications change (instant badge update)
+  // Użyj jednego kanału 'sidebar_sync'; przy CLOSED/CHANNEL_ERROR fallback na manual fetch
   useEffect(() => {
     const supabase = createClient();
+    const channelName = 'sidebar_sync';
+    // Kanał o tej samej nazwie: Supabase reuses existing; ewentualny stary kanał (np. po hot reload) usuń przed subskrypcją
+    const realtimeTopic = `realtime:${channelName}`;
+    const existing = supabase.getChannels().find((ch) => ch.topic === realtimeTopic);
+    if (existing) {
+      supabase.removeChannel(existing);
+    }
     const channel = supabase
-      .channel('sidebar-notification-counts')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'timesheets' },
@@ -65,7 +74,15 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
         { event: '*', schema: 'public', table: 'shift_applications' },
         () => refreshCounts()
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Realtime active');
+        }
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          console.log('Realtime closed - switching to manual fetch');
+          refreshCounts();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -92,6 +109,7 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
     const labelMap: Record<string, string> = {
       Dashboard: dict.nav?.dashboard || 'Dashboard',
       Shifts: dict.nav?.shifts || 'Shifts',
+      'Job Listings': dict.nav?.jobListings || 'Job Listings',
       Applicants: dict.nav?.applicants || 'Applicants',
       Timesheets: dict.nav?.timesheets || 'Timesheets',
       Finances: dict.nav?.finances || 'Finances',
@@ -138,7 +156,9 @@ export function CompanySidebar({ dict, lang }: CompanySidebarProps) {
                       : 'text-[#000000] hover:bg-[#F3F4F6]'
                   )}
                 >
-                  <Icon className={cn('h-5 w-5 flex-shrink-0', isItemActive ? 'text-white' : 'text-[#000000]')} />
+                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center" aria-hidden>
+                    <Icon className={cn('h-5 w-5', isItemActive ? 'text-white' : 'text-[#000000]')} />
+                  </span>
                   <span className="flex-1">{getItemLabel(item.name)}</span>
                   {item.hasBadge && notificationCount > 0 ? (
                     <span

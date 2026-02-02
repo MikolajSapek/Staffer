@@ -58,6 +58,7 @@ export default function WorkerReviewsDialog({
 
     try {
       const supabase = createClient();
+      // reviewer_id = firma (company), reviewee_id = pracownik; JOIN profiles -> company_details
       const { data, error: fetchError } = await supabase
         .from('reviews')
         .select(`

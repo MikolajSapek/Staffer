@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import ShiftsTabs from '@/components/dashboard/ShiftsTabs';
+import { getListingsActivePage, getListingsArchivedPage } from '@/app/actions/shifts';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,11 +35,14 @@ export default async function CompanyDashboardPage({
   const nav = dict.nav as Record<string, string> | undefined;
   const dashboardDict = (dict as any).dashboard;
 
-  // Fetch active and archived shifts for ShiftsTabs
+  // Fetch active and archived shifts for ShiftsTabs (all use authenticated role via createClient)
   const now = new Date().toISOString();
-  await supabase.rpc('update_completed_shifts');
+  const { error: updateCompletedError } = await supabase.rpc('update_completed_shifts');
+  if (updateCompletedError) {
+    console.error('DEBUG [update_completed_shifts RPC]:', { error: updateCompletedError, userId: user?.id });
+  }
 
-  const { data: activeShifts } = await supabase
+  const { data: activeShifts, error: activeError } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -57,9 +61,14 @@ export default async function CompanyDashboardPage({
     .eq('company_id', user.id)
     .gte('end_time', now)
     .neq('status', 'cancelled')
-    .order('start_time', { ascending: true });
+    .order('start_time', { ascending: true })
+    .range(0, 19);
 
-  const { data: pastShifts } = await supabase
+  if (activeError) {
+    console.error('DEBUG [shifts SELECT active]:', { error: activeError, code: activeError.code, data: activeShifts, userId: user?.id });
+  }
+
+  const { data: pastShifts, error: pastError } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -78,9 +87,13 @@ export default async function CompanyDashboardPage({
     .eq('company_id', user.id)
     .lt('end_time', now)
     .order('start_time', { ascending: false })
-    .limit(100);
+    .range(0, 19);
 
-  const { data: statusShifts } = await supabase
+  if (pastError) {
+    console.error('DEBUG [shifts SELECT past]:', { error: pastError, code: pastError.code, data: pastShifts, userId: user?.id });
+  }
+
+  const { data: statusShifts, error: statusError } = await supabase
     .from('shifts')
     .select(`
       *,
@@ -99,15 +112,22 @@ export default async function CompanyDashboardPage({
     .eq('company_id', user.id)
     .in('status', ['completed', 'cancelled'])
     .order('start_time', { ascending: false })
-    .limit(100);
+    .range(0, 19);
 
-  const allArchivedShifts = [...(pastShifts || []), ...(statusShifts || [])];
+  if (statusError) {
+    console.error('DEBUG [shifts SELECT status]:', { error: statusError, code: statusError.code, data: statusShifts, userId: user?.id });
+  }
+
+  console.log('DATA CHECK [Dashboard]:', { activeCount: activeShifts?.length ?? 0, pastCount: pastShifts?.length ?? 0, statusCount: statusShifts?.length ?? 0, userId: user?.id, hasActiveError: !!activeError, hasPastError: !!pastError, hasStatusError: !!statusError });
+
+  // Zabezpieczenie: data null → pusta tablica (unika błędu .map na null)
+  const allArchivedShifts = [...(pastShifts ?? []), ...(statusShifts ?? [])];
   const uniqueArchivedShifts = Array.from(
-    new Map(allArchivedShifts.map((s) => [s.id, s])).values()
-  ).slice(0, 100);
+    new Map((allArchivedShifts ?? []).map((s) => [s.id, s])).values()
+  ).slice(0, 20);
 
   const mapShifts = (shifts: any[]) =>
-    (shifts || []).map((shift) => ({
+    (shifts ?? []).map((shift) => ({
       ...shift,
       locations: shift.location,
       shift_applications: (shift.shift_applications || []).map((app: any) => {
@@ -132,7 +152,7 @@ export default async function CompanyDashboardPage({
       }),
     }));
 
-  const mappedActiveShifts = mapShifts(activeShifts || []);
+  const mappedActiveShifts = mapShifts(activeShifts ?? []);
   const mappedArchivedShifts = mapShifts(uniqueArchivedShifts);
 
   const tools = [
@@ -251,6 +271,9 @@ export default async function CompanyDashboardPage({
           <ShiftsTabs
             activeShifts={mappedActiveShifts}
             archivedShifts={mappedArchivedShifts}
+            onLoadMoreActive={getListingsActivePage}
+            onLoadMoreArchived={getListingsArchivedPage}
+            loadMoreLabel={dashboardDict?.loadMore ?? 'Load more'}
             lang={currentLang}
             dict={{
               dashboard: {

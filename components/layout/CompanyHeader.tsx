@@ -68,9 +68,9 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
     const labelMap: Record<string, string> = {
       'Dashboard': dict.nav?.dashboard || 'Dashboard',
       'Shifts': dict.nav?.shifts || 'Shifts',
+      'Job Listings': dict.nav?.jobListings || 'Job Listings',
       'Applicants': dict.nav?.applicants || 'Applicants',
       'Timesheets': dict.nav?.timesheets || 'Timesheets',
-      'Applicants': dict.nav?.applicants || 'Applicants',
       'Locations': dict.nav?.locations || 'Locations',
       'Templates': dict.dashboard?.templates || 'Templates',
       'Team': dict.dashboard?.team || 'Team',
@@ -105,7 +105,8 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
     const pathWithoutLang = pathname.replace(/^\/(en-US|da)/, '') || '/';
     const titleMap: Record<string, string> = {
       '/dashboard': dict.nav?.dashboard || 'Dashboard',
-      '/listings': dict.nav?.shifts || 'Job Listings',
+      '/listings': dict.nav?.shifts || 'Shifts',
+      '/market': dict.nav?.jobListings || 'Job Listings',
       '/timesheets': dict.nav?.timesheets || 'Timesheets',
       '/applicants': dict.nav?.applicants || 'Applicants',
       '/locations': dict.nav?.locations || 'Locations',

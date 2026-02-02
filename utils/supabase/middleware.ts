@@ -36,6 +36,9 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Nie ucinać sesji anonimowej: dla niezalogowanych (np. /market) zwracamy response bez zmian.
+  // Supabase SSR ustawia/odświeża ciasteczka przez setAll; nie nadpisujemy ani nie usuwamy nagłówków sesji.
+
   // Redirect logged-in workers from root (/{lang}) to Job Listings in worker layout
   const pathname = request.nextUrl.pathname
   const isRootWithLocale =

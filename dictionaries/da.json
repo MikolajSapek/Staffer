@@ -19,6 +19,7 @@
   "nav": {
     "dashboard": "Oversigt",
     "shifts": "Vagter",
+    "jobListings": "Jobannoncer",
     "locations": "Lokationer",
     "timesheets": "Timesedler",
     "applicants": "Ansøgere",
@@ -109,6 +110,7 @@
     "title": "Jobopslag",
     "subtitle": "Find din næste vagt her",
     "noJobs": "Der er ingen aktive jobopslag i øjeblikket.",
+    "noOffersAvailable": "Ingen tilgængelige tilbud",
     "apply": "Ansøg nu",
     "loginToApply": "Log ind for at ansøge",
     "fullyBooked": "Fuldt booket",

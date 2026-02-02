@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +35,9 @@ interface Shift {
 interface ShiftsTabsProps {
   activeShifts: Shift[] | null;
   archivedShifts: Shift[] | null;
+  onLoadMoreActive?: (offset: number) => Promise<{ shifts: Shift[]; hasMore: boolean }>;
+  onLoadMoreArchived?: (offset: number) => Promise<{ shifts: Shift[]; hasMore: boolean }>;
+  loadMoreLabel?: string;
   lang: string;
   dict: {
     dashboard: {
@@ -69,10 +72,50 @@ interface ShiftsTabsProps {
 export default function ShiftsTabs({
   activeShifts,
   archivedShifts,
+  onLoadMoreActive,
+  onLoadMoreArchived,
+  loadMoreLabel = 'Load more',
   lang,
   dict,
 }: ShiftsTabsProps) {
   const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
+  const [activeList, setActiveList] = useState<Shift[]>(activeShifts ?? []);
+  const [archivedList, setArchivedList] = useState<Shift[]>(archivedShifts ?? []);
+  const [hasMoreActive, setHasMoreActive] = useState((activeShifts?.length ?? 0) === 20);
+  const [hasMoreArchived, setHasMoreArchived] = useState((archivedShifts?.length ?? 0) === 20);
+  const [loadingMoreActive, setLoadingMoreActive] = useState(false);
+  const [loadingMoreArchived, setLoadingMoreArchived] = useState(false);
+
+  const loadMoreActive = useCallback(async () => {
+    if (!onLoadMoreActive || loadingMoreActive || !hasMoreActive) return;
+    setLoadingMoreActive(true);
+    try {
+      const { shifts, hasMore } = await onLoadMoreActive(activeList.length);
+      setActiveList((prev) => [...prev, ...shifts]);
+      setHasMoreActive(hasMore);
+    } finally {
+      setLoadingMoreActive(false);
+    }
+  }, [onLoadMoreActive, loadingMoreActive, hasMoreActive, activeList.length]);
+
+  const loadMoreArchived = useCallback(async () => {
+    if (!onLoadMoreArchived || loadingMoreArchived || !hasMoreArchived) return;
+    setLoadingMoreArchived(true);
+    try {
+      const { shifts, hasMore } = await onLoadMoreArchived(archivedList.length);
+      setArchivedList((prev) => [...prev, ...shifts]);
+      setHasMoreArchived(hasMore);
+    } finally {
+      setLoadingMoreArchived(false);
+    }
+  }, [onLoadMoreArchived, loadingMoreArchived, hasMoreArchived, archivedList.length]);
+
+  useEffect(() => {
+    setActiveList(activeShifts ?? []);
+    setArchivedList(archivedShifts ?? []);
+    setHasMoreActive((activeShifts?.length ?? 0) === 20);
+    setHasMoreArchived((archivedShifts?.length ?? 0) === 20);
+  }, [activeShifts, archivedShifts]);
 
   // Define getStatusBadge function inside the component to access dict
   const getStatusBadge = (status: string) => {
@@ -184,11 +227,13 @@ export default function ShiftsTabs({
     );
   };
 
-  const currentShifts = activeTab === 'active' ? activeShifts : archivedShifts;
+  const currentShifts = activeTab === 'active' ? activeList : archivedList;
   const isEmpty = !currentShifts || currentShifts.length === 0;
-  const emptyMessage = activeTab === 'active' 
-    ? dict.companyShifts.noActiveShifts 
+  const emptyMessage = activeTab === 'active'
+    ? dict.companyShifts.noActiveShifts
     : dict.companyShifts.noArchiveShifts;
+  const showLoadMoreActive = activeTab === 'active' && onLoadMoreActive && hasMoreActive && !isEmpty;
+  const showLoadMoreArchived = activeTab === 'archive' && onLoadMoreArchived && hasMoreArchived && !isEmpty;
 
   return (
     <div>
@@ -200,8 +245,8 @@ export default function ShiftsTabs({
           className="rounded-b-none"
         >
           {dict.companyShifts.activeShifts}
-          {activeShifts && activeShifts.length > 0 && (
-            <span className="ml-2 text-xs opacity-75">({activeShifts.length})</span>
+          {activeList.length > 0 && (
+            <span className="ml-2 text-xs opacity-75">({activeList.length})</span>
           )}
         </Button>
         <Button
@@ -210,8 +255,8 @@ export default function ShiftsTabs({
           className="rounded-b-none"
         >
           {dict.companyShifts.archiveShifts}
-          {archivedShifts && archivedShifts.length > 0 && (
-            <span className="ml-2 text-xs opacity-75">({archivedShifts.length})</span>
+          {archivedList.length > 0 && (
+            <span className="ml-2 text-xs opacity-75">({archivedList.length})</span>
           )}
         </Button>
       </div>
@@ -226,9 +271,24 @@ export default function ShiftsTabs({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {currentShifts.map((shift) => renderShiftCard(shift, activeTab === 'archive'))}
-        </div>
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {currentShifts.map((shift) => renderShiftCard(shift, activeTab === 'archive'))}
+          </div>
+          {(showLoadMoreActive || showLoadMoreArchived) && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={activeTab === 'active' ? loadMoreActive : loadMoreArchived}
+                disabled={activeTab === 'active' ? loadingMoreActive : loadingMoreArchived}
+              >
+                {activeTab === 'active' ? loadingMoreActive : loadingMoreArchived
+                  ? '...'
+                  : loadMoreLabel}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
