@@ -522,7 +522,8 @@ export async function getMarketShiftsPage(offset: number): Promise<{
 }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { shifts: [], hasMore: false };
+  // Niezalogowani mogą przeglądać oferty (anon / public read)
+  // if (!user) return { shifts: [], hasMore: false }; – usunięte
 
   const { data, error } = await supabase
     .from('market_shifts_view')
@@ -532,7 +533,13 @@ export async function getMarketShiftsPage(offset: number): Promise<{
     .order('start_time', { ascending: true })
     .range(offset, offset + PAGE_SIZE - 1);
 
-  if (error) console.error('DEBUG [getMarketShiftsPage]:', { error, userId: user?.id });
+  const dataIsEmptyArray = Array.isArray(data) && data.length === 0;
+  const dataIsNull = data === null || data === undefined;
+  if (error) {
+    console.error('DEBUG [getMarketShiftsPage]:', { error, userId: user?.id ?? 'anon', dataType: dataIsNull ? 'null' : (Array.isArray(data) ? 'array' : typeof data), dataLength: Array.isArray(data) ? data.length : 'n/a' });
+  } else if (dataIsEmptyArray || dataIsNull) {
+    console.warn('DEBUG [getMarketShiftsPage] 0 results:', { dataIsEmptyArray, dataIsNull, dataType: dataIsNull ? 'null' : (Array.isArray(data) ? 'array' : typeof data), dataLength: Array.isArray(data) ? data.length : 'n/a', userId: user?.id ?? 'anon' });
+  }
   const list = data ?? [];
   const available = list
     .filter((s: Record<string, unknown>) => (s.vacancies_taken ?? 0) < (s.vacancies_total ?? 0))

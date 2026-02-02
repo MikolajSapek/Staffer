@@ -4,6 +4,7 @@ import '../globals.css';
 import dynamic from 'next/dynamic';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getDictionary } from './dictionaries';
+import { getCurrentUser } from '@/utils/supabase/server';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -33,11 +34,12 @@ export default async function RootLayout({
 }) {
   const { lang } = await params;
   const dict = await getDictionary(lang as 'en-US' | 'da');
+  const user = await getCurrentUser();
   return (
     <html lang={lang}>
       <body className={inter.className} suppressHydrationWarning>
         <LanguageSwitcher />
-        <ConditionalNavbar dict={dict} lang={lang} />
+        <ConditionalNavbar dict={dict} lang={lang} hasUser={!!user} />
         {children}
         <Analytics />
         <SpeedInsights />

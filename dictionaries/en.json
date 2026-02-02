@@ -19,6 +19,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "shifts": "Shifts",
+    "jobListings": "Job Listings",
     "locations": "Locations",
     "timesheets": "Timesheets",
     "applicants": "Applicants",

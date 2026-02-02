@@ -4,6 +4,7 @@ import {
   LayoutList,
   Wallet,
   Clock,
+  Globe,
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
@@ -14,12 +15,13 @@ export interface NavigationItem {
   hasBadge?: boolean;
 }
 
-// Flat sidebar: Dashboard, Applicants, Shifts, Timesheets, Finances
+// Flat sidebar: Dashboard, Applicants, Shifts (moje oferty), Job Listings (rynek jak u workera), Timesheets, Finances
 // Badges: Applicants (if > 0), Timesheets (pending approval), Finances (pending payments)
 export const COMPANY_NAVIGATION_ITEMS: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Applicants', href: '/applicants', icon: LayoutList, hasBadge: true },
   { name: 'Shifts', href: '/listings', icon: Briefcase },
+  { name: 'Job Listings', href: '/market', icon: Globe },
   { name: 'Timesheets', href: '/timesheets', icon: Clock, hasBadge: true },
   { name: 'Finances', href: '/billing', icon: Wallet, hasBadge: true },
 ];

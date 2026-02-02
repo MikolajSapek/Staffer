@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
@@ -8,31 +7,25 @@ import { getMarketShiftsPage } from '@/app/actions/shifts';
 
 export const dynamic = 'force-dynamic';
 
-export default async function WorkerMarketPage({
+/**
+ * Market page: public – niezalogowani widzą oferty, Apply przekierowuje do logowania.
+ * Zalogowani workerzy widzą oferty i mogą aplikować.
+ */
+export default async function MarketPage({
   params,
 }: {
   params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
   const dict = await getDictionary(lang as 'en-US' | 'da');
-  
+
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Worker layout already handles authentication, but we still need user data
-  if (!user) {
-    redirect(`/${lang}/login`);
-  }
-
-  const profile = await getCurrentProfile();
+  const profile = user ? await getCurrentProfile() : null;
   const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
   const verificationStatus = profile?.verification_status ?? null;
 
-  // Ensure only workers can access this page
-  if (userRole !== 'worker') {
-    redirect(`/${lang}`);
-  }
-  
   let appliedShiftIds: string[] = [];
   let applicationStatusMap: Record<string, string> = {};
 
@@ -41,7 +34,7 @@ export default async function WorkerMarketPage({
       .from('shift_applications')
       .select('shift_id, status')
       .eq('worker_id', user.id);
-    
+
     appliedShiftIds = applications?.map(app => app.shift_id) || [];
     applications?.forEach(app => {
       const status = app.status === 'accepted' ? 'approved' : app.status;
@@ -49,7 +42,7 @@ export default async function WorkerMarketPage({
     });
   }
 
-  // ZWERYFIKOWANE: market_shifts_view gwarantuje poprawne dane (requirements, location_name, location_address)
+  // Odczyt publiczny (anon): market_shifts_view – NIE filtrujemy po worker_id/auth.uid(), goście widzą tę samą listę
   const { data: shiftsData, error: shiftsError } = await supabase
     .from('market_shifts_view')
     .select('id, title, description, category, hourly_rate, start_time, end_time, break_minutes, is_break_paid, possible_overtime, vacancies_total, vacancies_taken, status, is_urgent, must_bring, requirements, company_id, location_name, location_address, company_name, logo_url')
@@ -58,11 +51,28 @@ export default async function WorkerMarketPage({
     .order('start_time', { ascending: true })
     .range(0, 19);
 
+  // DEBUG: przy 0 wynikach rozróżnij data === [] (sukces, brak wierszy) vs data === null (błąd/RLS)
+  const dataIsEmptyArray = Array.isArray(shiftsData) && shiftsData.length === 0;
+  const dataIsNull = shiftsData === null || shiftsData === undefined;
   if (shiftsError) {
-    console.error('DEBUG [market market_shifts_view SELECT]:', { error: shiftsError, code: shiftsError.code, userId: user?.id });
+    console.error('DEBUG [market market_shifts_view SELECT]:', {
+      error: shiftsError,
+      code: shiftsError.code,
+      userId: user?.id ?? 'anon',
+      dataType: dataIsNull ? 'null' : Array.isArray(shiftsData) ? 'array' : typeof shiftsData,
+      dataLength: Array.isArray(shiftsData) ? shiftsData.length : 'n/a',
+    });
+  } else if (dataIsEmptyArray || dataIsNull) {
+    console.warn('DEBUG [market market_shifts_view SELECT] 0 results:', {
+      dataIsEmptyArray,
+      dataIsNull,
+      dataType: dataIsNull ? 'null' : (Array.isArray(shiftsData) ? 'array' : typeof shiftsData),
+      dataLength: Array.isArray(shiftsData) ? shiftsData.length : 'n/a',
+      userId: user?.id ?? 'anon',
+      hasError: !!shiftsError,
+    });
   }
 
-  // Mapowanie płaskich kolumn widoku (company_name, logo_url z widoku SQL) do struktury UI
   const mapViewToShift = (row: Record<string, unknown>) => {
     const companyName = row.company_name ?? 'Company';
     const logoUrl = row.logo_url ?? null;
@@ -97,7 +107,7 @@ export default async function WorkerMarketPage({
               {dict.jobBoard?.loadError ?? 'Unable to load job offers. Please try again or contact support.'}
             </p>
             <p className="text-muted-foreground text-sm mt-2">
-              {dict.jobBoard?.loadErrorHint ?? 'If this persists, check that you are logged in as a worker.'}
+              {dict.jobBoard?.loadErrorHint ?? 'If this persists, please try again later or contact support.'}
             </p>
           </CardContent>
         </Card>
@@ -115,7 +125,7 @@ export default async function WorkerMarketPage({
           onLoadMore={getMarketShiftsPage}
           loadMoreLabel={dict.jobBoard?.loadMore ?? 'Load more'}
           userRole={userRole}
-          user={user}
+          user={user ?? null}
           appliedShiftIds={appliedShiftIds}
           applicationStatusMap={applicationStatusMap}
           verificationStatus={verificationStatus}

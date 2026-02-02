@@ -19,6 +19,7 @@
   "nav": {
     "dashboard": "Oversigt",
     "shifts": "Vagter",
+    "jobListings": "Jobannoncer",
     "locations": "Lokationer",
     "timesheets": "Timesedler",
     "applicants": "Ansøgere",
