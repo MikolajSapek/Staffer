@@ -461,70 +461,66 @@ export function JobDetailsDialog({
           </div>
 
           {/* Footer - Sticky Apply Button */}
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 sticky bottom-0">
-            {userRole === 'company' ? (
-              <div className="w-full h-12 flex items-center justify-center">
-                <Badge variant="outline" className="text-sm text-gray-600">
-                  Preview Mode - View Only
-                </Badge>
-              </div>
-            ) : isApplied ? (
-              <Button
-                disabled
-                className={cn(
-                  "w-full h-12 text-base font-semibold",
-                  getStatusStyles(applicationStatus)
-                )}
-                size="lg"
-              >
-                {applicationStatus === 'accepted' || applicationStatus === 'approved'
-                  ? dict.workerApplications?.statusAccepted || 'Application Accepted'
-                  : applicationStatus === 'rejected'
-                  ? dict.workerApplications?.statusRejected || 'Application Rejected'
-                  : applicationStatus === 'waitlist'
-                  ? dict.workerApplications?.statusWaitlist || 'On Waitlist'
-                  : dict.workerApplications?.statusPending || 'Application Pending'}
-              </Button>
-            ) : isFullyBooked ? (
-              <Button
-                disabled
-                variant="outline"
-                className="w-full h-12 text-base cursor-not-allowed"
-                size="lg"
-              >
-                {dict.jobBoard.fullyBooked || 'Fully Booked'}
-              </Button>
-            ) : mustVerify ? (
-              <Button
-                disabled
-                variant="outline"
-                className="w-full h-12 text-base cursor-not-allowed"
-                size="lg"
-              >
-                Verify account to apply
-              </Button>
-            ) : canApply ? (
-              <Button
-                onClick={handleApplyClick}
-                className="w-full h-12 text-base font-semibold bg-black text-white hover:bg-gray-800"
-                size="lg"
-              >
-                {dict.jobBoard.apply}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="w-full h-12 text-base"
-                size="lg"
-                onClick={() => {
-                  setOpen(false);
-                  window.location.href = `/${lang}/login`;
-                }}
-              >
-                {dict.jobBoard.loginToApply}
-              </Button>
-            )}
-          </div>
+          {userRole !== 'company' && (
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 sticky bottom-0">
+              {isApplied ? (
+                <Button
+                  disabled
+                  className={cn(
+                    "w-full h-12 text-base font-semibold",
+                    getStatusStyles(applicationStatus)
+                  )}
+                  size="lg"
+                >
+                  {applicationStatus === 'accepted' || applicationStatus === 'approved'
+                    ? dict.workerApplications?.statusAccepted || 'Application Accepted'
+                    : applicationStatus === 'rejected'
+                    ? dict.workerApplications?.statusRejected || 'Application Rejected'
+                    : applicationStatus === 'waitlist'
+                    ? dict.workerApplications?.statusWaitlist || 'On Waitlist'
+                    : dict.workerApplications?.statusPending || 'Application Pending'}
+                </Button>
+              ) : isFullyBooked ? (
+                <Button
+                  disabled
+                  variant="outline"
+                  className="w-full h-12 text-base cursor-not-allowed"
+                  size="lg"
+                >
+                  {dict.jobBoard.fullyBooked || 'Fully Booked'}
+                </Button>
+              ) : mustVerify ? (
+                <Button
+                  disabled
+                  variant="outline"
+                  className="w-full h-12 text-base cursor-not-allowed"
+                  size="lg"
+                >
+                  Verify account to apply
+                </Button>
+              ) : canApply ? (
+                <Button
+                  onClick={handleApplyClick}
+                  className="w-full h-12 text-base font-semibold bg-black text-white hover:bg-gray-800"
+                  size="lg"
+                >
+                  {dict.jobBoard.apply}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="w-full h-12 text-base"
+                  size="lg"
+                  onClick={() => {
+                    setOpen(false);
+                    window.location.href = `/${lang}/login`;
+                  }}
+                >
+                  {dict.jobBoard.loginToApply}
+                </Button>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

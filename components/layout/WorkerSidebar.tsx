@@ -128,16 +128,16 @@ export function WorkerSidebar({ dict, lang }: WorkerSidebarProps) {
       <div className="mt-auto border-t border-black/10 p-4 bg-[#FFFFFF] space-y-2">
         <Link
           href={`/${currentLang}/profile`}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-            isActive('/profile')
-              ? 'bg-[#000000] text-white'
-              : 'text-[#000000] hover:bg-[#F3F4F6]'
-          )}
-        >
-          <User className="h-5 w-5 flex-shrink-0" />
-          <span>{dict.nav?.profile || 'Profile'}</span>
-        </Link>
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              isActive('/profile')
+                ? 'bg-[#000000] text-white'
+                : 'text-[#000000] hover:bg-[#F3F4F6]'
+            )}
+          >
+            <User className="h-5 w-5 flex-shrink-0" />
+            <span>{dict.nav?.profile || 'Profile'}</span>
+          </Link>
 
         <Link
           href={`/${currentLang}/worker/support`}

@@ -13,6 +13,13 @@ import {
   SheetTrigger,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WORKER_NAVIGATION } from '@/lib/config/worker-navigation';
 
 interface WorkerHeaderProps {
@@ -201,9 +208,7 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
     if (workerName?.first_name && workerName?.last_name) {
       return `${workerName.first_name} ${workerName.last_name}`;
     }
-    if (workerName?.first_name) {
-      return workerName.first_name;
-    }
+    if (workerName?.first_name) return workerName.first_name;
     return 'Worker';
   };
 
@@ -211,21 +216,26 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
 
   if (loading) {
     return (
-      <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-6">
+      <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-6 z-20">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 bg-muted animate-pulse rounded md:hidden" />
+          <div className="h-8 w-8 bg-muted animate-pulse rounded lg:hidden" />
           <div className="h-6 w-32 bg-muted animate-pulse rounded" />
         </div>
-        <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="hidden sm:block text-right">
+            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+            <div className="h-3 w-32 bg-muted animate-pulse rounded mt-1" />
+          </div>
+          <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+        </div>
       </header>
     );
   }
 
   return (
     <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-6 z-20">
-      {/* Mobile: Hamburger Menu + Logo | Desktop: Page Title */}
+      {/* Left: Mobile hamburger + Page title (desktop) – same structure as CompanyHeader */}
       <div className="flex items-center gap-3">
-        {/* Mobile Menu Trigger - visible when sidebar is hidden (lg breakpoint) */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <button
@@ -342,7 +352,6 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
           </SheetContent>
         </Sheet>
 
-        {/* Mobile: Logo (hidden on lg+) */}
         <Link
           href={`/${currentLang}/market`}
           className="lg:hidden italic font-bold text-xl tracking-tight text-slate-900"
@@ -350,7 +359,6 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
           Staffer
         </Link>
 
-        {/* Desktop: Page Title (hidden on mobile) */}
         {pageTitle && (
           <h1 className="hidden lg:block font-bold text-xl text-foreground">
             {pageTitle}
@@ -358,27 +366,52 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
         )}
       </div>
 
-      {/* Worker Identity - Top right: first_name last_name (Bold), email (gray small), right-aligned */}
-      <div className="flex items-center gap-3 ml-auto flex-row flex-shrink-0 justify-end">
-        <div className="text-right hidden sm:block">
-          <div className="font-bold text-sm text-slate-900">
+      {/* Right: Profile block – Avatar + Name + Email in one container */}
+      <div className="flex items-center gap-3 ml-auto flex-shrink-0 min-w-0">
+        <div className="hidden sm:block text-right min-w-0 max-w-[200px]">
+          <div className="font-bold text-sm text-foreground truncate">
             {getDisplayName()}
           </div>
-          <div className="text-xs text-slate-500 truncate max-w-[180px]">
+          <div className="text-xs text-muted-foreground truncate">
             {user?.email || 'User'}
           </div>
         </div>
-        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm ring-2 ring-white flex-shrink-0">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt="Profile"
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            <span className="font-bold">{getUserInitials()}</span>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="rounded-full ring-2 ring-white focus:outline-none focus:ring-2 focus:ring-slate-400 flex-shrink-0"
+              aria-label="Open account menu"
+            >
+              <Avatar className="h-10 w-10 rounded-full border-2 border-white shadow-sm">
+                <AvatarImage src={avatarUrl ?? undefined} alt="Profile" />
+                <AvatarFallback className="rounded-full bg-blue-600 text-white font-bold">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem asChild>
+              <Link href={`/${currentLang}/profile`} className="flex items-center gap-2 cursor-pointer">
+                <User className="h-4 w-4" />
+                Profil
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/${currentLang}/worker/settings`} className="flex items-center gap-2 cursor-pointer">
+                <Settings className="h-4 w-4" />
+                Ustawienia
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
+            >
+              <LogOut className="h-4 w-4" />
+              Wyloguj
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
