@@ -12,8 +12,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Star, Loader2 } from 'lucide-react';
+import { Star, Loader2, Heart, Ban } from 'lucide-react';
 import { submitReview } from '@/app/actions/reviews';
+import { upsertWorkerRelation } from '@/app/actions/worker-relations';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 export type PendingTimesheetAction = 'approve' | 'dispute' | 'add_overtime';
@@ -23,7 +25,10 @@ interface TimesheetRatingModalProps {
   onOpenChange: (open: boolean) => void;
   workerId: string;
   shiftId: string;
+  companyId: string;
   workerName: string;
+  firstName?: string;
+  lastName?: string;
   lang: string;
   dict: {
     title: string;
@@ -40,15 +45,24 @@ export default function TimesheetRatingModal({
   onOpenChange,
   workerId,
   shiftId,
+  companyId,
   workerName,
+  firstName,
+  lastName,
   lang,
   dict,
   pendingAction,
   onSaveOrSkip,
 }: TimesheetRatingModalProps) {
+  const { toast } = useToast();
+  const displayName = firstName != null && lastName != null
+    ? `${firstName} ${lastName}`.trim() || workerName
+    : workerName;
   const [rating, setRating] = useState<number>(0);
   const [hoveredRating, setHoveredRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isBlacklist, setIsBlacklist] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,6 +79,23 @@ export default function TimesheetRatingModal({
     setError(null);
     setLoading(true);
     try {
+      // Future Cooperation: upsert PRZED submitReview – zapisuje się nawet gdy opinia już istnieje
+      if (isFavorite || isBlacklist) {
+        const relResult = await upsertWorkerRelation({
+          workerId,
+          companyId,
+          relationType: isBlacklist ? 'blacklist' : 'favorite',
+          lang,
+        });
+        if (relResult.error) {
+          toast({
+            title: 'Relation update failed',
+            description: relResult.error,
+            variant: 'destructive',
+          });
+        }
+      }
+
       const result = await submitReview({
         shiftId,
         workerId,
@@ -81,6 +112,12 @@ export default function TimesheetRatingModal({
         return;
       }
 
+      toast({
+        title: 'Opinion submitted!',
+        description: 'Your review has been successfully added to the profile.',
+        variant: 'success',
+        duration: 5000,
+      });
       await onSaveOrSkip(pendingAction, true);
       onOpenChange(false);
       setRating(0);
@@ -125,7 +162,7 @@ export default function TimesheetRatingModal({
           <DialogHeader>
             <DialogTitle className="text-black">{dict.title}</DialogTitle>
             <DialogDescription className="text-gray-600">
-              {workerName}
+              {displayName}
             </DialogDescription>
           </DialogHeader>
 
@@ -157,6 +194,44 @@ export default function TimesheetRatingModal({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Future Cooperation */}
+            <div className="space-y-2">
+              <Label className="text-black">Future Cooperation</Label>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant={isFavorite ? 'default' : 'outline'}
+                  size="sm"
+                  disabled={loading}
+                  onClick={() => {
+                    setIsFavorite((p) => !p);
+                    if (isBlacklist) setIsBlacklist(false);
+                  }}
+                  className={cn(
+                    'gap-2',
+                    isFavorite && 'bg-rose-500 hover:bg-rose-600'
+                  )}
+                >
+                  <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+                  Favorite
+                </Button>
+                <Button
+                  type="button"
+                  variant={isBlacklist ? 'destructive' : 'outline'}
+                  size="sm"
+                  disabled={loading}
+                  onClick={() => {
+                    setIsBlacklist((p) => !p);
+                    if (isFavorite) setIsFavorite(false);
+                  }}
+                  className="gap-2"
+                >
+                  <Ban className="h-4 w-4" />
+                  Blacklist
+                </Button>
               </div>
             </div>
 

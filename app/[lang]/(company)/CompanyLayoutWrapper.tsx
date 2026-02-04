@@ -118,18 +118,18 @@ export default function CompanyLayoutWrapper({
   }, [hasCompanyDetails, pathname, router, currentLang]); // ✅ FIX: Dodano currentLang do zależności
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
-      {/* 1. Sidebar – tylko CompanySidebar, ukryty na mobile, wysuwany pod Avatarem (w Headerze) */}
+    <div className="flex h-screen bg-white overflow-hidden isolate">
+      {/* 1. Sidebar – fixed left, ukryty na mobile (Sheet w Headerze) */}
       <aside className="hidden lg:flex flex-col fixed left-0 top-0 w-64 h-full border-r border-black/10 bg-white z-30">
         <CompanySidebarDynamic dict={dict} lang={currentLang} />
       </aside>
 
-      {/* 2. Główna treść: margines lg:pl-64, żeby nie chowała się pod Sidebarem na desktop */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden lg:pl-64">
-        <header className="flex-shrink-0 z-20">
+      {/* 2. Główna treść: lg:pl-64 żeby nie nakładać się na Sidebar */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden lg:pl-64">
+        <header className="flex-shrink-0 z-20 bg-white border-b border-black/10">
           <CompanyHeaderDynamic dict={dict} lang={currentLang} />
         </header>
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

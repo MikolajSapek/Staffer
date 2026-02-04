@@ -41,6 +41,7 @@ export default function ConditionalNavbar({ dict, lang, hasUser = false }: Condi
                          pathname?.includes('/settings') ||
                          pathname?.includes('/templates') ||
                          pathname?.includes('/managers') ||
+                         pathname?.includes('/staff') ||
                          pathname?.includes('/create-shift') ||
                          pathname?.includes('/company-setup') ||
                          pathname?.includes('/company') ||

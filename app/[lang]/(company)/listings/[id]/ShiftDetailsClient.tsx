@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { CorrectionBadge } from '@/components/ui/correction-badge';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
-import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil, Lock, UserCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Users, Archive, Loader2, Star, Trash2, Pencil, Lock, UserCircle, Heart, UserX } from 'lucide-react';
 import Link from 'next/link';
 import { archiveShift, cancelWorkerAction } from '@/app/actions/shifts';
 import RateWorkerDialog from '@/components/RateWorkerDialog';
 import CancelWorkerDialog from '@/components/shifts/CancelWorkerDialog';
 import EditShiftDialog from '@/components/shifts/EditShiftDialog';
 import ApplicantProfileModal from '@/components/company/ApplicantProfileModal';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 
 interface WorkerDetails {
@@ -53,6 +54,8 @@ interface Application {
   } | null;
   languages?: Skill[];
   licenses?: Skill[];
+  is_favorite?: boolean;
+  is_blacklist?: boolean;
 }
 
 interface Location {
@@ -142,6 +145,8 @@ export default function ShiftDetailsClient({
   const [selectedWorker, setSelectedWorker] = useState<{
     id: string;
     name: string;
+    firstName?: string;
+    lastName?: string;
   } | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<{
@@ -193,8 +198,13 @@ export default function ShiftDetailsClient({
     ? hiredTeam.filter((app) => app.status === 'accepted')
     : hiredTeam;
 
-  const handleRateClick = (workerId: string, workerName: string) => {
-    setSelectedWorker({ id: workerId, name: workerName });
+  const handleRateClick = (
+    workerId: string,
+    workerName: string,
+    firstName?: string,
+    lastName?: string
+  ) => {
+    setSelectedWorker({ id: workerId, name: workerName, firstName, lastName });
     setRatingDialogOpen(true);
   };
 
@@ -616,9 +626,19 @@ export default function ShiftDetailsClient({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <div className="font-semibold text-base truncate">
                                   {fullName}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {application.is_favorite && (
+                                    <Tooltip content="You marked this worker as favorite">
+                                      <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                                    </Tooltip>
+                                  )}
+                                  {application.is_blacklist && (
+                                    <UserX className="h-4 w-4 text-muted-foreground" />
+                                  )}
                                 </div>
                                 {disputesMap[profile.id]?.was_disputed && (
                                   <CorrectionBadge
@@ -692,7 +712,12 @@ export default function ShiftDetailsClient({
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleRateClick(profile.id, fullName);
+                                    handleRateClick(
+                                      profile.id,
+                                      fullName,
+                                      profile.first_name ?? undefined,
+                                      profile.last_name ?? undefined
+                                    );
                                   }}
                                   className="gap-2"
                                 >
@@ -720,7 +745,10 @@ export default function ShiftDetailsClient({
           onOpenChange={handleDialogOpenChange}
           workerId={selectedWorker.id}
           shiftId={shift.id}
+          companyId={shift.company_id}
           workerName={selectedWorker.name}
+          firstName={selectedWorker.firstName}
+          lastName={selectedWorker.lastName}
           existingReview={reviewsMap[selectedWorker.id] || null}
           lang={lang}
           onReviewSubmitted={handleReviewSubmitted}

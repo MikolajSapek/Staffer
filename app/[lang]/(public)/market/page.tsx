@@ -2,14 +2,14 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { getCurrentProfile } from '@/utils/supabase/server';
-import JobBoardClient from '@/app/[lang]/JobBoardClient';
 import { getMarketShiftsPage } from '@/app/actions/shifts';
+import JobBoardClient from '@/app/[lang]/JobBoardClient';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Market page: public – niezalogowani widzą oferty, Apply przekierowuje do logowania.
- * Zalogowani workerzy widzą oferty i mogą aplikować.
+ * Market Dispatcher: Single route /market.
+ * Renders WorkerMarketView | CompanyMarketView | PublicMarketView based on user role.
  */
 export default async function MarketPage({
   params,
@@ -22,6 +22,62 @@ export default async function MarketPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  let profile: { role?: string } | null = null;
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    profile = data;
+  }
+
+  const role = profile?.role as 'worker' | 'company' | 'admin' | null;
+
+  if (role === 'worker') {
+    return (
+      <WorkerMarketView
+        lang={lang}
+        dict={dict}
+        user={user!}
+        supabase={supabase}
+      />
+    );
+  }
+
+  if (role === 'company') {
+    return (
+      <CompanyMarketView
+        lang={lang}
+        dict={dict}
+        user={user!}
+        supabase={supabase}
+      />
+    );
+  }
+
+  return (
+    <PublicMarketView
+      lang={lang}
+      dict={dict}
+      user={user}
+      supabase={supabase}
+    />
+  );
+}
+
+/** Public: guests see offers, Apply redirects to login */
+async function PublicMarketView({
+  lang,
+  dict,
+  user,
+  supabase,
+}: {
+  lang: string;
+  dict: Awaited<ReturnType<typeof getDictionary>>;
+  user: { id: string } | null;
+  supabase: Awaited<ReturnType<typeof createClient>>;
+}) {
   const profile = user ? await getCurrentProfile() : null;
   const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
   const verificationStatus = profile?.verification_status ?? null;
@@ -34,51 +90,56 @@ export default async function MarketPage({
       .from('shift_applications')
       .select('shift_id, status')
       .eq('worker_id', user.id);
-
-    appliedShiftIds = applications?.map(app => app.shift_id) || [];
-    applications?.forEach(app => {
+    appliedShiftIds = applications?.map((app) => app.shift_id) || [];
+    applications?.forEach((app) => {
       const status = app.status === 'accepted' ? 'approved' : app.status;
       applicationStatusMap[app.shift_id] = status;
     });
   }
 
-  // Odczyt publiczny (anon): market_shifts_view – NIE filtrujemy po worker_id/auth.uid(), goście widzą tę samą listę
   const { data: shiftsData, error: shiftsError } = await supabase
     .from('market_shifts_view')
-    .select('id, title, description, category, hourly_rate, start_time, end_time, break_minutes, is_break_paid, possible_overtime, vacancies_total, vacancies_taken, status, is_urgent, must_bring, requirements, company_id, location_name, location_address, company_name, logo_url')
+    .select(`
+      id,
+      title,
+      description,
+      category,
+      hourly_rate,
+      start_time,
+      end_time,
+      break_minutes,
+      is_break_paid,
+      possible_overtime,
+      vacancies_total,
+      vacancies_taken,
+      status,
+      is_urgent,
+      must_bring,
+      requirements,
+      company_id,
+      location_name,
+      location_address,
+      company_name,
+      logo_url,
+      shift_requirements (
+        skill_id
+      )
+    `)
     .eq('status', 'published')
     .gt('start_time', new Date().toISOString())
     .order('start_time', { ascending: true })
     .range(0, 19);
 
-  // DEBUG: przy 0 wynikach rozróżnij data === [] (sukces, brak wierszy) vs data === null (błąd/RLS)
-  const dataIsEmptyArray = Array.isArray(shiftsData) && shiftsData.length === 0;
-  const dataIsNull = shiftsData === null || shiftsData === undefined;
-  if (shiftsError) {
-    console.error('DEBUG [market market_shifts_view SELECT]:', {
-      error: shiftsError,
-      code: shiftsError.code,
-      userId: user?.id ?? 'anon',
-      dataType: dataIsNull ? 'null' : Array.isArray(shiftsData) ? 'array' : typeof shiftsData,
-      dataLength: Array.isArray(shiftsData) ? shiftsData.length : 'n/a',
-    });
-  } else if (dataIsEmptyArray || dataIsNull) {
-    console.warn('DEBUG [market market_shifts_view SELECT] 0 results:', {
-      dataIsEmptyArray,
-      dataIsNull,
-      dataType: dataIsNull ? 'null' : (Array.isArray(shiftsData) ? 'array' : typeof shiftsData),
-      dataLength: Array.isArray(shiftsData) ? shiftsData.length : 'n/a',
-      userId: user?.id ?? 'anon',
-      hasError: !!shiftsError,
-    });
-  }
-
   const mapViewToShift = (row: Record<string, unknown>) => {
     const companyName = row.company_name ?? 'Company';
     const logoUrl = row.logo_url ?? null;
+    const shiftReqs = row.shift_requirements as Array<{ skill_id: string | null }> | undefined;
+    const requirementsFromRel = Array.isArray(shiftReqs)
+      ? shiftReqs.map((sr) => sr.skill_id).filter((id): id is string => !!id)
+      : [];
     return {
       ...row,
-      requirements: (Array.isArray(row.requirements) ? row.requirements : []) as string[],
+      requirements: (requirementsFromRel.length > 0 ? requirementsFromRel : (Array.isArray(row.requirements) ? row.requirements : [])) as string[],
       locations: {
         name: row.location_name ?? '',
         address: row.location_address ?? '',
@@ -115,7 +176,7 @@ export default async function MarketPage({
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">
-              {dict.jobBoard.noOffersAvailable ?? dict.jobBoard.noJobs ?? 'No offers available'}
+              {dict.jobBoard?.noOffersAvailable ?? dict.jobBoard?.noJobs ?? 'No offers available'}
             </p>
           </CardContent>
         </Card>
@@ -128,6 +189,211 @@ export default async function MarketPage({
           user={user ?? null}
           appliedShiftIds={appliedShiftIds}
           applicationStatusMap={applicationStatusMap}
+          verificationStatus={verificationStatus}
+          dict={dict}
+          lang={lang}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Worker: sees offers, can apply, has bannedUntil check */
+async function WorkerMarketView({
+  lang,
+  dict,
+  user,
+  supabase,
+}: {
+  lang: string;
+  dict: Awaited<ReturnType<typeof getDictionary>>;
+  user: { id: string };
+  supabase: Awaited<ReturnType<typeof createClient>>;
+}) {
+  const profile = await getCurrentProfile();
+  const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
+  const verificationStatus = profile?.verification_status ?? null;
+
+  let bannedUntil: string | null = null;
+  const { data: workerDetails } = await supabase
+    .from('worker_details')
+    .select('banned_until')
+    .eq('profile_id', user.id)
+    .maybeSingle();
+  bannedUntil = workerDetails?.banned_until ?? null;
+
+  let appliedShiftIds: string[] = [];
+  let applicationStatusMap: Record<string, string> = {};
+
+  const { data: applications } = await supabase
+    .from('shift_applications')
+    .select('shift_id, status')
+    .eq('worker_id', user.id);
+  appliedShiftIds = applications?.map((app) => app.shift_id) || [];
+  applications?.forEach((app) => {
+    const status = app.status === 'accepted' ? 'approved' : app.status;
+    applicationStatusMap[app.shift_id] = status;
+  });
+
+  const { data: shiftsData, error: shiftsError } = await supabase
+    .from('shifts')
+    .select(`
+      id,
+      title,
+      description,
+      category,
+      hourly_rate,
+      start_time,
+      end_time,
+      break_minutes,
+      is_break_paid,
+      possible_overtime,
+      vacancies_total,
+      vacancies_taken,
+      status,
+      is_urgent,
+      must_bring,
+      company_id,
+      locations!location_id (
+        name,
+        address
+      ),
+      profiles!company_id (
+        company_details!profile_id (
+          company_name,
+          logo_url
+        )
+      ),
+      shift_requirements (
+        skill_id
+      )
+    `)
+    .eq('status', 'published')
+    .gt('start_time', new Date().toISOString())
+    .order('start_time', { ascending: true });
+
+  const availableShifts = (shiftsData || []).filter(
+    (shift) => shift.vacancies_taken < shift.vacancies_total
+  );
+  const shifts = (shiftsError ? [] : availableShifts).map((shift) => ({
+    ...shift,
+    requirements: (shift.shift_requirements ?? []).map((sr: { skill_id: string | null }) => sr.skill_id).filter((id): id is string => !!id),
+  }));
+
+  return (
+    <div>
+      {!shifts || shifts.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              {dict.jobBoard?.noJobs ?? 'No offers available'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <JobBoardClient
+          shifts={shifts}
+          userRole={userRole}
+          user={user}
+          appliedShiftIds={appliedShiftIds}
+          applicationStatusMap={applicationStatusMap}
+          verificationStatus={verificationStatus}
+          bannedUntil={bannedUntil}
+          dict={dict}
+          lang={lang}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Company: browses marketplace (all shifts), no apply */
+async function CompanyMarketView({
+  lang,
+  dict,
+  user,
+  supabase,
+}: {
+  lang: string;
+  dict: Awaited<ReturnType<typeof getDictionary>>;
+  user: { id: string };
+  supabase: Awaited<ReturnType<typeof createClient>>;
+}) {
+  const profile = await getCurrentProfile();
+  const userRole = profile?.role as 'worker' | 'company' | 'admin' | null;
+  const verificationStatus = profile?.verification_status ?? null;
+
+  const { data: shiftsData, error: shiftsError } = await supabase
+    .from('shifts')
+    .select(`
+      id,
+      title,
+      description,
+      category,
+      hourly_rate,
+      start_time,
+      end_time,
+      break_minutes,
+      is_break_paid,
+      possible_overtime,
+      vacancies_total,
+      vacancies_taken,
+      status,
+      is_urgent,
+      must_bring,
+      company_id,
+      locations!location_id (
+        name,
+        address
+      ),
+      profiles!company_id (
+        company_details!profile_id (
+          company_name,
+          logo_url
+        )
+      ),
+      shift_requirements (
+        skill_id
+      )
+    `)
+    .eq('status', 'published')
+    .gt('start_time', new Date().toISOString())
+    .order('start_time', { ascending: true });
+
+  if (shiftsError) {
+    return (
+      <div className="p-8 text-red-500">
+        <h2 className="text-xl font-bold mb-2">Błąd pobierania rynku</h2>
+        <p>{shiftsError.message}</p>
+      </div>
+    );
+  }
+
+  const availableShifts = (shiftsData || []).filter(
+    (shift) => shift.vacancies_taken < shift.vacancies_total
+  );
+  const shifts = (shiftsError ? [] : availableShifts).map((shift) => ({
+    ...shift,
+    requirements: (shift.shift_requirements ?? []).map((sr: { skill_id: string | null }) => sr.skill_id).filter((id): id is string => !!id),
+  }));
+
+  return (
+    <div>
+      {!shifts || shifts.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              {dict.jobBoard?.noJobs ?? 'Brak aktywnych ofert na rynku.'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <JobBoardClient
+          shifts={shifts}
+          userRole={userRole}
+          user={user}
+          appliedShiftIds={[]}
+          applicationStatusMap={{}}
           verificationStatus={verificationStatus}
           dict={dict}
           lang={lang}

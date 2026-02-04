@@ -9,6 +9,7 @@ import {
   UserCog,
   Plus,
   Clock,
+  UserCheck,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -159,6 +160,7 @@ export default async function CompanyDashboardPage({
     { name: dashboardDict?.locations || nav?.locations || 'Locations', href: `/${currentLang}/locations`, icon: MapPin },
     { name: dashboardDict?.templates || 'Templates', href: `/${currentLang}/templates`, icon: Copy },
     { name: dashboardDict?.team || 'Team', href: `/${currentLang}/managers`, icon: UserCog },
+    { name: 'Staff', href: `/${currentLang}/staff`, icon: UserCheck },
   ];
 
   return (
@@ -239,8 +241,8 @@ export default async function CompanyDashboardPage({
           </Link>
         </Card>
 
-        {/* Tiles: Locations, Templates, Team */}
-        <div className="grid gap-4 md:grid-cols-3 mb-10">
+        {/* Tiles: Locations, Templates, Team, Staff */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-10">
           {tools.map((tool) => {
             const Icon = tool.icon;
             return (

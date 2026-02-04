@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Star, Users, X, Clock, Wallet, MapPin, Calendar, Lock, Phone, Mail } from 'lucide-react';
+import { Star, Users, X, Clock, Wallet, MapPin, Calendar, Lock, Phone, Mail, Heart } from 'lucide-react';
 import ApplicantProfileModal from '@/components/company/ApplicantProfileModal';
 import WorkerReviewsDialog from '@/components/WorkerReviewsDialog';
+import { Tooltip } from '@/components/ui/tooltip';
 import { formatTime } from '@/lib/date-utils';
 import { format } from 'date-fns';
 import { fillVacancies, rejectAllPending } from '@/app/actions/applications';
@@ -60,6 +61,8 @@ interface Application {
   worker_id: string;
   profiles: Profile | null;
   shifts: Shift | null;
+  is_favorite?: boolean;
+  is_blacklist?: boolean;
 }
 
 interface ApplicantsClientProps {
@@ -497,6 +500,13 @@ export default function ApplicantsClient({
                               <span className="font-semibold text-slate-900 text-base">
                                 {fullName}
                               </span>
+                              {app.is_favorite && (
+                                <Tooltip content="You marked this worker as favorite">
+                                  <span className="inline-flex">
+                                    <Heart className="h-4 w-4 fill-red-500 text-red-500 shrink-0" />
+                                  </span>
+                                </Tooltip>
+                              )}
                               <WorkerReviewsDialog
                                 workerId={profile.id}
                                 workerName={fullName}

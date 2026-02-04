@@ -108,9 +108,33 @@ export default async function ApplicantsPage({
       );
     }
 
+    // Fetch worker_relations (favorite/blacklist) for company to enrich applications
+    const workerIds = (allApplications || [])
+      .map((app: { profiles?: { id?: string } }) => app.profiles?.id)
+      .filter(Boolean) as string[];
+    let relationsMap: Record<string, { is_favorite: boolean; is_blacklist: boolean }> = {};
+    if (workerIds.length > 0) {
+      const { data: relations } = await supabase
+        .from('worker_relations')
+        .select('worker_id, relation_type')
+        .eq('company_id', user.id)
+        .in('worker_id', workerIds);
+      relations?.forEach((r: { worker_id: string; relation_type: string }) => {
+        relationsMap[r.worker_id] = relationsMap[r.worker_id] || { is_favorite: false, is_blacklist: false };
+        if (r.relation_type === 'favorite') relationsMap[r.worker_id].is_favorite = true;
+        if (r.relation_type === 'blacklist') relationsMap[r.worker_id].is_blacklist = true;
+      });
+    }
+
+    const enrichedApplications = (allApplications || []).map((app: { profiles?: { id?: string } }) => ({
+      ...app,
+      is_favorite: relationsMap[app.profiles?.id ?? '']?.is_favorite ?? false,
+      is_blacklist: relationsMap[app.profiles?.id ?? '']?.is_blacklist ?? false,
+    }));
+
     return (
       <>
-        {!allApplications || allApplications.length === 0 ? (
+        {!enrichedApplications || enrichedApplications.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">
@@ -120,7 +144,7 @@ export default async function ApplicantsPage({
           </Card>
         ) : (
           <ApplicantsClient
-            applications={allApplications as any}
+            applications={enrichedApplications as any}
             dict={dict}
             lang={lang}
           />

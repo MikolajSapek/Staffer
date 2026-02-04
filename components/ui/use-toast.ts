@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-type ToastVariant = 'default' | 'destructive';
+type ToastVariant = 'default' | 'destructive' | 'success';
 
 export interface ToastOptions {
   title?: string;
@@ -67,46 +67,73 @@ export function useToast() {
     const toastEl = document.createElement('div');
     toastEl.style.minWidth = '260px';
     toastEl.style.maxWidth = '360px';
-    toastEl.style.padding = '0.75rem 1rem';
+    toastEl.style.padding = '1rem';
     toastEl.style.borderRadius = '0.5rem';
-    toastEl.style.boxShadow = '0 10px 15px -3px rgba(15,23,42,0.25)';
+    toastEl.style.boxShadow = '0 25px 50px -12px rgb(0 0 0 / 0.25)';
     toastEl.style.display = 'flex';
     toastEl.style.flexDirection = 'column';
     toastEl.style.gap = '0.25rem';
     toastEl.style.fontSize = '0.875rem';
     toastEl.style.cursor = 'pointer';
+    toastEl.style.backgroundColor = '#ffffff';
+    toastEl.style.color = '#0f172a';
+    toastEl.style.borderTop = '1px solid #e2e8f0';
+    toastEl.style.borderRight = '1px solid #e2e8f0';
+    toastEl.style.borderBottom = '1px solid #e2e8f0';
+    toastEl.style.transform = 'translateX(100%)';
     toastEl.style.opacity = '0';
-    toastEl.style.transform = 'translateY(8px)';
-    toastEl.style.transition = 'opacity 150ms ease-out, transform 150ms ease-out';
+    toastEl.style.transition = 'opacity 200ms ease-out, transform 250ms cubic-bezier(0.32, 0.72, 0, 1)';
 
-    if (variant === 'destructive') {
-      toastEl.style.backgroundColor = '#fee2e2'; // red-100
-      toastEl.style.color = '#991b1b'; // red-800
-      toastEl.style.border = '1px solid #fecaca'; // red-200
-    } else {
-      toastEl.style.backgroundColor = '#0f172a'; // slate-900
-      toastEl.style.color = '#e5e7eb'; // gray-200
-      toastEl.style.border = '1px solid rgba(148,163,184,0.4)'; // slate-400/40
-    }
+    const leftBorderColor = variant === 'destructive'
+      ? '#ef4444'
+      : variant === 'success'
+        ? '#22c55e'
+        : '#64748b';
+    toastEl.style.borderLeft = `4px solid ${leftBorderColor}`;
 
     if (title) {
+      const titleRow = document.createElement('div');
+      titleRow.style.display = 'flex';
+      titleRow.style.alignItems = 'center';
+      titleRow.style.gap = '0.5rem';
+
+      if (variant === 'success') {
+        const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        checkSvg.setAttribute('width', '20');
+        checkSvg.setAttribute('height', '20');
+        checkSvg.setAttribute('viewBox', '0 0 24 24');
+        checkSvg.setAttribute('fill', 'none');
+        checkSvg.setAttribute('stroke', 'currentColor');
+        checkSvg.setAttribute('stroke-width', '2');
+        checkSvg.setAttribute('stroke-linecap', 'round');
+        checkSvg.setAttribute('stroke-linejoin', 'round');
+        checkSvg.style.flexShrink = '0';
+        checkSvg.style.color = '#22c55e';
+        const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        polyline.setAttribute('points', '20 6 9 17 4 12');
+        checkSvg.appendChild(polyline);
+        titleRow.appendChild(checkSvg);
+      }
+
       const titleEl = document.createElement('div');
       titleEl.style.fontWeight = '600';
+      titleEl.style.color = '#0f172a';
       titleEl.textContent = title;
-      toastEl.appendChild(titleEl);
+      titleRow.appendChild(titleEl);
+      toastEl.appendChild(titleRow);
     }
 
     if (description) {
       const descEl = document.createElement('div');
       descEl.style.fontSize = '0.8125rem';
-      descEl.style.opacity = '0.9';
+      descEl.style.color = '#64748b';
       descEl.textContent = description;
       toastEl.appendChild(descEl);
     }
 
     const remove = () => {
       toastEl.style.opacity = '0';
-      toastEl.style.transform = 'translateY(8px)';
+      toastEl.style.transform = 'translateX(100%)';
       window.setTimeout(() => {
         if (toastEl.parentNode === container) {
           container?.removeChild(toastEl);
@@ -121,10 +148,10 @@ export function useToast() {
 
     container.appendChild(toastEl);
 
-    // Animate in on next frame
+    // Animate in: płynne wsuwanie z prawej
     window.requestAnimationFrame(() => {
       toastEl.style.opacity = '1';
-      toastEl.style.transform = 'translateY(0)';
+      toastEl.style.transform = 'translateX(0)';
     });
 
     window.setTimeout(remove, duration);

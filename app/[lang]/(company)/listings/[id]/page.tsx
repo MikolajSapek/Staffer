@@ -151,9 +151,39 @@ export default async function ShiftDetailsPage({
   };
 
   // Filter to only accepted applications (hired team)
-  const hiredTeam = (shift.shift_applications as any[])?.filter(
+  let hiredTeam = (shift.shift_applications as any[])?.filter(
     (app: any) => app.status === 'accepted'
   ) || [];
+
+  // Fetch worker_relations (favorite/blacklist) for company to enrich applications
+  const workerIds = hiredTeam.map((app: any) => app.profiles?.id).filter(Boolean) as string[];
+  let relationsMap: Record<string, { is_favorite: boolean; is_blacklist: boolean }> = {};
+  if (workerIds.length > 0) {
+    const { data: relations } = await supabase
+      .from('worker_relations')
+      .select('worker_id, relation_type')
+      .eq('company_id', user.id)
+      .in('worker_id', workerIds);
+    relations?.forEach((r: { worker_id: string; relation_type: string }) => {
+      relationsMap[r.worker_id] = relationsMap[r.worker_id] || { is_favorite: false, is_blacklist: false };
+      if (r.relation_type === 'favorite') relationsMap[r.worker_id].is_favorite = true;
+      if (r.relation_type === 'blacklist') relationsMap[r.worker_id].is_blacklist = true;
+    });
+  }
+
+  // Enrich hired team with is_favorite and is_blacklist, then sort: favorites first, then by applied_at ASC
+  hiredTeam = hiredTeam
+    .map((app: any) => ({
+      ...app,
+      is_favorite: relationsMap[app.profiles?.id]?.is_favorite ?? false,
+      is_blacklist: relationsMap[app.profiles?.id]?.is_blacklist ?? false,
+    }))
+    .sort((a: any, b: any) => {
+      if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
+      const atA = new Date(a.applied_at || 0).getTime();
+      const atB = new Date(b.applied_at || 0).getTime();
+      return atA - atB;
+    });
 
   // Fetch worker skills for hired team using the optimized applicant_skills_view
   let hiredTeamWithSkills = hiredTeam;

@@ -201,6 +201,7 @@ export default async function TimesheetsPage({
 
       <TimesheetsClient 
         timesheets={mappedTimesheets}
+        companyId={user.id}
         dict={dict}
         lang={lang}
       />

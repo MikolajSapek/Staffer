@@ -112,6 +112,7 @@ export function CompanyHeader({ dict, lang }: CompanyHeaderProps) {
       '/locations': dict.nav?.locations || 'Locations',
       '/templates': dict.dashboard?.templates || 'Templates',
       '/managers': dict.dashboard?.team || 'Team',
+      '/staff': 'Staff',
       '/billing': dict.nav?.finances || 'Finances',
       '/settings': dict.nav?.settings || 'Settings',
       '/company/profile': dict.nav?.profile || 'Profile',

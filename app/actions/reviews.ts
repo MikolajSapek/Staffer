@@ -94,13 +94,17 @@ export async function submitReview(params: SubmitReviewParams) {
 
   // reviewee_id from shift_applications.worker_id (params.workerId validated above)
   const revieweeId = application.worker_id;
+  const reviewerId = user.id;
+
+  // AUDIT: log przed wstawieniem
+  console.log('Inserting Review:', { reviewer: reviewerId, reviewee: revieweeId });
 
   // Insert the review
   const { data: review, error: insertError } = await supabase
     .from('reviews')
     .insert({
       shift_id: params.shiftId,
-      reviewer_id: user.id,
+      reviewer_id: reviewerId,
       reviewee_id: revieweeId,
       rating: params.rating,
       comment: commentValue,

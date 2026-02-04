@@ -58,6 +58,7 @@ interface Timesheet {
 
 interface TimesheetsClientProps {
   timesheets: Timesheet[];
+  companyId: string;
   dict: {
     timesheetsPage: {
       noPendingApprovals: string;
@@ -90,6 +91,7 @@ interface TimesheetsClientProps {
 
 export default function TimesheetsClient({
   timesheets,
+  companyId,
   dict,
   lang,
 }: TimesheetsClientProps) {
@@ -694,7 +696,10 @@ export default function TimesheetsClient({
           onOpenChange={setRatingModalOpen}
           workerId={ratingModalTimesheet.worker_id}
           shiftId={ratingModalTimesheet.shifts.id}
+          companyId={companyId}
           workerName={`${ratingModalTimesheet.profiles?.first_name || ''} ${ratingModalTimesheet.profiles?.last_name || ''}`.trim() || 'Worker'}
+          firstName={ratingModalTimesheet.profiles?.first_name ?? undefined}
+          lastName={ratingModalTimesheet.profiles?.last_name ?? undefined}
           lang={lang}
           dict={dict.timesheetsPage.ratingModal || {
             title: 'Rate your collaboration with this worker',
