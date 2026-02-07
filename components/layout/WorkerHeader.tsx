@@ -26,13 +26,27 @@ interface WorkerHeaderProps {
   lang: string;
 }
 
+const PAGE_TITLE_MAP: Record<string, string> = {
+  '/market': 'Job Listings',
+  '/schedule': 'My Calendar',
+  '/applications': 'My Shifts',
+  '/finances': 'Finances',
+  '/profile': 'My Profile',
+  '/worker/settings': 'Settings',
+  '/worker/support': 'Support',
+  '/dashboard': 'Dashboard',
+};
+
 export function WorkerHeader({ lang }: WorkerHeaderProps) {
   const currentLang = lang || 'en-US';
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [workerName, setWorkerName] = useState<{ first_name: string | null; last_name: string | null } | null>(null);
+  const [workerName, setWorkerName] = useState<{
+    first_name: string | null;
+    last_name: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [counts, setCounts] = useState({ finances: 0 });
@@ -47,17 +61,22 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
     refreshCounts();
   }, [refreshCounts]);
 
-  // Check if a nav item is active
+  const getPageTitle = () => {
+    if (!pathname) return '';
+    const pathWithoutLang = pathname.replace(/^\/(en-US|da)/, '') || '/';
+    return PAGE_TITLE_MAP[pathWithoutLang] ?? '';
+  };
+
   const isActive = (href: string) => {
     if (!pathname) return false;
     const pathWithoutLang = pathname.replace(/^\/(en-US|da)/, '') || '/';
     const hrefWithoutLang = href.startsWith('/') ? href : `/${href}`;
     if (pathWithoutLang === hrefWithoutLang) return true;
-    if (hrefWithoutLang !== '/' && pathWithoutLang.startsWith(hrefWithoutLang)) return true;
+    if (hrefWithoutLang !== '/' && pathWithoutLang.startsWith(hrefWithoutLang))
+      return true;
     return false;
   };
 
-  // Handle logout
   const handleLogout = async () => {
     try {
       const supabase = createClient();
@@ -69,130 +88,6 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
       console.error('Error signing out:', error);
     }
   };
-
-  const getPageTitle = () => {
-    if (!pathname) return '';
-    
-    const pathWithoutLang = pathname.replace(/^\/(en-US|da)/, '') || '/';
-    
-    const titleMap: Record<string, string> = {
-      '/schedule': 'My Schedule',
-      '/applications': 'My Shifts',
-      '/finances': 'Financial Overview',
-      '/profile': 'My Profile',
-      '/market': 'Job Listings',
-      '/support': 'Support',
-      '/worker/settings': 'Settings',
-    };
-    
-    return titleMap[pathWithoutLang] || '';
-  };
-
-  // Fetch user and worker details
-  useEffect(() => {
-    let mounted = true;
-    
-    async function fetchUser() {
-      try {
-        const supabase = createClient();
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (!mounted) return;
-
-        if (error) {
-          if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-            console.error('Supabase connection error:', error.message);
-            setUser(null);
-            setAvatarUrl(null);
-            setLoading(false);
-            return;
-          }
-          setUser(null);
-          setAvatarUrl(null);
-          setLoading(false);
-          return;
-        }
-
-        setUser(user);
-        if (user) {
-          // Fetch worker details (avatar and name)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('first_name, last_name')
-            .eq('id', user.id)
-            .maybeSingle();
-          
-          const { data: workerDetails } = await supabase
-            .from('worker_details')
-            .select('avatar_url')
-            .eq('profile_id', user.id)
-            .maybeSingle();
-          
-          setWorkerName(profile ? { first_name: profile.first_name, last_name: profile.last_name } : null);
-          setAvatarUrl(workerDetails?.avatar_url || null);
-        } else {
-          setAvatarUrl(null);
-          setWorkerName(null);
-        }
-        setLoading(false);
-      } catch (err: unknown) {
-        console.error('Error fetching user:', err);
-        if (!mounted) return;
-        setUser(null);
-        setAvatarUrl(null);
-        setLoading(false);
-      }
-    }
-
-    fetchUser();
-
-    // Listen for auth changes
-    let subscription: { unsubscribe: () => void } | null = null;
-    
-    try {
-      const supabase = createClient();
-      const {
-        data: { subscription: authSubscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!mounted) return;
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const supabase = createClient();
-          Promise.all([
-            supabase
-              .from('profiles')
-              .select('first_name, last_name')
-              .eq('id', session.user.id)
-              .maybeSingle(),
-            supabase
-              .from('worker_details')
-              .select('avatar_url')
-              .eq('profile_id', session.user.id)
-              .maybeSingle()
-          ]).then(([{ data: profile }, { data: workerDetails }]) => {
-            if (mounted) {
-              setWorkerName(profile ? { first_name: profile.first_name, last_name: profile.last_name } : null);
-              setAvatarUrl(workerDetails?.avatar_url || null);
-            }
-          });
-        } else {
-          setAvatarUrl(null);
-          setWorkerName(null);
-          setLoading(false);
-        }
-      });
-      subscription = authSubscription;
-    } catch (err: unknown) {
-      console.error('Error setting up auth listener:', err);
-    }
-
-    return () => {
-      mounted = false;
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
-  }, []);
 
   const getUserInitials = () => {
     if (workerName?.first_name) {
@@ -212,20 +107,128 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
     return 'Worker';
   };
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchUser() {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user: authUser },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (!mounted) return;
+
+        if (error) {
+          setUser(null);
+          setAvatarUrl(null);
+          setLoading(false);
+          return;
+        }
+
+        setUser(authUser);
+        if (authUser) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', authUser.id)
+            .maybeSingle();
+
+          const { data: workerDetails } = await supabase
+            .from('worker_details')
+            .select('avatar_url')
+            .eq('profile_id', authUser.id)
+            .maybeSingle();
+
+          setWorkerName(
+            profile
+              ? {
+                  first_name: profile.first_name,
+                  last_name: profile.last_name,
+                }
+              : null
+          );
+          setAvatarUrl(workerDetails?.avatar_url || null);
+        } else {
+          setAvatarUrl(null);
+          setWorkerName(null);
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching user:', err);
+        if (!mounted) return;
+        setUser(null);
+        setAvatarUrl(null);
+        setLoading(false);
+      }
+    }
+
+    fetchUser();
+
+    let subscription: { unsubscribe: () => void } | null = null;
+    try {
+      const supabase = createClient();
+      const {
+        data: { subscription: authSubscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!mounted) return;
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          const supabase = createClient();
+          Promise.all([
+            supabase
+              .from('profiles')
+              .select('first_name, last_name')
+              .eq('id', session.user.id)
+              .maybeSingle(),
+            supabase
+              .from('worker_details')
+              .select('avatar_url')
+              .eq('profile_id', session.user.id)
+              .maybeSingle(),
+          ]).then(([{ data: profile }, { data: workerDetails }]) => {
+            if (mounted) {
+              setWorkerName(
+                profile
+                  ? {
+                      first_name: profile.first_name,
+                      last_name: profile.last_name,
+                    }
+                  : null
+              );
+              setAvatarUrl(workerDetails?.avatar_url || null);
+            }
+          });
+        } else {
+          setAvatarUrl(null);
+          setWorkerName(null);
+          setLoading(false);
+        }
+      });
+      subscription = authSubscription;
+    } catch (err) {
+      console.error('Error setting up auth listener:', err);
+    }
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+
   const pageTitle = getPageTitle();
 
   if (loading) {
     return (
-      <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-6 z-20">
-        <div className="flex items-center gap-3">
+      <header className="relative h-16 border-b border-black/10 bg-white flex items-center px-4 md:px-6 z-20 flex-shrink-0">
+        <div className="flex-1 flex items-center min-w-0">
           <div className="h-8 w-8 bg-muted animate-pulse rounded lg:hidden" />
+        </div>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className="h-6 w-32 bg-muted animate-pulse rounded" />
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="hidden sm:block text-right">
-            <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-            <div className="h-3 w-32 bg-muted animate-pulse rounded mt-1" />
-          </div>
+        <div className="flex-1 flex justify-end items-center min-w-0">
           <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
         </div>
       </header>
@@ -233,13 +236,13 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
   }
 
   return (
-    <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-6 z-20">
-      {/* Left: Mobile hamburger + Page title (desktop) – same structure as CompanyHeader */}
-      <div className="flex items-center gap-3">
+    <header className="relative h-16 border-b border-black/10 bg-white flex items-center px-4 md:px-6 z-20 flex-shrink-0">
+      {/* Left: Menu button (mobile only) */}
+      <div className="flex items-center min-w-0 flex-1">
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <button
-              className="lg:hidden p-2 -ml-2 rounded-md hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-2 -ml-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0"
               aria-label="Open menu"
             >
               <Menu className="h-6 w-6 text-slate-700" />
@@ -247,9 +250,7 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-            {/* Mobile Navigation - same structure as WorkerSidebar */}
             <div className="flex flex-col h-full bg-white">
-              {/* Logo - Top */}
               <div className="h-16 flex items-center justify-center px-6 border-b">
                 <Link
                   href={`/${currentLang}/market`}
@@ -262,7 +263,6 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
                 </Link>
               </div>
 
-              {/* Navigation - Middle (scrollable, flat, no category headers) */}
               <nav className="flex-1 overflow-y-auto p-4">
                 <ul className="space-y-0.5">
                   {WORKER_NAVIGATION.flatMap((cat) => cat.items).map((item) => {
@@ -299,7 +299,6 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
                 </ul>
               </nav>
 
-              {/* Footer - Bottom: Profile, Support, Settings, Log Out */}
               <div className="mt-auto border-t border-slate-200 p-4 bg-white space-y-2">
                 <Link
                   href={`/${currentLang}/profile`}
@@ -315,11 +314,11 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
                   <span>Profile</span>
                 </Link>
                 <Link
-                  href={`/${currentLang}/support`}
+                  href={`/${currentLang}/worker/support`}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                    isActive('/support')
+                    isActive('/worker/support')
                       ? 'bg-slate-900 text-white'
                       : 'text-slate-700 hover:bg-slate-100'
                   )}
@@ -351,25 +350,28 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
             </div>
           </SheetContent>
         </Sheet>
+      </div>
 
-        <Link
-          href={`/${currentLang}/market`}
-          className="lg:hidden italic font-bold text-xl tracking-tight text-slate-900"
-        >
-          Staffer
-        </Link>
-
-        {pageTitle && (
-          <h1 className="hidden lg:block font-bold text-xl text-foreground">
+      {/* Center: Absolute – Title always perfectly centered */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+        {pageTitle ? (
+          <h1 className="text-xl font-bold tracking-tight text-foreground whitespace-nowrap">
             {pageTitle}
           </h1>
+        ) : (
+          <Link
+            href={`/${currentLang}/market`}
+            className="italic font-bold text-xl tracking-tight text-slate-900 pointer-events-auto"
+          >
+            Staffer
+          </Link>
         )}
       </div>
 
-      {/* Right: Profile block – Avatar + Name + Email in one container */}
-      <div className="flex items-center gap-3 ml-auto flex-shrink-0 min-w-0">
-        <div className="hidden sm:block text-right min-w-0 max-w-[200px]">
-          <div className="font-bold text-sm text-foreground truncate">
+      {/* Right: Profile block – Name + Email (md+) | Avatar only (mobile), justify-end */}
+      <div className="flex items-center justify-end gap-3 flex-shrink-0 min-w-0 flex-1">
+        <div className="hidden md:block text-right min-w-0 max-w-[200px]">
+          <div className="font-medium text-sm text-foreground truncate">
             {getDisplayName()}
           </div>
           <div className="text-xs text-muted-foreground truncate">
@@ -392,13 +394,19 @@ export function WorkerHeader({ lang }: WorkerHeaderProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem asChild>
-              <Link href={`/${currentLang}/profile`} className="flex items-center gap-2 cursor-pointer">
+              <Link
+                href={`/${currentLang}/profile`}
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <User className="h-4 w-4" />
                 Profil
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/${currentLang}/worker/settings`} className="flex items-center gap-2 cursor-pointer">
+              <Link
+                href={`/${currentLang}/worker/settings`}
+                className="flex items-center gap-2 cursor-pointer"
+              >
                 <Settings className="h-4 w-4" />
                 Ustawienia
               </Link>

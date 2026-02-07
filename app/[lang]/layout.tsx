@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '../globals.css';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { getDictionary } from './dictionaries';
 import { getCurrentUser } from '@/utils/supabase/server';
@@ -10,9 +10,13 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({ subsets: ['latin'] });
 
-// Conditionally render Navbar (hidden for company routes which use Sidebar)
-const ConditionalNavbar = dynamic(() => import('@/components/company/ConditionalNavbar'), {
+// Force dynamic – prevents stale hasUser after login (Ghost Header fix)
+export const dynamic = 'force-dynamic';
+
+// Conditionally render Navbar (hidden for company/worker routes which use Sidebar+Header)
+const ConditionalNavbar = dynamicImport(() => import('@/components/company/ConditionalNavbar'), {
   ssr: true,
+  loading: () => null, // Prevent flash of Navbar loading state on worker routes
 });
 
 export const metadata: Metadata = {

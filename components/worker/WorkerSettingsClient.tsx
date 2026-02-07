@@ -332,7 +332,6 @@ export default function WorkerSettingsClient({ dict, lang }: WorkerSettingsClien
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{dict.settings?.title || 'Settings'}</h1>
         <p className="text-muted-foreground">
           {dict.settings?.subtitle || 'Manage your account settings and preferences'}
         </p>

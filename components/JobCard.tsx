@@ -85,7 +85,7 @@ export function JobCard({
 
   return (
     <JobDetailsDialog
-      shift={shift}
+      shift={{ ...shift, profiles: shift.profiles ?? null }}
       isApplied={hasApplied}
       userRole={userRole}
       user={user}
