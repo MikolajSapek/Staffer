@@ -51,6 +51,7 @@ interface JobBoardClientProps {
   user: User | null;
   appliedShiftIds: string[];
   applicationStatusMap: Record<string, string>;
+  applicationIdMap?: Record<string, string>;
   verificationStatus: string | null;
   dict: {
     jobBoard: {
@@ -71,6 +72,10 @@ interface JobBoardClientProps {
       statusAccepted: string;
       statusRejected: string;
       statusWaitlist: string;
+      withdraw?: string;
+      withdrawConfirmTitle?: string;
+      withdrawConfirmDescription?: string;
+      withdrawSuccess?: string;
     };
     createShift?: {
       categories: Record<string, string>;
@@ -90,6 +95,7 @@ export default function JobBoardClient({
   user,
   appliedShiftIds: initialAppliedShiftIds,
   applicationStatusMap: initialApplicationStatusMap,
+  applicationIdMap = {},
   verificationStatus,
   dict,
   lang,
@@ -109,6 +115,11 @@ export default function JobBoardClient({
     setShifts(initialShifts);
     setHasMore(initialShifts.length === 20);
   }, [initialShifts]);
+
+  useEffect(() => {
+    setAppliedShiftIds(initialAppliedShiftIds);
+    setApplicationStatusMap(initialApplicationStatusMap);
+  }, [initialAppliedShiftIds, initialApplicationStatusMap]);
 
   const loadMore = useCallback(async () => {
     if (!onLoadMore || loadingMore || !hasMore) return;
@@ -204,6 +215,7 @@ export default function JobBoardClient({
               dict={dict}
               lang={lang}
               applicationStatus={applicationStatusMap[shift.id]}
+              applicationId={applicationIdMap[shift.id]}
               getStatusBadge={getStatusBadge}
               onApplySuccess={handleApplySuccess}
               verificationStatus={verificationStatus}

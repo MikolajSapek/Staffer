@@ -5,12 +5,22 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Wallet, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, Wallet, Star, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
 import { formatTime, formatDateShort } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { differenceInMinutes, startOfMonth, endOfMonth, format } from 'date-fns';
 import { JobDetailsDialog } from '@/components/JobDetailsDialog';
 import { useParams } from 'next/navigation';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { withdrawApplication } from '@/app/actions/applications';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Application {
   id: string;
@@ -82,6 +92,10 @@ interface WorkerApplicationsClientProps {
       message?: string;
       activeTab?: string;
       archiveTab?: string;
+      withdraw?: string;
+      withdrawConfirmTitle?: string;
+      withdrawConfirmDescription?: string;
+      withdrawSuccess?: string;
     };
     jobBoard: {
       apply: string;
@@ -113,7 +127,11 @@ export default function WorkerApplicationsClient({
   verificationStatus,
 }: WorkerApplicationsClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [now, setNow] = useState<Date | null>(null);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [withdrawConfirmApp, setWithdrawConfirmApp] = useState<Application | null>(null);
+  const [withdrawingAppId, setWithdrawingAppId] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const d = new Date();
     d.setDate(1);
@@ -121,6 +139,7 @@ export default function WorkerApplicationsClient({
   });
   const params = useParams();
   const lang = params?.lang || 'en';
+  const langStr = typeof lang === 'string' ? lang : (Array.isArray(lang) ? lang[0] : 'en') ?? 'en';
 
   useEffect(() => {
     setNow(new Date());
@@ -245,6 +264,37 @@ export default function WorkerApplicationsClient({
     return shift.profiles?.avatar_url || shift.profiles?.company_details?.logo_url || null;
   }, []);
 
+  const handleWithdrawClick = useCallback((e: React.MouseEvent, app: Application) => {
+    e.stopPropagation();
+    setWithdrawConfirmApp(app);
+    setWithdrawDialogOpen(true);
+  }, []);
+
+  const handleWithdrawConfirm = useCallback(async () => {
+    if (!withdrawConfirmApp) return;
+    setWithdrawingAppId(withdrawConfirmApp.id);
+    try {
+      const result = await withdrawApplication(withdrawConfirmApp.id, langStr);
+      if (result.success) {
+        setWithdrawDialogOpen(false);
+        setWithdrawConfirmApp(null);
+        toast({
+          title: dict.workerApplications.withdrawSuccess || 'Zgłoszenie zostało wycofane',
+          variant: 'default',
+        });
+        router.refresh();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setWithdrawingAppId(null);
+    }
+  }, [withdrawConfirmApp, langStr, router, toast, dict.workerApplications.withdrawSuccess]);
+
   const renderApplicationCard = useCallback((app: Application, isArchive: boolean = false) => {
     const shift = Array.isArray(app.shifts) ? app.shifts[0] : app.shifts;
     if (!shift) return null;
@@ -285,10 +335,11 @@ export default function WorkerApplicationsClient({
         key={app.id}
         shift={shiftForDialog}
         isApplied={true}
+        applicationId={app.id}
         userRole={userRole}
         user={user}
         dict={dict}
-        lang={lang as string}
+        lang={langStr}
         applicationStatus={app.status}
         verificationStatus={verificationStatus}
         onApplySuccess={() => {
@@ -331,10 +382,21 @@ export default function WorkerApplicationsClient({
               </div>
             </div>
 
-            {/* Right: Status Badge & Price */}
+            {/* Right: Status Badge, Withdraw Button & Price */}
             <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-1">
-              <div className="flex-shrink-0">
+              <div className="flex flex-shrink-0 items-center gap-2">
                 {getStatusBadge(app.status, isArchive)}
+                {app.status === 'pending' && !isArchive && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive border-destructive hover:bg-destructive/10 h-8"
+                    onClick={(e) => handleWithdrawClick(e, app)}
+                  >
+                    <Undo2 className="h-3.5 w-3.5 mr-1" />
+                    {dict.workerApplications.withdraw || 'Wycofaj'}
+                  </Button>
+                )}
               </div>
               <div className="text-base font-bold text-gray-900 whitespace-nowrap">
                 {totalEarnings} DKK
@@ -396,7 +458,7 @@ export default function WorkerApplicationsClient({
         </div>
       </JobDetailsDialog>
     );
-  }, [getStatusBadge, getCompanyName, getCompanyLogo, dict, lang, user, userRole, verificationStatus]);
+  }, [getStatusBadge, getCompanyName, getCompanyLogo, dict, lang, user, userRole, verificationStatus, handleWithdrawClick]);
 
   const renderEmptyState = () => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
@@ -462,6 +524,37 @@ export default function WorkerApplicationsClient({
         )}
       </TabsContent>
       </Tabs>
+
+      {/* Withdraw confirmation dialog */}
+      <Dialog open={withdrawDialogOpen} onOpenChange={(open) => !open && setWithdrawDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dict.workerApplications.withdrawConfirmTitle || 'Wycofaj zgłoszenie'}
+            </DialogTitle>
+            <DialogDescription>
+              {dict.workerApplications.withdrawConfirmDescription ||
+                'Czy na pewno chcesz wycofać swoje zgłoszenie? Tego działania nie można cofnąć.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setWithdrawDialogOpen(false)}
+              disabled={!!withdrawingAppId}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleWithdrawConfirm}
+              disabled={!!withdrawingAppId}
+            >
+              {withdrawingAppId ? 'Wycofywanie...' : (dict.workerApplications.withdraw || 'Wycofaj')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

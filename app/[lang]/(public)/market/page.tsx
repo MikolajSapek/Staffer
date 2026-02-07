@@ -85,16 +85,19 @@ async function PublicMarketView({
 
   let appliedShiftIds: string[] = [];
   let applicationStatusMap: Record<string, string> = {};
+  let applicationIdMap: Record<string, string> = {};
 
   if (user && userRole === 'worker') {
     const { data: applications } = await supabase
       .from('shift_applications')
-      .select('shift_id, status')
+      .select('id, shift_id, status')
       .eq('worker_id', user.id);
-    appliedShiftIds = applications?.map((app) => app.shift_id) || [];
-    applications?.forEach((app) => {
+    const activeApplications = applications?.filter((app) => app.status !== 'cancelled') ?? [];
+    appliedShiftIds = activeApplications.map((app) => app.shift_id);
+    activeApplications.forEach((app) => {
       const status = app.status === 'accepted' ? 'approved' : app.status;
       applicationStatusMap[app.shift_id] = status;
+      applicationIdMap[app.shift_id] = app.id;
     });
   }
 
@@ -190,6 +193,7 @@ async function PublicMarketView({
           user={user ?? null}
           appliedShiftIds={appliedShiftIds}
           applicationStatusMap={applicationStatusMap}
+          applicationIdMap={applicationIdMap}
           verificationStatus={verificationStatus}
           dict={dict}
           lang={lang}
@@ -225,15 +229,18 @@ async function WorkerMarketView({
 
   let appliedShiftIds: string[] = [];
   let applicationStatusMap: Record<string, string> = {};
+  let applicationIdMap: Record<string, string> = {};
 
   const { data: applications } = await supabase
     .from('shift_applications')
-    .select('shift_id, status')
+    .select('id, shift_id, status')
     .eq('worker_id', user.id);
-  appliedShiftIds = applications?.map((app) => app.shift_id) || [];
-  applications?.forEach((app) => {
+  const activeApplications = applications?.filter((app) => app.status !== 'cancelled') ?? [];
+  appliedShiftIds = activeApplications.map((app) => app.shift_id);
+  activeApplications.forEach((app) => {
     const status = app.status === 'accepted' ? 'approved' : app.status;
     applicationStatusMap[app.shift_id] = status;
+    applicationIdMap[app.shift_id] = app.id;
   });
 
   const { data: shiftsData, error: shiftsError } = await supabase
@@ -298,6 +305,7 @@ async function WorkerMarketView({
           user={user}
           appliedShiftIds={appliedShiftIds}
           applicationStatusMap={applicationStatusMap}
+          applicationIdMap={applicationIdMap}
           verificationStatus={verificationStatus}
           bannedUntil={bannedUntil}
           dict={dict}
@@ -395,6 +403,7 @@ async function CompanyMarketView({
           user={user}
           appliedShiftIds={[]}
           applicationStatusMap={{}}
+          applicationIdMap={{}}
           verificationStatus={verificationStatus}
           dict={dict}
           lang={lang}

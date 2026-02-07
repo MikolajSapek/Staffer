@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { format, differenceInMinutes } from 'date-fns';
 import { da } from 'date-fns/locale/da';
 import { formatInTimeZone } from 'date-fns-tz';
-import { MapPin, Clock, Building2, Calendar, Flame, X, Users, Briefcase, User, Mail, Phone as PhoneIcon } from 'lucide-react';
+import { MapPin, Clock, Building2, Calendar, Flame, X, Users, Briefcase, User, Mail, Phone as PhoneIcon, Undo2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -21,6 +22,7 @@ import { cn, getMapsLink } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { withdrawApplication } from '@/app/actions/applications';
 
 interface Shift {
   id: string;
@@ -78,6 +80,10 @@ export interface JobDetailsDialogProps {
       statusAccepted: string;
       statusRejected: string;
       statusWaitlist: string;
+      withdraw?: string;
+      withdrawConfirmTitle?: string;
+      withdrawConfirmDescription?: string;
+      withdrawSuccess?: string;
     };
     createShift?: {
       categories: Record<string, string>;
@@ -89,6 +95,7 @@ export interface JobDetailsDialogProps {
   };
   lang: string;
   applicationStatus?: string | null;
+  applicationId?: string | null;
   children: React.ReactNode;
   onApply?: (shift: Shift) => void;
   onApplySuccess?: () => void;
@@ -103,6 +110,7 @@ export function JobDetailsDialog({
   dict,
   lang,
   applicationStatus,
+  applicationId,
   children,
   onApply,
   onApplySuccess,
@@ -112,6 +120,8 @@ export function JobDetailsDialog({
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   
   // Wymagania z market_shifts_view: shift.requirements to tablica ID skilli – pobieramy nazwy z skills
   const [requiredLanguages, setRequiredLanguages] = useState<Array<{ id: string; name: string }>>([]);
@@ -464,22 +474,36 @@ export function JobDetailsDialog({
           {userRole !== 'company' && (
             <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 sticky bottom-0">
               {isApplied ? (
-                <Button
-                  disabled
-                  className={cn(
-                    "w-full h-12 text-base font-semibold",
-                    getStatusStyles(applicationStatus)
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                  <Button
+                    disabled
+                    className={cn(
+                      "flex-1 h-12 text-base font-semibold",
+                      getStatusStyles(applicationStatus)
+                    )}
+                    size="lg"
+                  >
+                    {applicationStatus === 'accepted' || applicationStatus === 'approved'
+                      ? dict.workerApplications?.statusAccepted || 'Application Accepted'
+                      : applicationStatus === 'rejected'
+                      ? dict.workerApplications?.statusRejected || 'Application Rejected'
+                      : applicationStatus === 'waitlist'
+                      ? dict.workerApplications?.statusWaitlist || 'On Waitlist'
+                      : dict.workerApplications?.statusPending || 'Application Pending'}
+                  </Button>
+                  {applicationStatus === 'pending' && applicationId && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="h-12 text-destructive border-destructive hover:bg-destructive/10 shrink-0"
+                      onClick={() => setIsWithdrawDialogOpen(true)}
+                      disabled={isWithdrawing}
+                    >
+                      <Undo2 className="h-4 w-4 mr-2" />
+                      {isWithdrawing ? 'Wycofywanie...' : (dict.workerApplications?.withdraw || 'Wycofaj zgłoszenie')}
+                    </Button>
                   )}
-                  size="lg"
-                >
-                  {applicationStatus === 'accepted' || applicationStatus === 'approved'
-                    ? dict.workerApplications?.statusAccepted || 'Application Accepted'
-                    : applicationStatus === 'rejected'
-                    ? dict.workerApplications?.statusRejected || 'Application Rejected'
-                    : applicationStatus === 'waitlist'
-                    ? dict.workerApplications?.statusWaitlist || 'On Waitlist'
-                    : dict.workerApplications?.statusPending || 'Application Pending'}
-                </Button>
+                </div>
               ) : isFullyBooked ? (
                 <Button
                   disabled
@@ -521,6 +545,61 @@ export function JobDetailsDialog({
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Withdraw confirmation dialog */}
+      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dict.workerApplications?.withdrawConfirmTitle || 'Wycofaj zgłoszenie'}
+            </DialogTitle>
+            <DialogDescription>
+              {dict.workerApplications?.withdrawConfirmDescription ||
+                'Czy na pewno chcesz wycofać swoje zgłoszenie? Tego działania nie można cofnąć.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsWithdrawDialogOpen(false)}
+              disabled={isWithdrawing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!applicationId) return;
+                setIsWithdrawing(true);
+                try {
+                  const result = await withdrawApplication(applicationId, lang);
+                  if (result.success) {
+                    setIsWithdrawDialogOpen(false);
+                    setOpen(false);
+                    toast({
+                      title: dict.workerApplications?.withdrawSuccess || 'Zgłoszenie zostało wycofane',
+                      variant: 'default',
+                    });
+                    if (onApplySuccess) onApplySuccess();
+                    else router.refresh();
+                  } else {
+                    toast({
+                      title: 'Error',
+                      description: result.error,
+                      variant: 'destructive',
+                    });
+                  }
+                } finally {
+                  setIsWithdrawing(false);
+                }
+              }}
+              disabled={isWithdrawing}
+            >
+              {isWithdrawing ? 'Wycofywanie...' : (dict.workerApplications?.withdraw || 'Wycofaj')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

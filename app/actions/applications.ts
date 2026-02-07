@@ -315,3 +315,74 @@ export async function getCompanyHiresCount(companyId: string): Promise<number> {
 export async function getCompanyPersonsHiredCount(companyId: string): Promise<number> {
   return getCompanyHiresCount(companyId);
 }
+
+/**
+ * Withdraw a worker's pending application.
+ * - Verifies the current user is authenticated as a worker.
+ * - Verifies the application belongs to this worker and status is 'pending'.
+ * - Updates status to 'cancelled' and updated_at to NOW().
+ */
+export async function withdrawApplication(
+  applicationId: string,
+  lang: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  // Verify user is a worker
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'worker') {
+    return { success: false, error: 'Only workers can withdraw applications' };
+  }
+
+  // Fetch application and verify ownership + status
+  const { data: application, error: fetchError } = await supabase
+    .from('shift_applications')
+    .select('id, worker_id, status')
+    .eq('id', applicationId)
+    .single();
+
+  if (fetchError?.code === 'PGRST116') {
+    return { success: false, error: 'Application not found' };
+  }
+
+  if (fetchError || !application) {
+    return { success: false, error: fetchError?.message || 'Application not found' };
+  }
+
+  if (application.worker_id !== user.id) {
+    return { success: false, error: 'You can only withdraw your own applications' };
+  }
+
+  if (application.status !== 'pending') {
+    return { success: false, error: 'Only pending applications can be withdrawn' };
+  }
+
+  const { error: updateError } = await supabase
+    .from('shift_applications')
+    .update({
+      status: 'cancelled',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId);
+
+  if (updateError) {
+    return { success: false, error: updateError.message };
+  }
+
+  revalidatePath(`/${lang}/applications`, 'page');
+  revalidatePath(`/${lang}/schedule`, 'page');
+  revalidatePath(`/${lang}/market`, 'page');
+  revalidatePath(`/${lang}`, 'page');
+
+  return { success: true };
+}

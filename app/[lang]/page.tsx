@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
-import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from './dictionaries';
 import { getCurrentProfile } from '@/utils/supabase/server';
-import JobBoardClient from './JobBoardClient';
+import LandingPageClient from '@/components/landing/LandingPageClient';
 import { getCurrentUTCISO } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
@@ -101,28 +100,16 @@ export default async function JobBoardPage({
   const shifts = shiftsError ? [] : availableShifts;
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {!shifts || shifts.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">
-              {dict.jobBoard.noJobs}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <JobBoardClient
-          shifts={shifts}
-          userRole={userRole}
-          user={user}
-          appliedShiftIds={appliedShiftIds}
-          applicationStatusMap={applicationStatusMap}
-          verificationStatus={verificationStatus}
-          dict={dict}
-          lang={lang}
-        />
-      )}
-    </div>
+    <LandingPageClient
+      shifts={shifts}
+      userRole={userRole}
+      user={user}
+      appliedShiftIds={appliedShiftIds}
+      applicationStatusMap={applicationStatusMap}
+      verificationStatus={verificationStatus}
+      dict={dict}
+      lang={lang}
+    />
   );
 }
 

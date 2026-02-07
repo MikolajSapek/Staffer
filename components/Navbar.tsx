@@ -28,6 +28,11 @@ import {
 
 interface NavbarProps {
   dict: {
+    landing?: {
+      tabJobSeekers?: string;
+      tabCompanies?: string;
+      tabContact?: string;
+    };
     navigation: {
       dashboard: string;
       login: string;
@@ -72,6 +77,7 @@ interface NavbarProps {
 export default function Navbar({ dict, lang }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const isLandingPage = pathname === `/${lang}` || pathname === `/${lang}/`;
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [role, setRole] = useState<'worker' | 'company' | 'admin' | null>(null);
@@ -80,13 +86,12 @@ export default function Navbar({ dict, lang }: NavbarProps) {
   const [counts, setCounts] = useState({ applicants: 0, finances: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Remove language prefix for route checks
+  const pathWithoutLang = pathname?.replace(/^\/(en-US|da|pl|pl-PL)/, '') || '/';
+
   // Get page title based on pathname
   const getPageTitle = () => {
     if (!pathname) return '';
-    
-    // Remove language prefix (e.g., /en-US or /da)
-    // If result is empty, default to '/' (home page)
-    const pathWithoutLang = pathname.replace(/^\/(en-US|da)/, '') || '/';
     
     const titleMap: Record<string, string> = {
       // Worker pages
@@ -353,13 +358,42 @@ export default function Navbar({ dict, lang }: NavbarProps) {
             Staffer
           </Link>
 
-          {/* Page Title - Center */}
-          {pageTitle && (
-            <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
-              <h1 className="font-bold text-xl text-foreground">
-                {pageTitle}
-              </h1>
+          {/* Page Title or Landing Nav Links - Center */}
+          {!user && isLandingPage ? (
+            <div className="absolute left-1/2 hidden -translate-x-1/2 gap-1 md:flex">
+              <Link
+                href={`/${lang}#job-seekers`}
+                className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                {dict.jobBoard?.title ?? 'Job listing'}
+              </Link>
+              <Link
+                href={`/${lang}#companies`}
+                className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                {dict.landing?.tabCompanies ?? 'For companies'}
+              </Link>
+              <Link
+                href={`/${lang}#job-seekers`}
+                className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                {dict.landing?.tabJobSeekers ?? 'For job seekers'}
+              </Link>
+              <Link
+                href={`/${lang}#contact`}
+                className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                {dict.landing?.tabContact ?? 'Contact'}
+              </Link>
             </div>
+          ) : (
+            pageTitle && (
+              <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
+                <h1 className="font-bold text-xl text-foreground">
+                  {pageTitle}
+                </h1>
+              </div>
+            )
           )}
 
           {!user ? (

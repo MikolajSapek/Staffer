@@ -59,9 +59,14 @@ export default async function ApplicationsPage({
     .select('id, shift_id, rating, comment, tags, created_at')
     .eq('reviewee_id', user.id);
 
+  // Filter out withdrawn (cancelled) applications
+  const applicationsFiltered = (applicationsRaw || []).filter(
+    (app: { status: string }) => app.status !== 'cancelled'
+  );
+
   // Sort applications by shift start_time (ascending) - from nearest shift to furthest
   // Handle both array and object formats for shifts relation
-  const applicationsSorted = (applicationsRaw || []).sort((a: any, b: any) => {
+  const applicationsSorted = applicationsFiltered.sort((a: any, b: any) => {
     const shiftA = Array.isArray(a.shifts) ? a.shifts[0] : a.shifts;
     const shiftB = Array.isArray(b.shifts) ? b.shifts[0] : b.shifts;
     

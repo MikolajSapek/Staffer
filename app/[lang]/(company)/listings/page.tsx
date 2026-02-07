@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { createClient } from '@/utils/supabase/server';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -48,6 +48,7 @@ interface JobCardProps {
   dict: any;
   lang: string;
   applicationStatus?: string | null; // e.g. 'pending', 'accepted', 'rejected'
+  applicationId?: string | null; // For withdraw button when status is pending
   getStatusBadge?: (shiftId: string) => React.ReactNode;
   onApplySuccess?: () => void;
   verificationStatus?: string | null;
@@ -62,6 +63,7 @@ export function JobCard({
   dict,
   lang,
   applicationStatus,
+  applicationId,
   getStatusBadge,
   onApplySuccess,
   verificationStatus,
@@ -92,6 +94,7 @@ export function JobCard({
       dict={dict}
       lang={lang}
       applicationStatus={applicationStatus}
+      applicationId={applicationId}
       onApply={onApply}
       onApplySuccess={onApplySuccess}
       verificationStatus={verificationStatus}
