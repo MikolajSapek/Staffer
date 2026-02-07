@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import ScheduleCalendar from '@/components/worker/ScheduleCalendar';
 import DayShiftList from '@/components/worker/DayShiftList';
+import { Button } from '@/components/ui/button';
+import { List } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 interface Shift {
@@ -22,6 +24,7 @@ interface Shift {
   is_urgent?: boolean;
   possible_overtime?: boolean;
   must_bring?: string | null;
+  applicationStatus?: string;
   locations: {
     name: string;
     address: string;
@@ -60,9 +63,26 @@ export default function ScheduleCalendarClient({
 }: ScheduleCalendarClientProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+  const handleShowAll = () => {
+    setSelectedDate(null);
+  };
+
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
-      <div>
+    <div className="grid gap-6 lg:grid-cols-12">
+      {/* Left column: Calendar (col-span-4) */}
+      <div className="lg:col-span-4 space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">{dict.workerCalendar.title}</h2>
+          <Button
+            variant={selectedDate ? 'secondary' : 'default'}
+            size="sm"
+            onClick={handleShowAll}
+            className="shrink-0"
+          >
+            <List className="h-4 w-4 mr-1.5" />
+            {dict.workerCalendar.showAllShifts}
+          </Button>
+        </div>
         <ScheduleCalendar
           shifts={shifts}
           selectedDate={selectedDate}
@@ -70,7 +90,9 @@ export default function ScheduleCalendarClient({
           dict={dict.workerCalendar}
         />
       </div>
-      <div>
+
+      {/* Right column: List or Detail view (col-span-8) */}
+      <div className="lg:col-span-8">
         <DayShiftList
           shifts={shifts}
           selectedDate={selectedDate}
@@ -85,5 +107,3 @@ export default function ScheduleCalendarClient({
     </div>
   );
 }
-
-

@@ -458,11 +458,16 @@
     "title": "My Schedule",
     "subtitle": "Your upcoming shifts",
     "noShifts": "You have no upcoming shifts.",
+    "showAllShifts": "Show All Shifts",
+    "noShiftsOnDate": "No shifts scheduled for this day",
+    "selectDate": "Select a date to view details",
     "date": "Date",
     "time": "Time",
     "address": "Address",
     "locationNotSpecified": "Location not specified",
-    "notSpecified": "Not specified"
+    "notSpecified": "Not specified",
+    "statusPending": "Pending",
+    "statusAccepted": "Accepted"
   },
   "workerApplications": {
     "title": "My Shifts",

@@ -442,11 +442,16 @@
     "title": "Min Kalender",
     "subtitle": "Dine kommende vagter",
     "noShifts": "Du har ingen kommende vagter.",
+    "showAllShifts": "Vis alle vagter",
+    "noShiftsOnDate": "Ingen vagter planlagt denne dag",
+    "selectDate": "Vælg en dato for at se detaljer",
     "date": "Dato",
     "time": "Tid",
     "address": "Adresse",
     "locationNotSpecified": "Lokation ikke angivet",
-    "notSpecified": "Ikke angivet"
+    "notSpecified": "Ikke angivet",
+    "statusPending": "Afventer",
+    "statusAccepted": "Accepteret"
   },
   "workerApplications": {
     "title": "Mine Vagter",

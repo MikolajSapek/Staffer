@@ -26,6 +26,24 @@ export function createClient() {
     throw new Error('Invalid NEXT_PUBLIC_SUPABASE_URL format. Must be a valid URL.');
   }
 
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+    realtime: {
+      // Wymuś ping co 10-15 sekund (Eduroam często ubija połączenia po 30-60s bezczynności)
+      heartbeatIntervalMs: 15000,
+      params: {
+        // Zwiększ limit zdarzeń, aby uniknąć dławienia przy reconnectach
+        eventsPerSecond: 10,
+      },
+    },
+    global: {
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          // Wymusza tryb cors, co czasem pomaga przeglądarce w negocjacji TCP
+          mode: 'cors',
+        });
+      },
+    },
+  });
 }
 

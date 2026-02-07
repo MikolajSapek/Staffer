@@ -31,7 +31,7 @@ export default async function SchedulePage({
     redirect(`/${lang}`);
   }
 
-  // Eventy kalendarza: shift_applications (nie timesheets) – worker_id = auth.uid(), status accepted
+  // shift_applications: worker_id = auth.uid(), include pending + approved/accepted
   const { data: applications } = await supabase
     .from('shift_applications')
     .select(`
@@ -57,13 +57,13 @@ export default async function SchedulePage({
       )
     `)
     .eq('worker_id', user.id)
-    .in('status', ['approved', 'accepted']) // Support both for backward compatibility
+    .in('status', ['approved', 'accepted', 'pending'])
     .order('shifts(start_time)', { ascending: true });
 
-  // Transform data for client component - keep all shift fields (RLS: worker_id = auth.uid(), shift_applications)
+  // Transform: include applicationStatus for status styling (Pending/Accepted)
   const shifts = (applications || [])
     .filter((app: any) => app.shifts)
-    .map((app: any) => app.shifts);
+    .map((app: any) => ({ ...app.shifts, applicationStatus: app.status }));
 
   console.log('DATA CHECK [Calendar]:', { shiftsCount: shifts?.length ?? 0, workerId: user.id, applicationsCount: applications?.length ?? 0 });
 
