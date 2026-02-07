@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { getCurrentProfile } from '@/utils/supabase/server';
 import JobBoardClient from '@/app/[lang]/JobBoardClient';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export default async function CompanyMarketPage({
       )
     `)
     .eq('status', 'published')
-    .gt('start_time', new Date().toISOString())
+    .gt('start_time', getCurrentUTCISO())
     .order('start_time', { ascending: true });
 
   if (shiftsError) {

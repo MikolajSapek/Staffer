@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { getCompanyNotificationCounts } from '@/app/actions/notifications';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 import Link from 'next/link';
 import {
   Users,
@@ -37,7 +38,7 @@ export default async function CompanyDashboardPage({
   const dashboardDict = (dict as any).dashboard;
 
   // Fetch active and archived shifts for ShiftsTabs (all use authenticated role via createClient)
-  const now = new Date().toISOString();
+  const now = getCurrentUTCISO();
   const { error: updateCompletedError } = await supabase.rpc('update_completed_shifts');
   if (updateCompletedError) {
     console.error('DEBUG [update_completed_shifts RPC]:', { error: updateCompletedError, userId: user?.id });

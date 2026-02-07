@@ -30,6 +30,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import TimesheetsClient from './TimesheetsClient';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,7 +114,7 @@ export default async function TimesheetsPage({
   }
 
   // Get current time for filtering completed shifts (UTC for database queries)
-  const now = new Date().toISOString();
+  const now = getCurrentUTCISO();
 
   // Map and calculate total_pay for each timesheet
   // Filter: 1) company's shift, 2) has accepted shift_application, 3) shift completed

@@ -3,6 +3,8 @@ import SupportForm from '@/components/support/SupportForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Phone, Mail, Clock } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function WorkerSupportPage({
   params,
 }: {

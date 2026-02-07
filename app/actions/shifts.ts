@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 type CancelWorkerResult = {
   success: boolean;
@@ -412,7 +413,7 @@ export async function getListingsActivePage(offset: number): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { shifts: [], hasMore: false };
 
-  const now = new Date().toISOString();
+  const now = getCurrentUTCISO();
   const { data, error } = await supabase
     .from('shifts')
     .select(`
@@ -451,7 +452,7 @@ export async function getListingsArchivedPage(offset: number): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { shifts: [], hasMore: false };
 
-  const now = new Date().toISOString();
+  const now = getCurrentUTCISO();
   const { data: pastShifts, error: pastError } = await supabase
     .from('shifts')
     .select(`
@@ -529,7 +530,7 @@ export async function getMarketShiftsPage(offset: number): Promise<{
     .from('market_shifts_view')
     .select('id, title, description, category, hourly_rate, start_time, end_time, break_minutes, is_break_paid, possible_overtime, vacancies_total, vacancies_taken, status, is_urgent, must_bring, requirements, company_id, location_name, location_address, company_name, logo_url')
     .eq('status', 'published')
-    .gt('start_time', new Date().toISOString())
+    .gt('start_time', getCurrentUTCISO())
     .order('start_time', { ascending: true })
     .range(offset, offset + PAGE_SIZE - 1);
 

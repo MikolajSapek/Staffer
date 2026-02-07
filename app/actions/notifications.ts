@@ -2,6 +2,7 @@
 
 import { unstable_noStore } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 /**
  * Get notification counts for company users
@@ -58,7 +59,7 @@ export async function getCompanyNotificationCounts() {
       (applicationsResult.data || []).map((a) => `${a.shift_id}:${a.worker_id}`)
     );
 
-    const now = new Date().toISOString();
+    const now = getCurrentUTCISO();
     timesheetsCount = (timesheetsResult.data || []).filter((t: any) => {
       const shift = Array.isArray(t.shift) ? t.shift[0] : t.shift;
       if (shift?.company_id !== user.id) return false;
@@ -78,7 +79,7 @@ export async function getCompanyNotificationCounts() {
       `, { count: 'exact', head: true })
       .eq('company_id', user.id)
       .eq('status', 'pending')
-      .gte('shifts.end_time', new Date().toISOString()),
+      .gte('shifts.end_time', getCurrentUTCISO()),
 
     supabase
       .from('payments')

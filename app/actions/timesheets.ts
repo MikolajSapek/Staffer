@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 /**
  * Approve a timesheet with idempotency protection against duplicate payments.
@@ -177,7 +178,7 @@ export async function approveTimesheet(timesheetId: string, lang?: string) {
 export async function getWorkerTimesheets(workerId: string) {
   const supabase = await createClient();
   // UTC timestamp for database queries
-  const now = new Date().toISOString();
+  const now = getCurrentUTCISO();
 
   const { data: timesheets, error } = await supabase
     .from('timesheets')

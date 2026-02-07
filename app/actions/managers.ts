@@ -19,6 +19,7 @@ export interface Manager {
   last_name: string;
   email: string;
   phone_number: string | null;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,6 +65,7 @@ export async function createManager(formData: {
   last_name: string;
   email: string;
   phone_number?: string | null;
+  avatar_url?: string | null;
 }): Promise<ManagerResult> {
   const supabase = await createClient();
   
@@ -118,6 +120,7 @@ export async function createManager(formData: {
       last_name: formData.last_name.trim(),
       email: formData.email.trim().toLowerCase(),
       phone_number: formData.phone_number?.trim() || null,
+      avatar_url: formData.avatar_url?.trim() || null,
     };
 
     // Insert the manager and return full object
@@ -166,6 +169,7 @@ export async function updateManager(
     last_name?: string;
     email?: string;
     phone_number?: string | null;
+    avatar_url?: string | null;
   }
 ): Promise<ManagerResult> {
   const supabase = await createClient();
@@ -248,6 +252,10 @@ export async function updateManager(
     
     if (formData.phone_number !== undefined) {
       updatePayload.phone_number = formData.phone_number?.trim() || null;
+    }
+
+    if (formData.avatar_url !== undefined) {
+      updatePayload.avatar_url = formData.avatar_url?.trim() || null;
     }
 
     // Update the manager

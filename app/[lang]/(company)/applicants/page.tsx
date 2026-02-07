@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import ApplicantsClient from './ApplicantsClient';
+import { getDateOffsetUTCISO } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export default async function ApplicantsPage({
     // Fetch from profiles: first_name, last_name, email
     // Fetch from worker_details: avatar_url, phone_number, experience, description
     // Calculate date 3 days ago (UTC for database queries)
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const threeDaysAgo = getDateOffsetUTCISO(-3 * 24 * 60 * 60 * 1000);
     
     const { data: allApplications, error: fetchError } = await supabase
       .from('shift_applications')

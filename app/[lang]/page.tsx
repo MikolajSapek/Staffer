@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getDictionary } from './dictionaries';
 import { getCurrentProfile } from '@/utils/supabase/server';
 import JobBoardClient from './JobBoardClient';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,8 +91,7 @@ export default async function JobBoardPage({
       )
     `)
     .eq('status', 'published')
-    // Using new Date().toISOString() for UTC timestamp in database queries is correct
-    .gt('start_time', new Date().toISOString())
+    .gt('start_time', getCurrentUTCISO())
     .order('start_time', { ascending: true });
 
   // Filtrujemy tylko te zmiany, które mają wolne miejsca

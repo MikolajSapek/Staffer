@@ -66,7 +66,7 @@ Zarządzanie preferencjami notyfikacji zapisywanymi w kolumnie JSONB `notificati
     "new_worker_applied": true,
     "offer_accepted": true,
     "pending_workdays": true,
-    "pick_candidates": true,
+    "pick_applicants": true,
     "rate_worker": true
   }
 }

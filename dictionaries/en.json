@@ -158,7 +158,7 @@
     "timesheetsPending": "Timesheets awaiting approval",
     "timesheetsDesc": "Review and approve worker hours",
     "pendingApproval": "pending approval",
-    "candidatesPending": "Candidates awaiting review",
+    "applicantsPending": "Applicants awaiting review",
     "financesPending": "Payments pending",
     "reviewNow": "Review now"
   },
@@ -821,7 +821,10 @@
       "createSuccess": "Manager created successfully!",
       "updateSuccess": "Manager updated successfully!",
       "deleteSuccess": "Manager deleted successfully!",
-      "fetchError": "Could not fetch managers"
+      "fetchError": "Could not fetch managers",
+      "avatarLabel": "Profile photo",
+      "selectAvatar": "Select photo",
+      "avatarHint": "JPG, PNG or GIF. Max 10MB."
     }
   },
   "support": {

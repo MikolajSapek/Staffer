@@ -29,7 +29,7 @@ export default async function CompanyListingsPage({
   await supabase.rpc('update_completed_shifts');
 
   // Get current time for filtering (UTC for database queries)
-  const now = new Date().toISOString();
+  const now = getCurrentUTCISO();
 
   // Fetch active (upcoming) shifts.
   // Criteria: end_time >= now AND status != 'cancelled'. Uses only status and end_time (no worker/application checks).

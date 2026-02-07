@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Input } from '@/components/ui/input';
+import { toLocalDateString } from '@/lib/date-utils';
 import {
   Select,
   SelectContent,
@@ -45,7 +46,7 @@ export function DateTimePicker({
     }
     
     const dateObj = new Date(isoString);
-    const date = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+    const date = toLocalDateString(dateObj); // YYYY-MM-DD in local time
     const hour = dateObj.getHours().toString().padStart(2, '0');
     const minute = dateObj.getMinutes().toString().padStart(2, '0');
     
@@ -100,8 +101,8 @@ export function DateTimePicker({
     updateValue(date, hour, newMinute);
   };
 
-  // Calculate min date for the date input
-  const minDate = min ? new Date(min).toISOString().split('T')[0] : undefined;
+  // Calculate min date for the date input (local time to avoid timezone boundary shift)
+  const minDate = min ? toLocalDateString(new Date(min)) : undefined;
 
   return (
     <div className={cn('grid gap-2', className)} id={id}>

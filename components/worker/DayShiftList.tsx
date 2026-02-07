@@ -6,7 +6,7 @@ import { da } from 'date-fns/locale/da';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { formatTime, formatDateLong } from '@/lib/date-utils';
+import { formatTime, formatDateLongFromDate } from '@/lib/date-utils';
 import { Clock, MapPin, Building2, CalendarDays } from 'lucide-react';
 import { JobDetailsDialog } from '@/components/JobDetailsDialog';
 import type { User } from '@supabase/supabase-js';
@@ -159,7 +159,7 @@ export default function DayShiftList({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">{formatDateLong(selectedDate.toISOString())}</h3>
+      <h3 className="text-lg font-semibold">{formatDateLongFromDate(selectedDate)}</h3>
       <div className="space-y-4">
         {shiftsForDate.map((shift) => (
           <DetailShiftCard

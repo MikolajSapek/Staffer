@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useRef } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,12 +12,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Users, Loader2, Trash2, Mail, Phone, Pencil } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Plus, Users, Loader2, Trash2, Pencil, Camera, X } from 'lucide-react';
 import { getManagers, createManager, deleteManager, updateManager, type Manager } from '@/app/actions/managers';
 import { useToast } from '@/components/ui/use-toast';
+import ManagerCard from '@/components/team/ManagerCard';
+import { createClient } from '@/utils/supabase/client';
 
 interface ManagersClientProps {
   dict: {
@@ -53,13 +53,15 @@ interface ManagersClientProps {
       updateSuccess: string;
       deleteSuccess: string;
       fetchError: string;
+      avatarLabel?: string;
+      selectAvatar?: string;
+      avatarHint?: string;
     };
   };
   lang: string;
 }
 
 export default function ManagersClient({ dict, lang }: ManagersClientProps) {
-  const router = useRouter();
   const { toast } = useToast();
   const [managers, setManagers] = useState<Manager[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,11 +69,15 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
   const [editingManager, setEditingManager] = useState<Manager | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     email: '',
     phone_number: '',
+    avatar_url: '',
   });
 
   useEffect(() => {
@@ -94,6 +100,40 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
     }
   };
 
+  const uploadAvatarToStorage = async (managerId: string): Promise<string | null> => {
+    if (!avatarFile) return null;
+    const supabase = createClient();
+    const fileExt = avatarFile.name.split('.').pop() || 'jpg';
+    const filePath = `managers/${managerId}/avatar-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, avatarFile, {
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+    return publicUrl;
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setAvatarFile(file);
+    }
+  };
+
+  const handleAvatarRemove = () => {
+    setAvatarFile(null);
+    setFormData((prev) => ({ ...prev, avatar_url: '' }));
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -112,27 +152,57 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
         return;
       }
 
-      let result;
+      let avatarUrl: string | null = formData.avatar_url?.trim() || null;
+      let managerId: string | undefined;
+
       if (editingManager) {
-        result = await updateManager(editingManager.id, {
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          email: formData.email,
-          phone_number: formData.phone_number || null,
-        });
+        managerId = editingManager.id;
       } else {
-        result = await createManager({
+        const createResult = await createManager({
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
           phone_number: formData.phone_number || null,
+          avatar_url: avatarUrl,
         });
+        if (!createResult.success) {
+          setError(createResult.error || createResult.message);
+          setSubmitting(false);
+          return;
+        }
+        managerId = createResult.managerId ?? undefined;
       }
 
-      if (!result.success) {
-        setError(result.error || result.message);
-        setSubmitting(false);
-        return;
+      if (avatarFile && managerId) {
+        setIsUploading(true);
+        try {
+          const uploadedUrl = await uploadAvatarToStorage(managerId);
+          if (uploadedUrl) avatarUrl = uploadedUrl;
+        } catch (uploadErr) {
+          setError(uploadErr instanceof Error ? uploadErr.message : 'Failed to upload photo');
+          setSubmitting(false);
+          setIsUploading(false);
+          return;
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
+      if (editingManager) {
+        const result = await updateManager(editingManager.id, {
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          email: formData.email,
+          phone_number: formData.phone_number || null,
+          avatar_url: avatarUrl,
+        });
+        if (!result.success) {
+          setError(result.error || result.message);
+          setSubmitting(false);
+          return;
+        }
+      } else if (avatarUrl && managerId) {
+        await updateManager(managerId, { avatar_url: avatarUrl });
       }
 
       toast({
@@ -140,12 +210,12 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
         description: editingManager ? dict.form.updateSuccess : dict.form.createSuccess,
       });
 
-      // Reset form and close dialog
-      setFormData({ first_name: '', last_name: '', email: '', phone_number: '' });
+      setFormData({ first_name: '', last_name: '', email: '', phone_number: '', avatar_url: '' });
+      setAvatarFile(null);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
       setEditingManager(null);
       setDialogOpen(false);
-      
-      // Refresh managers list
+
       await fetchManagers();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : dict.form.fetchError;
@@ -162,7 +232,10 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
       last_name: manager.last_name,
       email: manager.email,
       phone_number: manager.phone_number || '',
+      avatar_url: manager.avatar_url || '',
     });
+    setAvatarFile(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
     setDialogOpen(true);
   };
 
@@ -204,13 +277,11 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
     setDialogOpen(open);
     if (!open) {
       setEditingManager(null);
-      setFormData({ first_name: '', last_name: '', email: '', phone_number: '' });
+      setFormData({ first_name: '', last_name: '', email: '', phone_number: '', avatar_url: '' });
+      setAvatarFile(null);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
       setError(null);
     }
-  };
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
   if (loading) {
@@ -249,57 +320,46 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {managers.map((manager) => (
-            <Card key={manager.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {getInitials(manager.first_name, manager.last_name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">
-                        {manager.first_name} {manager.last_name}
-                      </CardTitle>
-                      <CardDescription className="mt-1 space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <Mail className="h-3 w-3" />
-                          <span className="truncate">{manager.email}</span>
-                        </div>
-                        {manager.phone_number && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Phone className="h-3 w-3" />
-                            <span>{manager.phone_number}</span>
-                          </div>
-                        )}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
+        <>
+          {/* Management Section - Manager Cards */}
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold text-foreground mb-4">{dict.title}</h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {managers.map((manager) => (
+                <div key={manager.id} className="relative group">
+                  <ManagerCard
+                    manager={{
+                      name: `${manager.first_name} ${manager.last_name}`,
+                      email: manager.email,
+                      phone: manager.phone_number,
+                      avatarUrl: manager.avatar_url ?? null,
+                      department: 'Management',
+                      isVerified: false,
+                    }}
+                  />
+                  <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 shadow-sm"
                       onClick={() => handleEdit(manager)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8 shadow-sm"
                       onClick={() => handleDelete(manager.id)}
-                      className="text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       {/* Single Dialog for both Add and Edit */}
@@ -318,6 +378,66 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
                 </div>
               )}
               <div className="space-y-4 py-4">
+                {/* Avatar Upload */}
+                <div className="space-y-2">
+                  <Label>{dict.form.avatarLabel ?? 'Profile photo'}</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <Avatar className="w-24 h-24 border-2 border-gray-200">
+                        {isUploading ? (
+                          <div className="flex h-full w-full items-center justify-center bg-muted">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : avatarFile ? (
+                          <img
+                            src={URL.createObjectURL(avatarFile)}
+                            alt="Preview"
+                            className="aspect-square h-full w-full object-cover"
+                          />
+                        ) : (
+                          <>
+                            <AvatarImage src={formData.avatar_url || undefined} alt="Avatar" />
+                            <AvatarFallback className="text-2xl bg-muted text-muted-foreground">
+                              {formData.first_name && formData.last_name
+                                ? `${formData.first_name[0]}${formData.last_name[0]}`.toUpperCase()
+                                : '?'}
+                            </AvatarFallback>
+                          </>
+                        )}
+                      </Avatar>
+                      {(avatarFile || formData.avatar_url) && !isUploading && (
+                        <button
+                          type="button"
+                          onClick={handleAvatarRemove}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        disabled={submitting || isUploading}
+                        className="hidden"
+                        id="manager-avatar-upload"
+                      />
+                      <label
+                        htmlFor="manager-avatar-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Camera className="w-4 h-4" />
+                        {avatarFile ? avatarFile.name : (dict.form.selectAvatar ?? 'Select photo')}
+                      </label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {dict.form.avatarHint ?? 'JPG, PNG or GIF. Max 10MB.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="first_name">
                     {dict.form.firstNameLabel} <span className="text-red-500">*</span>
@@ -377,11 +497,11 @@ export default function ManagersClient({ dict, lang }: ManagersClientProps) {
                   type="button"
                   variant="outline"
                   onClick={() => handleDialogOpenChange(false)}
-                  disabled={submitting}
+                  disabled={submitting || isUploading}
                 >
                   {dict.form.cancel}
                 </Button>
-                <Button type="submit" disabled={submitting}>
+                <Button type="submit" disabled={submitting || isUploading}>
                   {submitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

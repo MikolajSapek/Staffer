@@ -1,6 +1,8 @@
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ForgotPasswordPage({
   params,
 }: {

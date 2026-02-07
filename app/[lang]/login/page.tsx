@@ -4,6 +4,8 @@ import LoginForm from '@/components/auth/LoginForm';
 import Link from 'next/link';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 
+export const dynamic = 'force-dynamic';
+
 export default async function LoginPage({
   params,
 }: {
@@ -26,7 +28,7 @@ export default async function LoginPage({
       const role = profile.role as 'worker' | 'company' | 'admin';
       if (role === 'company') redirect(`/${lang}/dashboard`);
       if (role === 'worker') redirect(`/${lang}/schedule`);
-      if (role === 'admin') redirect(`/${lang}/admin`);
+      if (role === 'admin') redirect(`/${lang}/dashboard`);
     }
     redirect(`/${lang}`);
   }

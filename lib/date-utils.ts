@@ -16,6 +16,25 @@ export function formatDateLong(dateString: string): string {
 }
 
 /**
+ * Format a Date object with day name using local time parts (avoids timezone shifts).
+ * Use when the Date represents a calendar-selected date in local time.
+ */
+export function formatDateLongFromDate(date: Date): string {
+  return format(date, 'EEEE d. MMMM yyyy', { locale: da });
+}
+
+/**
+ * Get YYYY-MM-DD from a date string or Date using local time (avoids timezone shift on boundaries).
+ */
+export function toLocalDateString(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
  * Format date without day name (d. MMMM yyyy)
  */
 export function formatDateShort(dateString: string): string {
@@ -81,12 +100,31 @@ export function fromLocalISO(localDateTimeStr: string): string {
 }
 
 /**
+ * Get current time in UTC ISO string format.
+ * Used for database queries (e.g. .gt('start_time', getCurrentUTCISO())).
+ * @returns ISO string in UTC format
+ */
+export function getCurrentUTCISO(): string {
+  return new Date().toISOString();
+}
+
+/**
+ * Get UTC ISO string for a date offset from now (e.g. 3 days ago).
+ * Used for database queries with time windows.
+ * @param offsetMs - Offset in milliseconds (negative for past, positive for future)
+ * @returns ISO string in UTC format
+ */
+export function getDateOffsetUTCISO(offsetMs: number): string {
+  return new Date(Date.now() + offsetMs).toISOString();
+}
+
+/**
  * Get current time in local datetime-local format (YYYY-MM-DDTHH:mm)
  * Used for min/max attributes in datetime-local input fields
  * @returns Formatted string in YYYY-MM-DDTHH:mm format (local time)
  */
 export function getCurrentLocalISO(): string {
-  return toLocalISO(new Date().toISOString());
+  return toLocalISO(getCurrentUTCISO());
 }
 
 const MINUTE_OPTIONS = [0, 10, 20, 30, 40, 50];

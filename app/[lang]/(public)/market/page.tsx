@@ -4,6 +4,7 @@ import { getDictionary } from '@/app/[lang]/dictionaries';
 import { getCurrentProfile } from '@/utils/supabase/server';
 import { getMarketShiftsPage } from '@/app/actions/shifts';
 import JobBoardClient from '@/app/[lang]/JobBoardClient';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,7 +127,7 @@ async function PublicMarketView({
       )
     `)
     .eq('status', 'published')
-    .gt('start_time', new Date().toISOString())
+    .gt('start_time', getCurrentUTCISO())
     .order('start_time', { ascending: true })
     .range(0, 19);
 
@@ -269,7 +270,7 @@ async function WorkerMarketView({
       )
     `)
     .eq('status', 'published')
-    .gt('start_time', new Date().toISOString())
+    .gt('start_time', getCurrentUTCISO())
     .order('start_time', { ascending: true });
 
   const availableShifts = (shiftsData || []).filter(
@@ -357,7 +358,7 @@ async function CompanyMarketView({
       )
     `)
     .eq('status', 'published')
-    .gt('start_time', new Date().toISOString())
+    .gt('start_time', getCurrentUTCISO())
     .order('start_time', { ascending: true });
 
   if (shiftsError) {

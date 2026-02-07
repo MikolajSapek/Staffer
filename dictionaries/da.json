@@ -158,7 +158,7 @@
     "timesheetsPending": "Timesedler afventer godkendelse",
     "timesheetsDesc": "Gennemgå og godkend arbejdstimer",
     "pendingApproval": "afventer godkendelse",
-    "candidatesPending": "Kandidater afventer gennemgang",
+    "applicantsPending": "Ansøgere afventer gennemgang",
     "financesPending": "Betalinger afventer",
     "reviewNow": "Gennemgå nu"
   },
@@ -806,7 +806,10 @@
       "createSuccess": "Manager oprettet!",
       "updateSuccess": "Manager opdateret!",
       "deleteSuccess": "Manager slettet!",
-      "fetchError": "Kunne ikke hente managers"
+      "fetchError": "Kunne ikke hente managers",
+      "avatarLabel": "Profilbillede",
+      "selectAvatar": "Vælg billede",
+      "avatarHint": "JPG, PNG eller GIF. Maks 10MB."
     }
   },
   "support": {

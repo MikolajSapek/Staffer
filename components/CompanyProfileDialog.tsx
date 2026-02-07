@@ -16,6 +16,7 @@ import { Star, Building2, MapPin, Calendar, Loader2, CheckCircle2, Clock, XCircl
 import { createClient } from '@/utils/supabase/client';
 import { cn } from '@/lib/utils';
 import { getCompanyHiresCount } from '@/app/actions/applications';
+import { getCurrentUTCISO } from '@/lib/date-utils';
 
 interface CompanyProfileDialogProps {
   companyId: string;
@@ -95,7 +96,7 @@ export default function CompanyProfileDialog({
       setProfile(profileData as CompanyProfile);
 
       // Optionally fetch active shifts count (UTC for database queries)
-      const now = new Date().toISOString();
+      const now = getCurrentUTCISO();
       const { count, error: shiftsError } = await supabase
         .from('shifts')
         .select('*', { count: 'exact', head: true })

@@ -619,6 +619,7 @@ export interface Database {
           last_name: string;
           email: string;
           phone_number: string | null;
+          avatar_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -629,6 +630,7 @@ export interface Database {
           last_name: string;
           email: string;
           phone_number?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -639,6 +641,7 @@ export interface Database {
           last_name?: string;
           email?: string;
           phone_number?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
