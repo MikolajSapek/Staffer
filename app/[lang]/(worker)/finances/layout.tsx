@@ -3,5 +3,5 @@ export default function FinancesLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <div className="finances-wrapper">{children}</div>
+  return <>{children}</>;
 }

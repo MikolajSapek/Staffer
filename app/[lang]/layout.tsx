@@ -8,7 +8,7 @@ import { getCurrentUser } from '@/utils/supabase/server';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 // Force dynamic – prevents stale hasUser after login (Ghost Header fix)
 export const dynamic = 'force-dynamic';

@@ -76,7 +76,7 @@ interface NavbarProps {
 
 export default function Navbar({ dict, lang }: NavbarProps) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const isLandingPage = pathname === `/${lang}` || pathname === `/${lang}/`;
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
@@ -358,29 +358,26 @@ export default function Navbar({ dict, lang }: NavbarProps) {
             Staffer
           </Link>
 
-          {/* Page Title or Landing Nav Links - Center */}
+          {/* Page Title or Landing Nav Links - Center (only when guest on landing) */}
           {!user && isLandingPage ? (
             <div className="absolute left-1/2 hidden -translate-x-1/2 gap-1 md:flex">
               <Link
-                href={`/${lang}#job-seekers`}
-                className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              >
-                {dict.jobBoard?.title ?? 'Job listing'}
-              </Link>
-              <Link
                 href={`/${lang}#companies`}
+                onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('landing-tab-change', { detail: 'companies' }))}
                 className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
                 {dict.landing?.tabCompanies ?? 'For companies'}
               </Link>
               <Link
                 href={`/${lang}#job-seekers`}
+                onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('landing-tab-change', { detail: 'job-seekers' }))}
                 className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
                 {dict.landing?.tabJobSeekers ?? 'For job seekers'}
               </Link>
               <Link
                 href={`/${lang}#contact`}
+                onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('landing-tab-change', { detail: 'contact' }))}
                 className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
                 {dict.landing?.tabContact ?? 'Contact'}

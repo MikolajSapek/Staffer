@@ -32,6 +32,13 @@ const HIDE_NAVBAR_ROUTES = [
   '/login',
   '/register',
   '/dashboard',
+  // Worker dashboard routes (WorkerSidebar + WorkerHeader only)
+  '/schedule',
+  '/finances',
+  '/applications',  // My Shifts
+  '/my-shifts',
+  '/profile',
+  '/worker',        // /worker/settings, /worker/support
 ] as const;
 
 export default function ConditionalNavbar({ dict, lang, hasUser = false }: ConditionalNavbarProps) {

@@ -41,75 +41,64 @@ export default async function JobBoardPage({
   if (user && userRole === 'worker') {
     redirect(`/${lang}/market`);
   }
-  
-  let appliedShiftIds: string[] = [];
-  let applicationStatusMap: Record<string, string> = {};
 
-  if (user && userRole === 'worker') {
-    const { data: applications } = await supabase
-      .from('shift_applications')
-      .select('shift_id, status')
-      .eq('worker_id', user.id);
-    
-    appliedShiftIds = applications?.map(app => app.shift_id) || [];
-    applications?.forEach(app => {
-      const status = app.status === 'accepted' ? 'approved' : app.status;
-      applicationStatusMap[app.shift_id] = status;
-    });
+  // Only show landing page when no session (guest)
+  if (!user) {
+    const { data: shiftsData, error: shiftsError } = await supabase
+      .from('shifts')
+      .select(`
+        id,
+        title,
+        description,
+        category,
+        hourly_rate,
+        start_time,
+        end_time,
+        break_minutes,
+        is_break_paid,
+        possible_overtime,
+        vacancies_total,
+        vacancies_taken,
+        status,
+        is_urgent,
+        must_bring,
+        company_id,
+        locations!location_id (
+          name,
+          address
+        ),
+        profiles!company_id (
+          company_details!profile_id (
+            company_name,
+            logo_url
+          )
+        )
+      `)
+      .eq('status', 'published')
+      .gt('start_time', getCurrentUTCISO())
+      .order('start_time', { ascending: true })
+      .limit(20);
+
+    const availableShifts = (shiftsData || []).filter((shift: { vacancies_taken: number; vacancies_total: number }) =>
+      shift.vacancies_taken < shift.vacancies_total
+    );
+    const shifts = shiftsError ? [] : availableShifts;
+
+    return (
+      <LandingPageClient
+        shifts={shifts}
+        userRole={userRole}
+        user={null}
+        appliedShiftIds={[]}
+        applicationStatusMap={{}}
+        verificationStatus={verificationStatus}
+        dict={dict}
+        lang={lang}
+      />
+    );
   }
 
-  // Fetch only essential shift data for public job board (no manager data)
-  const { data: shiftsData, error: shiftsError } = await supabase
-    .from('shifts')
-    .select(`
-      id,
-      title,
-      description,
-      category,
-      hourly_rate,
-      start_time,
-      end_time,
-      break_minutes,
-      is_break_paid,
-      possible_overtime,
-      vacancies_total,
-      vacancies_taken,
-      status,
-      is_urgent,
-      must_bring,
-      company_id,
-      locations!location_id (
-        name,
-        address
-      ),
-      profiles!company_id (
-        company_details!profile_id (
-          company_name,
-          logo_url
-        )
-      )
-    `)
-    .eq('status', 'published')
-    .gt('start_time', getCurrentUTCISO())
-    .order('start_time', { ascending: true });
-
-  // Filtrujemy tylko te zmiany, które mają wolne miejsca
-  const availableShifts = (shiftsData || []).filter(shift => 
-    shift.vacancies_taken < shift.vacancies_total
-  );
-  const shifts = shiftsError ? [] : availableShifts;
-
-  return (
-    <LandingPageClient
-      shifts={shifts}
-      userRole={userRole}
-      user={user}
-      appliedShiftIds={appliedShiftIds}
-      applicationStatusMap={applicationStatusMap}
-      verificationStatus={verificationStatus}
-      dict={dict}
-      lang={lang}
-    />
-  );
+  // Logged-in admin or unassigned role: redirect to dashboard
+  redirect(`/${lang}/dashboard`);
 }
 

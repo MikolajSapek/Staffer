@@ -85,13 +85,15 @@ export default async function ApplicationsPage({
   }));
 
   return (
-    <WorkerApplicationsClient 
+    <div>
+      <WorkerApplicationsClient 
       applications={applications || []} 
       dict={dict}
       user={user}
       userRole="worker"
       verificationStatus={profile?.verification_status ?? null}
     />
+    </div>
   );
 }
 

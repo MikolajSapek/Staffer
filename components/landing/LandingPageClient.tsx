@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import {
-  Briefcase,
-  Building2,
   Phone,
   MessageCircle,
   Mail,
@@ -27,8 +26,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import JobBoardClient from '@/app/[lang]/JobBoardClient';
 import type { User } from '@supabase/supabase-js';
+
+const PRIMARY_BLUE = '#0069ff';
+
+// Lazy load JobBoardClient - critical for LCP and bundle size
+const JobBoardClient = dynamic(
+  () => import('@/app/[lang]/JobBoardClient'),
+  {
+    loading: () => (
+      <div className="h-96 animate-pulse rounded-lg bg-gray-50" aria-hidden />
+    ),
+    ssr: false,
+  }
+);
 
 interface Shift {
   id: string;
@@ -107,6 +118,26 @@ export default function LandingPageClient({
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: CustomEvent<string>) => {
+      const v = e.detail;
+      if (v === 'companies' || v === 'job-seekers' || v === 'contact') {
+        setActiveTab(v);
+        window.history.replaceState(null, '', `#${v}`);
+      }
+    };
+    window.addEventListener('landing-tab-change', handler as EventListener);
+    return () => window.removeEventListener('landing-tab-change', handler as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, '');
+    if (hash && (hash === 'companies' || hash === 'job-seekers' || hash === 'contact')) {
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [activeTab]);
+
   const handleTabChange = (value: 'job-seekers' | 'companies' | 'contact') => {
     setActiveTab(value);
     if (typeof window !== 'undefined') {
@@ -116,9 +147,14 @@ export default function LandingPageClient({
 
   const t = (key: string, fallback: string) => landing[key] ?? fallback;
 
+  // Stats for job seekers (placeholder values – can be passed as props later)
+  const statsCompanies = shifts?.length ? new Set(shifts.map((s) => s.company_id)).size : 0;
+  const statsJobs = shifts?.length ?? 0;
+  const statsHours = 0; // Could be computed from shifts if needed
+
   return (
-    <div className="min-h-screen bg-white font-sans" style={{ fontFamily: 'sans-serif' }}>
-      {/* SECTION A: HERO */}
+    <div className="min-h-screen bg-white font-sans">
+      {/* SECTION A: HERO – Critical LCP, no heavy imports above fold */}
       <section className="container mx-auto px-4 py-12 md:py-20">
         <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
           <div className="flex-1">
@@ -130,23 +166,39 @@ export default function LandingPageClient({
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <button
+                type="button"
                 onClick={() => handleTabChange('companies')}
-                className="rounded-lg bg-black px-6 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+                className="rounded-lg px-6 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: PRIMARY_BLUE }}
               >
                 {t('tabCompanies', 'For Companies')}
               </button>
               <button
+                type="button"
                 onClick={() => handleTabChange('job-seekers')}
-                className="rounded-lg border-2 border-black bg-white px-6 py-3 font-semibold text-black transition-colors hover:bg-gray-100"
+                className="rounded-lg border-2 bg-white px-6 py-3 font-semibold transition-colors hover:bg-gray-50"
+                style={{ borderColor: PRIMARY_BLUE, color: PRIMARY_BLUE }}
               >
                 {t('tabJobSeekers', 'For Job Seekers')}
               </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange('contact')}
+                className="rounded-lg border-2 border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                {t('tabContact', 'Contact')}
+              </button>
             </div>
           </div>
-          <div className="flex-1">
-            <div className="mx-auto max-w-64 rounded-3xl border-4 border-gray-200 bg-gradient-to-b from-gray-100 to-white p-6 shadow-xl">
-              <div className="aspect-[9/16] rounded-2xl bg-gray-200/50 flex items-center justify-center text-gray-400 text-sm">
-                Phone mockup
+          <div className="flex flex-1 justify-center lg:justify-end">
+            {/* Lightweight CSS phone mockup – no external image for LCP */}
+            <div
+              className="relative w-64 rounded-[2.5rem] border-[6px] border-gray-200 bg-gradient-to-b from-gray-100 to-white p-4 shadow-xl"
+              style={{ aspectRatio: '9/16' }}
+            >
+              <div className="absolute left-1/2 top-4 h-6 w-24 -translate-x-1/2 rounded-full bg-gray-300" />
+              <div className="mt-8 flex h-full flex-col items-center justify-center rounded-2xl bg-gray-100/80 text-sm text-gray-500">
+                <span>App preview</span>
               </div>
             </div>
           </div>
@@ -157,6 +209,22 @@ export default function LandingPageClient({
       <section className="border-t border-gray-200 bg-white">
         {activeTab === 'job-seekers' && (
           <div id="job-seekers" className="container mx-auto px-4 py-16">
+            {/* Stats Row */}
+            <div className="flex flex-wrap justify-center gap-8 text-center">
+              <div>
+                <p className="text-2xl font-bold text-black">{statsCompanies}</p>
+                <p className="text-sm text-gray-600">{t('statsCompanies', 'Companies')}</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-black">{statsJobs}</p>
+                <p className="text-sm text-gray-600">{t('statsJobsCompleted', 'Jobs')}</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-black">{statsHours}</p>
+                <p className="text-sm text-gray-600">{t('statsHours', 'Hours')}</p>
+              </div>
+            </div>
+
             {/* Sub-Hero */}
             <div className="mt-16 text-center">
               <h2 className="text-2xl font-bold text-black md:text-3xl">
@@ -167,13 +235,13 @@ export default function LandingPageClient({
               </p>
             </div>
 
-            {/* Job Board */}
+            {/* Job Board – lazy loaded */}
             <div className="mt-12">
               {!shifts || shifts.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
                     <p className="text-muted-foreground">{jobBoard.noJobs ?? 'No active job listings.'}</p>
-                    <Button asChild className="mt-4 bg-black hover:bg-gray-800">
+                    <Button asChild className="mt-4" style={{ backgroundColor: PRIMARY_BLUE }}>
                       <Link href={`/${lang}/register`}>{nav.register ?? 'Register'}</Link>
                     </Button>
                   </CardContent>
@@ -214,8 +282,11 @@ export default function LandingPageClient({
               </div>
             </div>
 
-            {/* Bottom CTA */}
-            <div className="mt-20 w-full rounded-lg bg-black px-6 py-12 text-center md:py-16">
+            {/* Bottom CTA – blue strip */}
+            <div
+              className="mt-20 w-full rounded-lg px-6 py-12 text-center md:py-16"
+              style={{ backgroundColor: PRIMARY_BLUE }}
+            >
               <p className="text-xl font-semibold text-white md:text-2xl">
                 {t('bottomCtaText', 'Create a profile now and see available jobs')}
               </p>
@@ -223,7 +294,8 @@ export default function LandingPageClient({
                 asChild
                 size="lg"
                 variant="secondary"
-                className="mt-6 bg-white text-black hover:bg-gray-100"
+                className="mt-6 bg-white hover:bg-gray-100"
+                style={{ color: PRIMARY_BLUE }}
               >
                 <Link href={`/${lang}/register`}>{t('createProfile', 'Create profile')}</Link>
               </Button>
@@ -314,7 +386,7 @@ export default function LandingPageClient({
                     rows={4}
                   />
                 </div>
-                <Button type="submit" className="bg-black hover:bg-gray-800">
+                <Button type="submit" style={{ backgroundColor: PRIMARY_BLUE }}>
                   {t('contactMe', 'Contact me')}
                 </Button>
               </form>
@@ -351,19 +423,19 @@ export default function LandingPageClient({
               <div className="grid gap-4 sm:grid-cols-3">
                 <Card className="h-40 shadow-md">
                   <CardContent className="flex h-full flex-col items-center justify-center p-6">
-                    <Phone className="mb-3 h-10 w-10 text-black" />
+                    <Phone className="mb-3 h-10 w-10" style={{ color: PRIMARY_BLUE }} />
                     <p className="font-semibold text-black">{t('callUs', 'Call us')}</p>
                   </CardContent>
                 </Card>
                 <Card className="h-40 shadow-md">
                   <CardContent className="flex h-full flex-col items-center justify-center p-6">
-                    <MessageCircle className="mb-3 h-10 w-10 text-black" />
+                    <MessageCircle className="mb-3 h-10 w-10" style={{ color: PRIMARY_BLUE }} />
                     <p className="font-semibold text-black">{t('chat', 'Chat')}</p>
                   </CardContent>
                 </Card>
                 <Card className="h-40 shadow-md">
                   <CardContent className="flex h-full flex-col items-center justify-center p-6">
-                    <Mail className="mb-3 h-10 w-10 text-black" />
+                    <Mail className="mb-3 h-10 w-10" style={{ color: PRIMARY_BLUE }} />
                     <p className="font-semibold text-black">{t('mail', 'Mail')}</p>
                   </CardContent>
                 </Card>
@@ -373,7 +445,7 @@ export default function LandingPageClient({
         )}
       </section>
 
-      {/* FOOTER */}
+      {/* FOOTER – Dark blue/black */}
       <footer className="bg-[#0f172a] py-12 text-white">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 md:grid-cols-3">

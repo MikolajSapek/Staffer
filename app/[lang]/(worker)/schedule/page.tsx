@@ -68,7 +68,7 @@ export default async function SchedulePage({
   console.log('DATA CHECK [Calendar]:', { shiftsCount: shifts?.length ?? 0, workerId: user.id, applicationsCount: applications?.length ?? 0 });
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div>
       {!shifts || shifts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

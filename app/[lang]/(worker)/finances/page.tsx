@@ -72,7 +72,7 @@ export default async function FinancesPage({
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div>
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 mb-6">
         {/* Earnings This Month */}
